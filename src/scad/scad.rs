@@ -33,6 +33,18 @@ pub trait ScadObject: Debug + DynClone {
 }
 dyn_clone::clone_trait_object!(ScadObject);
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_scad_box {
+    ( $type:ty ) => {
+        impl From<$type> for Vec<Box<dyn ScadObject>> {
+            fn from(value: $type) -> Self {
+                vec![Box::new(value) as Box<dyn ScadObject>]
+            }
+        }
+    }
+}
+
 pub trait ScadObject2D: ScadObject {}
 pub trait ScadObject3D: ScadObject {}
 dyn_clone::clone_trait_object!(ScadObject2D);
