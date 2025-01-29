@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn test_translate2d() {
         let children = any_scads2d![
-            SquareBuilder::default().size_num(10.).build().unwrap(),
+            SquareBuilder::default().size(10.).build().unwrap(),
             CircleBuilder::default().r(5.).build().unwrap(),
         ];
         assert_eq!(
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_rotate2d() {
         let children = any_scads2d![
-            SquareBuilder::default().size_num(10.).build().unwrap(),
+            SquareBuilder::default().size(10.).build().unwrap(),
             CircleBuilder::default().r(5.).build().unwrap(),
         ];
         assert_eq!(
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_scale2d() {
         let children = any_scads2d![
-            SquareBuilder::default().size_num(10.).build().unwrap(),
+            SquareBuilder::default().size(10.).build().unwrap(),
             CircleBuilder::default().r(5.).build().unwrap(),
         ];
         assert_eq!(

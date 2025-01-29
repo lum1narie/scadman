@@ -21,23 +21,10 @@ impl From<Unit> for SquareSize {
 
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Square {
-    #[builder(setter(custom))]
+    #[builder(setter(into))]
     pub size: SquareSize,
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
-}
-
-impl SquareBuilder {
-    pub fn size(&mut self, value: Point2D) -> &mut Self {
-        let new = self;
-        new.size = Some(SquareSize::V(value));
-        new
-    }
-    pub fn size_num(&mut self, value: Unit) -> &mut Self {
-        let new = self;
-        new.size = Some(SquareSize::N(value));
-        new
-    }
 }
 
 impl ScadObject for Square {
@@ -293,7 +280,7 @@ mod tests {
     fn test_square() {
         assert_eq!(
             SquareBuilder::default()
-                .size_num(3.0)
+                .size(3.0)
                 .build()
                 .unwrap()
                 .to_code(),
@@ -301,7 +288,7 @@ mod tests {
         );
         assert_eq!(
             SquareBuilder::default()
-                .size_num(3.0)
+                .size(3.0)
                 .center(true)
                 .build()
                 .unwrap()
