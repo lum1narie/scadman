@@ -2,9 +2,10 @@ use std::ops::Deref;
 
 use derive_builder::Builder;
 
-use crate::scad::{Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit};
+use crate::scad::{Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit};
 
-// import("….ext", convexity)
+// Objects
+// ----------------------------------------
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SquareSize {
@@ -243,6 +244,105 @@ impl ScadObject for Text {
 
 impl ScadObject2D for Text {}
 
+#[derive(Builder, Clone, Debug, PartialEq)]
+pub struct Import2D {
+    #[builder(setter(into))]
+    pub file: String,
+    #[builder(setter(into, strip_option), default)]
+    pub convexity: Option<u64>,
+    #[builder(setter(into, strip_option), default)]
+    pub id: Option<u64>,
+    #[builder(setter(into, strip_option), default)]
+    pub layer: Option<u64>,
+    #[builder(setter(into, strip_option), default)]
+    pub fa: Option<Unit>,
+    #[builder(setter(into, strip_option), default)]
+    pub r#fn: Option<u64>,
+    #[builder(setter(into, strip_option), default)]
+    pub fs: Option<Unit>,
+}
+
+impl ScadObject for Import2D {
+    fn get_body(&self) -> String {
+        let mut args: Vec<String> = Vec::new();
+        args.push(format!("\"{}\"", self.file));
+        if let Some(c) = self.convexity {
+            args.push(format!("convexity={}", c));
+        }
+        if let Some(id) = self.id {
+            args.push(format!("id={}", id));
+        }
+        if let Some(l) = self.layer {
+            args.push(format!("layer={}", l));
+        }
+        if let Some(a) = self.fa {
+            args.push(format!("$fa={}", a));
+        }
+        if let Some(n) = self.r#fn {
+            args.push(format!("$fn={}", n));
+        }
+        if let Some(s) = self.fs {
+            args.push(format!("$fs={}", s));
+        }
+        format!("import({})", args.join(", "))
+    }
+}
+
+impl ScadObject2D for Import2D {}
+
+// Modifiers
+// ----------------------------------------
+
+#[derive(Builder, Debug, Clone)]
+pub struct Translate2D {
+    pub v: Point2D,
+    #[builder(setter(name = "apply_to"))]
+    pub children: Vec<Box<dyn ScadObject2D>>,
+}
+
+impl ScadObject for Translate2D {
+    fn get_body(&self) -> String {
+        format!("translate([{}, {}])", self.v.x, self.v.y)
+    }
+    fn get_children(&self) -> Option<Vec<String>> {
+        Some(self.children.iter().map(|c| c.to_code()).collect())
+    }
+}
+
+impl ScadObject2D for Translate2D {}
+
+#[derive(Builder, Debug, Clone)]
+pub struct Rotate2D {
+    #[builder(setter(custom))]
+    pub a: Angle,
+    #[builder(setter(name = "apply_to"))]
+    pub children: Vec<Box<dyn ScadObject2D>>,
+}
+
+impl Rotate2DBuilder {
+    pub fn deg(&mut self, value: Unit) -> &mut Self {
+        let new = self;
+        new.a = Some(Angle::Deg(value));
+        new
+    }
+    pub fn rad(&mut self, value: Unit) -> &mut Self {
+        let new = self;
+        new.a = Some(Angle::Rad(value));
+        new
+    }
+}
+
+impl ScadObject for Rotate2D {
+    fn get_body(&self) -> String {
+        format!("rotate({})", self.a.deg())
+    }
+    fn get_children(&self) -> Option<Vec<String>> {
+        Some(self.children.iter().map(|c| c.to_code()).collect())
+    }
+}
+
+impl ScadObject2D for Rotate2D {}
+
 #[derive(Builder, Debug, Clone)]
 pub struct Projection {
     #[builder(setter(into, strip_option), default)]
@@ -268,9 +368,14 @@ impl ScadObject2D for Projection {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{any_scads3d, obj_3d::SphereBuilder};
+    use std::f64::consts::PI;
+
+    use crate::{any_scads2d, any_scads3d, obj_3d::SphereBuilder};
 
     use super::*;
+
+    // Objects
+    // ----------------------------------------
 
     #[test]
     fn test_square() {
@@ -431,6 +536,74 @@ mod tests {
                 .unwrap()
                 .to_code(),
             "text(\"Hello World\", size=3);"
+        );
+    }
+
+    #[test]
+    fn test_import2d() {
+        assert_eq!(
+            Import2DBuilder::default()
+                .file("shape.svg")
+                .build()
+                .unwrap()
+                .to_code(),
+            "import(\"shape.svg\");"
+        );
+
+        assert_eq!(
+            Import2DBuilder::default()
+                .file("shape.svg")
+                .convexity(10 as u64)
+                .build()
+                .unwrap()
+                .to_code(),
+            "import(\"shape.svg\", convexity=10);"
+        );
+    }
+
+    // Modifiers
+    // ----------------------------------------
+
+    #[test]
+    fn test_translate2d() {
+        let children = any_scads2d![
+            SquareBuilder::default().size_num(10.).build().unwrap(),
+            CircleBuilder::default().r(5.).build().unwrap(),
+        ];
+        assert_eq!(
+            Translate2DBuilder::default()
+                .v(Point2D::new(10., -5.))
+                .apply_to(children)
+                .build()
+                .unwrap()
+                .to_code(),
+            "translate([10, -5]) {\n  square(size=10);\n  circle(r=5);\n}"
+        );
+    }
+
+    #[test]
+    fn test_rotate2d() {
+        let children = any_scads2d![
+            SquareBuilder::default().size_num(10.).build().unwrap(),
+            CircleBuilder::default().r(5.).build().unwrap(),
+        ];
+        assert_eq!(
+            Rotate2DBuilder::default()
+                .deg(45.)
+                .apply_to(children.clone())
+                .build()
+                .unwrap()
+                .to_code(),
+            "rotate(45) {\n  square(size=10);\n  circle(r=5);\n}"
+        );
+        assert_eq!(
+            Rotate2DBuilder::default()
+                .rad(PI / 4.)
+                .apply_to(children)
+                .build()
+                .unwrap()
+                .to_code(),
+            "rotate(45) {\n  square(size=10);\n  circle(r=5);\n}"
         );
     }
 

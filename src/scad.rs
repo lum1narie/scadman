@@ -56,3 +56,18 @@ macro_rules! any_scads3d {
         vec![$(Box::new($scad) as Box<dyn ScadObject3D>),*]
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Angle {
+    Deg(Unit),
+    Rad(Unit),
+}
+
+impl Angle {
+    pub fn deg(&self) -> Unit {
+        match self {
+            Angle::Deg(d) => *d,
+            Angle::Rad(r) => r.to_degrees(),
+        }
+    }
+}
