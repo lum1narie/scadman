@@ -1,7 +1,7 @@
 use derive_builder::Builder;
 
 use crate::{
-    __impl_scad2d,
+    __get_children_impl, __impl_scad2d,
     scad::{Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
 };
 
@@ -18,9 +18,7 @@ impl ScadObject for Translate2D {
     fn get_body(&self) -> String {
         format!("translate([{}, {}])", self.v.x, self.v.y)
     }
-    fn get_children(&self) -> Option<Vec<String>> {
-        Some(self.children.iter().map(|c| c.to_code()).collect())
-    }
+    __get_children_impl!();
 }
 
 #[derive(Builder, Debug, Clone)]
@@ -50,9 +48,7 @@ impl ScadObject for Rotate2D {
     fn get_body(&self) -> String {
         format!("rotate({})", self.a.deg())
     }
-    fn get_children(&self) -> Option<Vec<String>> {
-        Some(self.children.iter().map(|c| c.to_code()).collect())
-    }
+    __get_children_impl!();
 }
 
 #[derive(Builder, Debug, Clone)]
@@ -68,9 +64,7 @@ impl ScadObject for Scale2D {
     fn get_body(&self) -> String {
         format!("scale([{}, {}])", self.v.x, self.v.y)
     }
-    fn get_children(&self) -> Option<Vec<String>> {
-        Some(self.children.iter().map(|c| c.to_code()).collect())
-    }
+    __get_children_impl!();
 }
 
 #[derive(Builder, Debug, Clone)]
@@ -91,9 +85,7 @@ impl ScadObject for Projection {
         }
         format!("projection({})", args.join(", "))
     }
-    fn get_children(&self) -> Option<Vec<String>> {
-        Some(self.children.iter().map(|c| c.to_code()).collect())
-    }
+    __get_children_impl!();
 }
 
 #[cfg(test)]

@@ -83,3 +83,13 @@ impl Angle {
         }
     }
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __get_children_impl {
+    () => {
+        fn get_children(&self) -> Option<Vec<String>> {
+            Some(self.children.iter().map(|c| c.to_code()).collect())
+        }
+    };
+}
