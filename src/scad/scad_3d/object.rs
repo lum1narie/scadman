@@ -10,12 +10,33 @@
 
 use derive_builder::Builder;
 
-use crate::scad::{ScadObject, ScadObject3D, Unit};
+use crate::{
+    __generate_scad_options, __impl_scad3d,
+    scad::{generate_body, ScadDisplay, ScadObject, ScadObject3D, Unit},
+};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SphereSize {
     Radius(Unit),
     Diameter(Unit),
+}
+
+impl ScadDisplay for SphereSize {
+    fn repr_scad(&self) -> String {
+        match self {
+            SphereSize::Radius(r) => r.repr_scad(),
+            SphereSize::Diameter(d) => d.repr_scad(),
+        }
+    }
+}
+
+impl SphereSize {
+    fn name(&self) -> &'static str {
+        match self {
+            SphereSize::Radius(_) => "r",
+            SphereSize::Diameter(_) => "d",
+        }
+    }
 }
 
 #[derive(Builder, Clone, Debug, PartialEq)]
@@ -29,6 +50,8 @@ pub struct Sphere {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
+
+__impl_scad3d!(Sphere);
 
 impl SphereBuilder {
     pub fn r(&mut self, value: Unit) -> &mut Self {
@@ -45,42 +68,29 @@ impl SphereBuilder {
 
 impl ScadObject for Sphere {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        let size_str: String = match self.size {
-            SphereSize::Radius(r) => format!("r={}", r),
-            SphereSize::Diameter(d) => format!("d={}", d),
-        };
-        args.push(size_str);
-        if let Some(a) = self.fa {
-            args.push(format!("$fa={}", a));
-        }
-        if let Some(n) = self.r#fn {
-            args.push(format!("$fn={}", n));
-        }
-        if let Some(s) = self.fs {
-            args.push(format!("$fs={}", s));
-        }
-        format!("sphere({})", args.join(", "))
+        generate_body(
+            "sphere",
+            __generate_scad_options!(
+                (self.size.name(), self.size);
+                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+            ),
+        )
     }
 }
 
-impl ScadObject3D for Sphere {}
-
 #[cfg(test)]
 mod tests {
-    use crate::any_scads;
-
     use super::*;
 
     #[test]
     fn test_sphere() {
         assert_eq!(
             SphereBuilder::default().r(3.0).build().unwrap().to_code(),
-            "sphere(r=3);"
+            "sphere(r = 3);"
         );
         assert_eq!(
             SphereBuilder::default().d(4.0).build().unwrap().to_code(),
-            "sphere(d=4);"
+            "sphere(d = 4);"
         );
         assert_eq!(
             SphereBuilder::default()
@@ -90,7 +100,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "sphere(r=3, $fa=0.5, $fn=20);"
+            "sphere(r = 3, $fa = 0.5, $fn = 20);"
         );
         assert_eq!(
             SphereBuilder::default()
@@ -100,7 +110,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "sphere(r=3, $fa=0.5, $fs=40);"
+            "sphere(r = 3, $fa = 0.5, $fs = 40);"
         );
         assert!(SphereBuilder::default()
             .fa(0.5)

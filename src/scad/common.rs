@@ -1,11 +1,13 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 
 use dyn_clone::DynClone;
 use nalgebra as na;
 
 pub type Unit = f64;
-pub type Point2D = na::Vector2<Unit>;
-pub type Point3D = na::Vector3<Unit>;
+pub type Container2D<T> = na::Vector2<T>;
+pub type Container3D<T> = na::Vector3<T>;
+pub type Point2D = Container2D<Unit>;
+pub type Point3D = Container3D<Unit>;
 
 const INDENT: usize = 2;
 
@@ -69,6 +71,73 @@ macro_rules! any_scads3d {
     };
 }
 
+pub trait ScadDisplay {
+    fn repr_scad(&self) -> String;
+}
+macro_rules! __scad_display_as_string_impl {
+    ( $type:ty ) => {
+        impl ScadDisplay for $type {
+            fn repr_scad(&self) -> String {
+                self.to_string()
+            }
+        }
+    };
+}
+
+const UNIT_PRECISION: usize = 8;
+fn format_float(x: f64, n: usize) -> String {
+    let mut s = format!("{0:.1$}", x, n);
+    if s.contains('.') {
+        while s.ends_with('0') {
+            s.pop();
+        }
+        if s.ends_with('.') {
+            s.pop();
+        }
+    }
+    s
+}
+
+impl ScadDisplay for Unit {
+    fn repr_scad(&self) -> String {
+        format_float(*self, UNIT_PRECISION)
+    }
+}
+__scad_display_as_string_impl!(u64);
+__scad_display_as_string_impl!(usize);
+__scad_display_as_string_impl!(bool);
+impl ScadDisplay for String {
+    fn repr_scad(&self) -> String {
+        format!("\"{}\"", self.replace('"', "\\\""))
+    }
+}
+impl<T: ScadDisplay> ScadDisplay for Container2D<T> {
+    fn repr_scad(&self) -> String {
+        format!("[{}, {}]", self[0].repr_scad(), self[1].repr_scad())
+    }
+}
+impl<T: ScadDisplay> ScadDisplay for Container3D<T> {
+    fn repr_scad(&self) -> String {
+        format!(
+            "[{}, {}, {}]",
+            self[0].repr_scad(),
+            self[1].repr_scad(),
+            self[2].repr_scad()
+        )
+    }
+}
+impl<T: ScadDisplay> ScadDisplay for Vec<T> {
+    fn repr_scad(&self) -> String {
+        format!(
+            "[{}]",
+            self.iter()
+                .map(|x| x.repr_scad())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Angle {
     Deg(Unit),
@@ -82,6 +151,75 @@ impl Angle {
             Angle::Rad(r) => r.to_degrees(),
         }
     }
+}
+
+impl ScadDisplay for Angle {
+    fn repr_scad(&self) -> String {
+        self.deg().repr_scad()
+    }
+}
+
+pub enum ScadOption {
+    Value(String),
+    KeyValue((String, String)),
+}
+
+impl Display for ScadOption {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScadOption::Value(v) => std::fmt::Display::fmt(&v, f),
+            ScadOption::KeyValue((k, v)) => {
+                std::fmt::Display::fmt(&k, f)?;
+                write!(f, " = ")?;
+                std::fmt::Display::fmt(&v, f)
+            }
+        }
+    }
+}
+
+impl ScadOption {
+    pub fn from_key_value<T: ScadDisplay>(name: &str, value: T) -> Self {
+        if name.is_empty() {
+            Self::Value(value.repr_scad())
+        } else {
+            Self::KeyValue((name.to_string(), value.repr_scad()))
+        }
+    }
+
+    pub fn from_key_value_option<T: ScadDisplay>(name: &str, value: Option<T>) -> Option<Self> {
+        Some(Self::from_key_value(name, value?))
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __generate_scad_options {
+    ( $(($name_req:expr, $value_req:expr)),*; $(;)? ) => {
+        {
+            vec![
+                $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
+            ]
+        }
+    };
+    ( $(($name_req:expr, $value_req:expr)),*; $(($name_opt:expr, $value_opt:expr)),+; ) => {
+        {
+            let mut opts: Vec<$crate::scad::ScadOption> = vec![
+                $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
+            ];
+            $(
+                let maybe_opt = $crate::scad::ScadOption::from_key_value_option($name_opt, $value_opt);
+                if let Some(opt) = maybe_opt {
+                    opts.push(opt);
+                }
+            )*
+                opts
+        }
+    };
+}
+
+pub(crate) fn generate_body(name: &str, opts: Vec<ScadOption>) -> String {
+    let reprs = opts.iter().map(|o| o.to_string()).collect::<Vec<_>>();
+    format!("{}({})", name, reprs.join(", "))
 }
 
 #[doc(hidden)]

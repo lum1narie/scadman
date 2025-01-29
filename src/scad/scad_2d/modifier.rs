@@ -1,8 +1,8 @@
 use derive_builder::Builder;
 
 use crate::{
-    __get_children_impl, __impl_scad2d,
-    scad::{Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
+    __generate_scad_options, __get_children_impl, __impl_scad2d,
+    scad::{generate_body, Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
 };
 
 #[derive(Builder, Debug, Clone)]
@@ -16,7 +16,12 @@ __impl_scad2d!(Translate2D);
 
 impl ScadObject for Translate2D {
     fn get_body(&self) -> String {
-        format!("translate([{}, {}])", self.v.x, self.v.y)
+        generate_body(
+            "translate",
+            __generate_scad_options!(
+                ("", self.v);;
+            ),
+        )
     }
     __get_children_impl!();
 }
@@ -46,7 +51,12 @@ impl Rotate2DBuilder {
 
 impl ScadObject for Rotate2D {
     fn get_body(&self) -> String {
-        format!("rotate({})", self.a.deg())
+        generate_body(
+            "rotate",
+            __generate_scad_options!(
+                ("", self.a);;
+            ),
+        )
     }
     __get_children_impl!();
 }
@@ -62,7 +72,12 @@ __impl_scad2d!(Scale2D);
 
 impl ScadObject for Scale2D {
     fn get_body(&self) -> String {
-        format!("scale([{}, {}])", self.v.x, self.v.y)
+        generate_body(
+            "scale",
+            __generate_scad_options!(
+                ("", self.v);;
+            ),
+        )
     }
     __get_children_impl!();
 }
@@ -79,11 +94,12 @@ __impl_scad2d!(Projection);
 
 impl ScadObject for Projection {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        if let Some(c) = &self.cut {
-            args.push(format!("cut={}", c));
-        }
-        format!("projection({})", args.join(", "))
+        generate_body(
+            "projection",
+            __generate_scad_options!(
+                ;("cut", self.cut);
+            ),
+        )
     }
     __get_children_impl!();
 }
@@ -112,7 +128,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "translate([8, -4]) {\n  square(size=10);\n  circle(r=5);\n}"
+            "translate([8, -4]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
@@ -129,7 +145,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "rotate(45) {\n  square(size=10);\n  circle(r=5);\n}"
+            "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Rotate2DBuilder::default()
@@ -138,7 +154,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "rotate(45) {\n  square(size=10);\n  circle(r=5);\n}"
+            "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
@@ -155,7 +171,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "scale([3, 2]) {\n  square(size=10);\n  circle(r=5);\n}"
+            "scale([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
@@ -168,7 +184,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "projection() {\n  sphere(r=10);\n}"
+            "projection() {\n  sphere(r = 10);\n}"
         );
         assert_eq!(
             ProjectionBuilder::default()
@@ -177,7 +193,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "projection(cut=true) {\n  sphere(r=10);\n}"
+            "projection(cut = true) {\n  sphere(r = 10);\n}"
         );
     }
 }

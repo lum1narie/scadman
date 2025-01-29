@@ -4,5 +4,5 @@ pub use common::*;
 mod scad_2d;
 pub use scad_2d::*;
 
-mod obj_3d;
-pub use obj_3d::*;
+mod scad_3d;
+pub use scad_3d::*;

@@ -1,8 +1,8 @@
 use derive_builder::Builder;
 
 use crate::{
-    __impl_scad2d,
-    scad::{Point2D, ScadObject, ScadObject2D, Unit},
+    __generate_scad_options, __impl_scad2d,
+    scad::{generate_body, Point2D, ScadDisplay, ScadObject, ScadObject2D, Unit},
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -22,6 +22,15 @@ impl From<Unit> for SquareSize {
     }
 }
 
+impl ScadDisplay for SquareSize {
+    fn repr_scad(&self) -> String {
+        match self {
+            SquareSize::N(n) => n.repr_scad(),
+            SquareSize::V(v) => v.repr_scad(),
+        }
+    }
+}
+
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Square {
     #[builder(setter(into))]
@@ -34,16 +43,13 @@ __impl_scad2d!(Square);
 
 impl ScadObject for Square {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        let size_str: String = match self.size {
-            SquareSize::N(n) => format!("size={}", n),
-            SquareSize::V(v) => format!("size=[{}, {}]", v.x, v.y),
-        };
-        args.push(size_str);
-        if let Some(c) = self.center {
-            args.push(format!("center={}", c));
-        }
-        format!("square({})", args.join(", "))
+        generate_body(
+            "square",
+            __generate_scad_options!(
+                ("size", self.size);
+                ("center", self.center);
+            ),
+        )
     }
 }
 
@@ -51,6 +57,24 @@ impl ScadObject for Square {
 pub enum CircleSize {
     Radius(Unit),
     Diameter(Unit),
+}
+
+impl ScadDisplay for CircleSize {
+    fn repr_scad(&self) -> String {
+        match self {
+            CircleSize::Radius(r) => r.repr_scad(),
+            CircleSize::Diameter(d) => d.repr_scad(),
+        }
+    }
+}
+
+impl CircleSize {
+    fn name(&self) -> &'static str {
+        match self {
+            CircleSize::Radius(_) => "r",
+            CircleSize::Diameter(_) => "d",
+        }
+    }
 }
 
 #[derive(Builder, Clone, Debug, PartialEq)]
@@ -82,22 +106,13 @@ impl CircleBuilder {
 
 impl ScadObject for Circle {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        let size_str: String = match self.size {
-            CircleSize::Radius(r) => format!("r={}", r),
-            CircleSize::Diameter(d) => format!("d={}", d),
-        };
-        args.push(size_str);
-        if let Some(a) = self.fa {
-            args.push(format!("$fa={}", a));
-        }
-        if let Some(n) = self.r#fn {
-            args.push(format!("$fn={}", n));
-        }
-        if let Some(s) = self.fs {
-            args.push(format!("$fs={}", s));
-        }
-        format!("circle({})", args.join(", "))
+        generate_body(
+            "circle",
+            __generate_scad_options!(
+                (self.size.name(), self.size);
+                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+            ),
+        )
     }
 }
 
@@ -138,34 +153,13 @@ impl PolygonBuilder {
 
 impl ScadObject for Polygon {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        args.push(format!(
-            "points=[{}]",
-            self.points
-                .iter()
-                .map(|p| format!("[{}, {}]", p.x, p.y))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
-        if let Some(ps) = &self.paths {
-            args.push(format!(
-                "paths=[{}]",
-                ps.iter()
-                    .map(|p| format!(
-                        "[{}]",
-                        p.iter()
-                            .map(|i| i.to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-        if let Some(c) = &self.convexity {
-            args.push(format!("convexity={}", c));
-        }
-        format!("polygon({})", args.join(", "))
+        generate_body(
+            "polygon",
+            __generate_scad_options!(
+                ("points", self.points.clone());
+                ("paths", self.paths.clone()), ("convexity", self.convexity);
+            ),
+        )
     }
 }
 
@@ -197,36 +191,21 @@ __impl_scad2d!(Text);
 
 impl ScadObject for Text {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        args.push(format!("\"{}\"", self.text));
-        if let Some(f) = &self.font {
-            args.push(format!("font=\"{}\"", f));
-        }
-        if let Some(s) = &self.size {
-            args.push(format!("size={}", s));
-        }
-        if let Some(h) = &self.halign {
-            args.push(format!("halign=\"{}\"", h));
-        }
-        if let Some(v) = &self.valign {
-            args.push(format!("valign=\"{}\"", v));
-        }
-        if let Some(sp) = &self.spacing {
-            args.push(format!("spacing=\"{}\"", sp));
-        }
-        if let Some(d) = &self.direction {
-            args.push(format!("direction=\"{}\"", d));
-        }
-        if let Some(l) = &self.language {
-            args.push(format!("language=\"{}\"", l));
-        }
-        if let Some(s) = &self.script {
-            args.push(format!("script=\"{}\"", s));
-        }
-        if let Some(f) = &self.r#fn {
-            args.push(format!("$fn={}", f));
-        }
-        format!("text({})", args.join(", "))
+        generate_body(
+            "text",
+            __generate_scad_options!(
+                ("", self.text.clone());
+                ("font", self.font.clone()),
+                ("size", self.size),
+                ("halign", self.halign.clone()),
+                ("valign", self.valign.clone()),
+                ("spacing", self.spacing.clone()),
+                ("direction", self.direction.clone()),
+                ("language", self.language.clone()),
+                ("script", self.script.clone()),
+                ("$fn", self.r#fn);
+            ),
+        )
     }
 }
 
@@ -252,27 +231,15 @@ __impl_scad2d!(Import2D);
 
 impl ScadObject for Import2D {
     fn get_body(&self) -> String {
-        let mut args: Vec<String> = Vec::new();
-        args.push(format!("\"{}\"", self.file));
-        if let Some(c) = self.convexity {
-            args.push(format!("convexity={}", c));
-        }
-        if let Some(id) = self.id {
-            args.push(format!("id={}", id));
-        }
-        if let Some(l) = self.layer {
-            args.push(format!("layer={}", l));
-        }
-        if let Some(a) = self.fa {
-            args.push(format!("$fa={}", a));
-        }
-        if let Some(n) = self.r#fn {
-            args.push(format!("$fn={}", n));
-        }
-        if let Some(s) = self.fs {
-            args.push(format!("$fs={}", s));
-        }
-        format!("import({})", args.join(", "))
+        generate_body(
+            "import",
+            __generate_scad_options!(
+                ("", self.file.clone());
+                ("convexity", self.convexity), ("id", self.id),
+                ("layer", self.layer),
+                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+            ),
+        )
     }
 }
 
@@ -288,7 +255,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "square(size=3);"
+            "square(size = 3);"
         );
         assert_eq!(
             SquareBuilder::default()
@@ -297,7 +264,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "square(size=3, center=true);"
+            "square(size = 3, center = true);"
         );
         assert_eq!(
             SquareBuilder::default()
@@ -305,7 +272,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "square(size=[3, 2]);"
+            "square(size = [3, 2]);"
         );
         assert_eq!(
             SquareBuilder::default()
@@ -314,7 +281,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "square(size=[3, 2], center=true);"
+            "square(size = [3, 2], center = true);"
         );
         assert!(SquareBuilder::default().center(true).build().is_err())
     }
@@ -323,11 +290,11 @@ mod tests {
     fn test_circle() {
         assert_eq!(
             CircleBuilder::default().r(3.0).build().unwrap().to_code(),
-            "circle(r=3);"
+            "circle(r = 3);"
         );
         assert_eq!(
             CircleBuilder::default().d(4.0).build().unwrap().to_code(),
-            "circle(d=4);"
+            "circle(d = 4);"
         );
         assert_eq!(
             CircleBuilder::default()
@@ -337,7 +304,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "circle(r=3, $fa=0.5, $fn=20);"
+            "circle(r = 3, $fa = 0.5, $fn = 20);"
         );
         assert_eq!(
             CircleBuilder::default()
@@ -347,7 +314,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "circle(r=3, $fa=0.5, $fs=40);"
+            "circle(r = 3, $fa = 0.5, $fs = 40);"
         );
         assert!(CircleBuilder::default()
             .fa(0.5)
@@ -370,7 +337,7 @@ mod tests {
         };
         assert_eq!(
             p0.clone().build().unwrap().to_code(),
-            "polygon(points=[[1, 1], [-1, 2], [0, 0]]);"
+            "polygon(points = [[1, 1], [-1, 2], [0, 0]]);"
         );
         assert_eq!(
             p0.clone()
@@ -378,11 +345,11 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "polygon(points=[[1, 1], [-1, 2], [0, 0]], paths=[[0, 2, 1]]);"
+            "polygon(points = [[1, 1], [-1, 2], [0, 0]], paths = [[0, 2, 1]]);"
         );
         assert_eq!(
             p0.clone().convexity(2 as u64).build().unwrap().to_code(),
-            "polygon(points=[[1, 1], [-1, 2], [0, 0]], convexity=2);"
+            "polygon(points = [[1, 1], [-1, 2], [0, 0]], convexity = 2);"
         );
 
         let p1 = {
@@ -399,7 +366,7 @@ mod tests {
         };
         assert_eq!(
             p1.clone().paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
-            "polygon(points=[[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths=[[0, 1, 2], [3, 4, 5]]);"
+            "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
             p1.clone()
@@ -429,7 +396,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "text(\"Hello World\", font=\"LiberationSans-Regular\");"
+            "text(\"Hello World\", font = \"LiberationSans-Regular\");"
         );
         assert_eq!(
             TextBuilder::default()
@@ -438,7 +405,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "text(\"Hello World\", size=3);"
+            "text(\"Hello World\", size = 3);"
         );
     }
 
@@ -460,7 +427,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "import(\"shape.svg\", convexity=10);"
+            "import(\"shape.svg\", convexity = 10);"
         );
     }
 }
