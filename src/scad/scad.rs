@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use dyn_clone::DynClone;
+use dyn_clone::{clone_box, DynClone};
 use nalgebra as na;
 
 pub type Unit = f64;
@@ -33,8 +33,8 @@ pub trait ScadObject: Debug + DynClone {
 }
 dyn_clone::clone_trait_object!(ScadObject);
 
-pub trait ScadObject2D: ScadObject + DynClone {}
-pub trait ScadObject3D: ScadObject + DynClone {}
+pub trait ScadObject2D: ScadObject {}
+pub trait ScadObject3D: ScadObject {}
 dyn_clone::clone_trait_object!(ScadObject2D);
 dyn_clone::clone_trait_object!(ScadObject3D);
 
@@ -71,3 +71,5 @@ impl Angle {
         }
     }
 }
+
+

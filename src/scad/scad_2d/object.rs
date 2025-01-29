@@ -1,6 +1,6 @@
 use derive_builder::Builder;
 
-use crate::scad::{Point2D, ScadObject, ScadObject2D, Unit};
+use crate::{__impl_scad2d, scad::{Point2D, ScadObject, ScadObject2D, Unit}};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SquareSize {
@@ -27,6 +27,8 @@ pub struct Square {
     pub center: Option<bool>,
 }
 
+__impl_scad2d!(Square);
+
 impl ScadObject for Square {
     fn get_body(&self) -> String {
         let mut args: Vec<String> = Vec::new();
@@ -41,8 +43,6 @@ impl ScadObject for Square {
         format!("square({})", args.join(", "))
     }
 }
-
-impl ScadObject2D for Square {}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum CircleSize {
@@ -61,6 +61,8 @@ pub struct Circle {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
+
+__impl_scad2d!(Circle);
 
 impl CircleBuilder {
     pub fn r(&mut self, value: Unit) -> &mut Self {
@@ -95,7 +97,6 @@ impl ScadObject for Circle {
         format!("circle({})", args.join(", "))
     }
 }
-impl ScadObject2D for Circle {}
 
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
@@ -106,6 +107,8 @@ pub struct Polygon {
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
 }
+
+__impl_scad2d!(Polygon);
 
 impl PolygonBuilder {
     fn validate(&self) -> Result<(), String> {
@@ -163,8 +166,6 @@ impl ScadObject for Polygon {
     }
 }
 
-impl ScadObject2D for Polygon {}
-
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Text {
     #[builder(setter(into))]
@@ -188,6 +189,8 @@ pub struct Text {
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
 }
+
+__impl_scad2d!(Text);
 
 impl ScadObject for Text {
     fn get_body(&self) -> String {
@@ -224,8 +227,6 @@ impl ScadObject for Text {
     }
 }
 
-impl ScadObject2D for Text {}
-
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Import2D {
     #[builder(setter(into))]
@@ -243,6 +244,8 @@ pub struct Import2D {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
+
+__impl_scad2d!(Import2D);
 
 impl ScadObject for Import2D {
     fn get_body(&self) -> String {
@@ -269,8 +272,6 @@ impl ScadObject for Import2D {
         format!("import({})", args.join(", "))
     }
 }
-
-impl ScadObject2D for Import2D {}
 
 #[cfg(test)]
 mod tests {

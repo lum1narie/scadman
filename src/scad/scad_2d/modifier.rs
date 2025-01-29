@@ -1,6 +1,9 @@
 use derive_builder::Builder;
 
-use crate::scad::{Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit};
+use crate::{
+    __impl_scad2d,
+    scad::{Angle, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
+};
 
 #[derive(Builder, Debug, Clone)]
 pub struct Translate2D {
@@ -8,6 +11,8 @@ pub struct Translate2D {
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
+
+__impl_scad2d!(Translate2D);
 
 impl ScadObject for Translate2D {
     fn get_body(&self) -> String {
@@ -18,8 +23,6 @@ impl ScadObject for Translate2D {
     }
 }
 
-impl ScadObject2D for Translate2D {}
-
 #[derive(Builder, Debug, Clone)]
 pub struct Rotate2D {
     #[builder(setter(custom))]
@@ -27,6 +30,8 @@ pub struct Rotate2D {
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
+
+__impl_scad2d!(Rotate2D);
 
 impl Rotate2DBuilder {
     pub fn deg(&mut self, value: Unit) -> &mut Self {
@@ -50,7 +55,6 @@ impl ScadObject for Rotate2D {
     }
 }
 
-impl ScadObject2D for Rotate2D {}
 
 #[derive(Builder, Debug, Clone)]
 pub struct Scale2D {
@@ -58,6 +62,8 @@ pub struct Scale2D {
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
+
+__impl_scad2d!(Scale2D);
 
 impl ScadObject for Scale2D {
     fn get_body(&self) -> String {
@@ -68,7 +74,6 @@ impl ScadObject for Scale2D {
     }
 }
 
-impl ScadObject2D for Scale2D {}
 
 #[derive(Builder, Debug, Clone)]
 pub struct Projection {
@@ -77,6 +82,8 @@ pub struct Projection {
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
+
+__impl_scad2d!(Projection);
 
 impl ScadObject for Projection {
     fn get_body(&self) -> String {
@@ -90,8 +97,6 @@ impl ScadObject for Projection {
         Some(self.children.iter().map(|c| c.to_code()).collect())
     }
 }
-
-impl ScadObject2D for Projection {}
 
 #[cfg(test)]
 mod tests {
