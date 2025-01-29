@@ -1,6 +1,9 @@
 use derive_builder::Builder;
 
-use crate::{__impl_scad2d, scad::{Point2D, ScadObject, ScadObject2D, Unit}};
+use crate::{
+    __impl_scad2d,
+    scad::{Point2D, ScadObject, ScadObject2D, Unit},
+};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SquareSize {
@@ -116,12 +119,12 @@ impl PolygonBuilder {
             let pts: Vec<Point2D> = self.points.clone()?;
             let pas: Vec<Vec<usize>> = self.paths.clone()??;
 
-            for i in 0..pas.len() {
-                for j in 0..pas[i].len() {
-                    if pas[i][j] >= pts.len() {
+            for (i, pa) in pas.into_iter().enumerate() {
+                for (j, vtx) in pa.into_iter().enumerate() {
+                    if vtx >= pts.len() {
                         return Some(Err(format!(
                             "path index out of bounds: [{}][{}]:{}",
-                            i, j, pas[i][j]
+                            i, j, vtx
                         )));
                     }
                 }

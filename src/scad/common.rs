@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use dyn_clone::{clone_box, DynClone};
+use dyn_clone::DynClone;
 use nalgebra as na;
 
 pub type Unit = f64;
@@ -42,7 +42,7 @@ macro_rules! __impl_scad_box {
                 vec![Box::new(value) as Box<dyn ScadObject>]
             }
         }
-    }
+    };
 }
 
 pub trait ScadObject2D: ScadObject {}
@@ -54,19 +54,19 @@ dyn_clone::clone_trait_object!(ScadObject3D);
 macro_rules! any_scads {
     [ $($scad:expr),* $(,)? ] => {
         vec![$(Box::new($scad) as Box<dyn ScadObject>),*]
-    }
+    };
 }
 #[macro_export]
 macro_rules! any_scads2d {
     [ $($scad:expr),* $(,)? ] => {
         vec![$(Box::new($scad) as Box<dyn ScadObject2D>),*]
-    }
+    };
 }
 #[macro_export]
 macro_rules! any_scads3d {
     [ $($scad:expr),* $(,)? ] => {
         vec![$(Box::new($scad) as Box<dyn ScadObject3D>),*]
-    }
+    };
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -83,5 +83,3 @@ impl Angle {
         }
     }
 }
-
-

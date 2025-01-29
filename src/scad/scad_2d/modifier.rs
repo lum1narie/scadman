@@ -55,7 +55,6 @@ impl ScadObject for Rotate2D {
     }
 }
 
-
 #[derive(Builder, Debug, Clone)]
 pub struct Scale2D {
     pub v: Point2D,
@@ -73,7 +72,6 @@ impl ScadObject for Scale2D {
         Some(self.children.iter().map(|c| c.to_code()).collect())
     }
 }
-
 
 #[derive(Builder, Debug, Clone)]
 pub struct Projection {

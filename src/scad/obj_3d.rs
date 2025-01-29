@@ -10,7 +10,7 @@
 
 use derive_builder::Builder;
 
-use crate::scad::{ScadObject3D, ScadObject, Unit};
+use crate::scad::{ScadObject, ScadObject3D, Unit};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SphereSize {
