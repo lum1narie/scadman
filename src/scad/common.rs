@@ -8,6 +8,10 @@ pub type Container2D<T> = na::Vector2<T>;
 pub type Container3D<T> = na::Vector3<T>;
 pub type Point2D = Container2D<Unit>;
 pub type Point3D = Container3D<Unit>;
+pub type AffineMatrix2D = na::Matrix2x3<Unit>;
+pub type AffineMatrix3D = na::Matrix3x4<Unit>;
+pub type RGB = na::Vector3<Unit>;
+pub type RGBA = na::Vector4<Unit>;
 
 const INDENT: usize = 2;
 
@@ -137,6 +141,34 @@ impl<T: ScadDisplay> ScadDisplay for Vec<T> {
         )
     }
 }
+impl ScadDisplay for AffineMatrix3D {
+    fn repr_scad(&self) -> String {
+        format!(
+            "[{}]",
+            self.row_iter()
+                .map(|row| format!(
+                    "[{}]",
+                    row.iter()
+                        .map(|x| x.repr_scad())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+impl ScadDisplay for AffineMatrix2D {
+    fn repr_scad(&self) -> String {
+        #[rustfmt::skip]
+        let a3d = AffineMatrix3D::new(
+            self[(0, 0)], self[(0, 1)], 0.0, self[(0, 2)],
+            self[(1, 0)], self[(1, 1)], 0.0, self[(1, 2)],
+            0.0,          0.0,          1.0, 0.0,
+        );
+        a3d.repr_scad()
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Angle {
@@ -156,6 +188,60 @@ impl Angle {
 impl ScadDisplay for Angle {
     fn repr_scad(&self) -> String {
         self.deg().repr_scad()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Color {
+    RGB(RGB),
+    RGBA(RGBA),
+    Name(String),
+}
+
+impl From<RGB> for Color {
+    fn from(rgb: RGB) -> Self {
+        Color::RGB(rgb)
+    }
+}
+impl From<RGBA> for Color {
+    fn from(rgba: RGBA) -> Self {
+        Color::RGBA(rgba)
+    }
+}
+impl From<String> for Color {
+    fn from(name: String) -> Self {
+        Color::Name(name)
+    }
+}
+
+impl ScadDisplay for RGBA {
+    fn repr_scad(&self) -> String {
+        format!(
+            "[{}, {}, {}, {}]",
+            self[0].repr_scad(),
+            self[1].repr_scad(),
+            self[2].repr_scad(),
+            self[3].repr_scad()
+        )
+    }
+}
+
+impl Color {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Color::Name(_) => "",
+            _ => "c",
+        }
+    }
+}
+
+impl ScadDisplay for Color {
+    fn repr_scad(&self) -> String {
+        match self {
+            Color::RGB(rgb) => rgb.repr_scad(),
+            Color::RGBA(rgba) => rgba.repr_scad(),
+            Color::Name(name) => name.repr_scad(),
+        }
     }
 }
 
