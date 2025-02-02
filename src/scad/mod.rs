@@ -6,3 +6,5 @@ pub use scad_2d::*;
 
 mod scad_3d;
 pub use scad_3d::*;
+
+mod macros;
