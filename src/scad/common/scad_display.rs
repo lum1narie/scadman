@@ -1,4 +1,5 @@
 use ambassador::delegatable_trait;
+use derive_more::derive::From;
 
 use super::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
 
@@ -44,6 +45,27 @@ __scad_display_as_string_impl!(bool);
 impl ScadDisplay for String {
     fn repr_scad(&self) -> String {
         format!("\"{}\"", self.replace('"', "\\\""))
+    }
+}
+
+#[derive(Clone, Debug, From)]
+pub struct Identifier(pub String);
+
+impl ScadDisplay for Identifier {
+    fn repr_scad(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl<T: ScadDisplay, const N: usize> ScadDisplay for [T; N] {
+    fn repr_scad(&self) -> String {
+        format!(
+            "[{}]",
+            self.iter()
+                .map(|x| x.repr_scad())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 

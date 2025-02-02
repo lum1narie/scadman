@@ -56,3 +56,19 @@ impl Color {
         }
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
+#[delegate(ScadDisplay)]
+pub enum RoundSize {
+    Radius(Unit),
+    Diameter(Unit),
+}
+
+impl RoundSize {
+    pub fn name(&self) -> &'static str {
+        match self {
+            RoundSize::Radius(_) => "r",
+            RoundSize::Diameter(_) => "d",
+        }
+    }
+}

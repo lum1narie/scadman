@@ -116,7 +116,7 @@ impl ScadObject for Scale2D {
 #[delegate(ScadDisplay)]
 pub enum ResizeAuto {
     B(bool),
-    V(na::Vector2<bool>),
+    V([bool; 2]),
 }
 
 #[derive(Builder, Debug, Clone)]
@@ -411,7 +411,7 @@ mod tests {
         );
         assert_eq!(
             r1.clone()
-                .auto(na::Vector2::new(true, false))
+                .auto([true, false])
                 .build()
                 .unwrap()
                 .to_code(),

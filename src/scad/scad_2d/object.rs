@@ -5,8 +5,7 @@ use derive_more::derive::From;
 use crate::{
     __generate_scad_options, __impl_scad2d,
     scad::{
-        ambassador_impl_ScadDisplay, generate_body, Point2D, ScadDisplay, ScadObject, ScadObject2D,
-        Unit,
+        ambassador_impl_ScadDisplay, generate_body, RoundSize, Point2D, ScadDisplay, ScadObject, ScadObject2D, Unit
     },
 };
 
@@ -39,26 +38,10 @@ impl ScadObject for Square {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
-#[delegate(ScadDisplay)]
-pub enum CircleSize {
-    Radius(Unit),
-    Diameter(Unit),
-}
-
-impl CircleSize {
-    fn name(&self) -> &'static str {
-        match self {
-            CircleSize::Radius(_) => "r",
-            CircleSize::Diameter(_) => "d",
-        }
-    }
-}
-
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Circle {
     #[builder(setter(custom))]
-    pub size: CircleSize,
+    pub size: RoundSize,
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
     #[builder(setter(into, strip_option), default)]
@@ -72,12 +55,12 @@ __impl_scad2d!(Circle);
 impl CircleBuilder {
     pub fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
-        new.size = Some(CircleSize::Radius(value));
+        new.size = Some(RoundSize::Radius(value));
         new
     }
     pub fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
-        new.size = Some(CircleSize::Diameter(value));
+        new.size = Some(RoundSize::Diameter(value));
         new
     }
 }
