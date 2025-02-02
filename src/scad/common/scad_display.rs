@@ -1,5 +1,8 @@
+use ambassador::delegatable_trait;
+
 use super::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
 
+#[delegatable_trait]
 pub trait ScadDisplay {
     fn repr_scad(&self) -> String;
 }

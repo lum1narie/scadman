@@ -1,11 +1,13 @@
+use ambassador::Delegate;
 use derive_builder::Builder;
+use derive_more::derive::From;
 use nalgebra as na;
 
 use crate::{
     __generate_scad_options, __get_children_impl, __impl_scad2d,
     scad::{
-        generate_body, AffineMatrix2D, Angle, Color, Point2D, ScadDisplay, ScadObject,
-        ScadObject2D, ScadObject3D, Unit,
+        ambassador_impl_ScadDisplay, generate_body, AffineMatrix2D, Angle, Color, Point2D,
+        ScadDisplay, ScadObject, ScadObject2D, ScadObject3D, Unit,
     },
 };
 
@@ -110,30 +112,11 @@ impl ScadObject for Scale2D {
     __get_children_impl!();
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum ResizeAuto {
     B(bool),
     V(na::Vector2<bool>),
-}
-
-impl From<na::Vector2<bool>> for ResizeAuto {
-    fn from(value: na::Vector2<bool>) -> Self {
-        Self::V(value)
-    }
-}
-impl From<bool> for ResizeAuto {
-    fn from(value: bool) -> Self {
-        Self::B(value)
-    }
-}
-
-impl ScadDisplay for ResizeAuto {
-    fn repr_scad(&self) -> String {
-        match self {
-            ResizeAuto::B(b) => b.repr_scad(),
-            ResizeAuto::V(v) => v.repr_scad(),
-        }
-    }
 }
 
 #[derive(Builder, Debug, Clone)]
@@ -227,19 +210,11 @@ impl ScadObject for Color2D {
     __get_children_impl!();
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum OffsetSize {
     R(Unit),
     Delta(Unit),
-}
-
-impl ScadDisplay for OffsetSize {
-    fn repr_scad(&self) -> String {
-        match self {
-            OffsetSize::R(r) => r.repr_scad(),
-            OffsetSize::Delta(delta) => delta.repr_scad(),
-        }
-    }
 }
 
 impl OffsetSize {

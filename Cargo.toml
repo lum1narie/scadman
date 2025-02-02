@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ambassador = "0.4.1"
 derive_builder = "0.20.2"
+derive_more = { version = "1.0.0", features = ["from"] }
 dyn-clone = "1.0.17"
 nalgebra = "0.33.2"

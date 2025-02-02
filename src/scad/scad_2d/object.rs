@@ -1,34 +1,20 @@
+use ambassador::Delegate;
 use derive_builder::Builder;
+use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad2d,
-    scad::{generate_body, Point2D, ScadDisplay, ScadObject, ScadObject2D, Unit},
+    scad::{
+        ambassador_impl_ScadDisplay, generate_body, Point2D, ScadDisplay, ScadObject, ScadObject2D,
+        Unit,
+    },
 };
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum SquareSize {
     N(Unit),
     V(Point2D),
-}
-
-impl From<Point2D> for SquareSize {
-    fn from(value: Point2D) -> Self {
-        Self::V(value)
-    }
-}
-impl From<Unit> for SquareSize {
-    fn from(value: Unit) -> Self {
-        Self::N(value)
-    }
-}
-
-impl ScadDisplay for SquareSize {
-    fn repr_scad(&self) -> String {
-        match self {
-            SquareSize::N(n) => n.repr_scad(),
-            SquareSize::V(v) => v.repr_scad(),
-        }
-    }
 }
 
 #[derive(Builder, Clone, Debug, PartialEq)]
@@ -53,19 +39,11 @@ impl ScadObject for Square {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum CircleSize {
     Radius(Unit),
     Diameter(Unit),
-}
-
-impl ScadDisplay for CircleSize {
-    fn repr_scad(&self) -> String {
-        match self {
-            CircleSize::Radius(r) => r.repr_scad(),
-            CircleSize::Diameter(d) => d.repr_scad(),
-        }
-    }
 }
 
 impl CircleSize {

@@ -8,26 +8,21 @@
 // rotate_extrude(angle,convexity)
 // surface(file = "….ext",center,convexity)
 
+use ambassador::Delegate;
 use derive_builder::Builder;
 
 use crate::{
     __generate_scad_options, __impl_scad3d,
-    scad::{generate_body, ScadDisplay, ScadObject, ScadObject3D, Unit},
+    scad::{
+        ambassador_impl_ScadDisplay, generate_body, ScadDisplay, ScadObject, ScadObject3D, Unit,
+    },
 };
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum SphereSize {
     Radius(Unit),
     Diameter(Unit),
-}
-
-impl ScadDisplay for SphereSize {
-    fn repr_scad(&self) -> String {
-        match self {
-            SphereSize::Radius(r) => r.repr_scad(),
-            SphereSize::Diameter(d) => d.repr_scad(),
-        }
-    }
 }
 
 impl SphereSize {

@@ -1,6 +1,8 @@
-use super::{ScadDisplay, Unit};
-
+use ambassador::Delegate;
+use derive_more::derive::From;
 use nalgebra as na;
+
+use super::{ambassador_impl_ScadDisplay, ScadDisplay, Unit};
 
 pub type RGB = na::Vector3<Unit>;
 pub type RGBA = na::Vector4<Unit>;
@@ -26,27 +28,12 @@ impl ScadDisplay for Angle {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, From, Delegate)]
+#[delegate(ScadDisplay)]
 pub enum Color {
     RGB(RGB),
     RGBA(RGBA),
     Name(String),
-}
-
-impl From<RGB> for Color {
-    fn from(rgb: RGB) -> Self {
-        Color::RGB(rgb)
-    }
-}
-impl From<RGBA> for Color {
-    fn from(rgba: RGBA) -> Self {
-        Color::RGBA(rgba)
-    }
-}
-impl From<String> for Color {
-    fn from(name: String) -> Self {
-        Color::Name(name)
-    }
 }
 
 impl ScadDisplay for RGBA {
@@ -66,16 +53,6 @@ impl Color {
         match self {
             Color::Name(_) => "",
             _ => "c",
-        }
-    }
-}
-
-impl ScadDisplay for Color {
-    fn repr_scad(&self) -> String {
-        match self {
-            Color::RGB(rgb) => rgb.repr_scad(),
-            Color::RGBA(rgba) => rgba.repr_scad(),
-            Color::Name(name) => name.repr_scad(),
         }
     }
 }
