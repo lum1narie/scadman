@@ -1,7 +1,6 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
-use nalgebra as na;
 
 use crate::{
     __generate_scad_options, __get_children_impl, __impl_scad2d,
@@ -12,7 +11,8 @@ use crate::{
 };
 
 macro_rules! __impl_operator_2d {
-    ( $type:ident, $name:expr ) => {
+    ( $type:ident, $name:expr_2021 ) => {
+        #[allow(missing_debug_implementations)]
         #[derive(Builder, Debug, Clone)]
         pub struct $type {
             #[builder(setter(name = "apply_to"))]
@@ -112,7 +112,7 @@ impl ScadObject for Scale2D {
     __get_children_impl!();
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, From, Delegate)]
 #[delegate(ScadDisplay)]
 pub enum ResizeAuto {
     B(bool),
@@ -218,10 +218,10 @@ pub enum OffsetSize {
 }
 
 impl OffsetSize {
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
-            OffsetSize::R(_) => "r",
-            OffsetSize::Delta(_) => "delta",
+            Self::R(_) => "r",
+            Self::Delta(_) => "delta",
         }
     }
 }
@@ -387,7 +387,7 @@ mod tests {
                 .unwrap()
                 .to_code(),
             "scale([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
-        )
+        );
     }
 
     #[test]
@@ -396,11 +396,8 @@ mod tests {
             SquareBuilder::default().size(10.).build().unwrap(),
             CircleBuilder::default().r(5.).build().unwrap(),
         ];
-        let r1 = {
-            let mut r = Resize2DBuilder::default();
-            r.size(Point2D::new(3., 2.)).apply_to(children);
-            r
-        };
+        let mut r1 = Resize2DBuilder::default();
+        _ = r1.size(Point2D::new(3., 2.)).apply_to(children);
         assert_eq!(
             r1.clone().build().unwrap().to_code(),
             "resize([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
@@ -410,11 +407,7 @@ mod tests {
             "resize([3, 2], auto = true) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            r1.clone()
-                .auto([true, false])
-                .build()
-                .unwrap()
-                .to_code(),
+            r1.auto([true, false]).build().unwrap().to_code(),
             "resize([3, 2], auto = [true, false]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }

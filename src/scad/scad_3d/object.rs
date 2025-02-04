@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Sphere {
     #[builder(setter(custom))]
     pub size: RoundSize,
@@ -56,7 +56,7 @@ pub enum CubeSize {
     V(Point3D),
 }
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Cube {
     #[builder(setter(into))]
     pub size: CubeSize,
@@ -90,7 +90,7 @@ pub enum CylinderSizeEntry {
     Double([Unit; 2]),
 }
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Cylinder {
     #[builder(setter(into))]
     pub h: Unit,
@@ -154,7 +154,7 @@ impl ScadObject for Cylinder {
         format!(
             "cylinder({})",
             opts.iter()
-                .map(|opt| opt.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -183,10 +183,7 @@ impl PolyhedronBuilder {
             for (i, pa) in pas.into_iter().enumerate() {
                 for (j, vtx) in pa.into_iter().enumerate() {
                     if vtx >= pts.len() {
-                        return Some(Err(format!(
-                            "path index out of bounds: [{}][{}]:{}",
-                            i, j, vtx
-                        )));
+                        return Some(Err(format!("path index out of bounds: [{i}][{j}]:{vtx}")));
                     }
                 }
             }
@@ -238,7 +235,7 @@ impl ScadObject for Import3D {
     }
 }
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Clone, Debug, PartialEq, Eq)]
 pub struct Surface {
     #[builder(setter(into))]
     pub file: String,
@@ -284,7 +281,7 @@ mod tests {
             SphereBuilder::default()
                 .r(3.0)
                 .fa(0.5)
-                .r#fn(20 as u64)
+                .r#fn(20_u64)
                 .build()
                 .unwrap()
                 .to_code(),
@@ -300,12 +297,12 @@ mod tests {
                 .to_code(),
             "sphere(r = 3, $fa = 0.5, $fs = 40);"
         );
-        assert!(SphereBuilder::default()
+        let _x = SphereBuilder::default()
             .fa(0.5)
-            .r#fn(20 as u64)
+            .r#fn(20_u64)
             .fs(40.)
             .build()
-            .is_err());
+            .unwrap_err();
     }
 
     #[test]
@@ -336,40 +333,63 @@ mod tests {
     #[test]
     fn test_cylinder() {
         assert_eq!(
-            CylinderBuilder::default().h(5.0).r(3.0).build().unwrap().to_code(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r(3.0)
+                .build()
+                .unwrap()
+                .to_code(),
             "cylinder(h = 5, r = 3);"
         );
         assert_eq!(
-            CylinderBuilder::default().h(5.0).d(3.0).build().unwrap().to_code(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .d(3.0)
+                .build()
+                .unwrap()
+                .to_code(),
             "cylinder(h = 5, d = 3);"
         );
         assert_eq!(
-            CylinderBuilder::default().h(5.0).r([1.0, 2.0]).build().unwrap().to_code(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r([1.0, 2.0])
+                .build()
+                .unwrap()
+                .to_code(),
             "cylinder(h = 5, r1 = 1, r2 = 2);"
         );
         assert_eq!(
-            CylinderBuilder::default().h(5.0).d([1.0, 2.0]).build().unwrap().to_code(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .d([1.0, 2.0])
+                .build()
+                .unwrap()
+                .to_code(),
             "cylinder(h = 5, d1 = 1, d2 = 2);"
         );
         assert_eq!(
-            CylinderBuilder::default().h(5.0).r(3.0).fa(2.0).build().unwrap().to_code(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r(3.0)
+                .fa(2.0)
+                .build()
+                .unwrap()
+                .to_code(),
             "cylinder(h = 5, r = 3, $fa = 2);"
         );
     }
 
     #[test]
     fn test_polyhedron() {
-        let p0 = {
-            let mut p = PolyhedronBuilder::default();
-            p.points(vec![
-                Point3D::new(1., 1., 1.),
-                Point3D::new(-1., 2., -1.),
-                Point3D::new(0., 0., 0.),
-            ]);
-            p
-        };
+        let mut p0 = PolyhedronBuilder::default();
+        _ = p0.points(vec![
+            Point3D::new(1., 1., 1.),
+            Point3D::new(-1., 2., -1.),
+            Point3D::new(0., 0., 0.),
+        ]);
         assert_eq!(
-            p0.clone().build().unwrap().to_code(),
+            p0.build().unwrap().to_code(),
             "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]]);"
         );
         assert_eq!(
@@ -381,24 +401,21 @@ mod tests {
             "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], paths = [[0, 2, 1]]);"
         );
         assert_eq!(
-            p0.clone().convexity(2 as u64).build().unwrap().to_code(),
+            p0.convexity(2_u64).build().unwrap().to_code(),
             "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], convexity = 2);"
         );
 
-        let p1 = {
-            let mut p = PolyhedronBuilder::default();
-            p.points(vec![
-                Point3D::new(2., 0., 2.),
-                Point3D::new(1., 1., 1.),
-                Point3D::new(-1., 1., 0.),
-                Point3D::new(1., 0., -1.),
-                Point3D::new(0.5, 0.5, 0.7),
-                Point3D::new(-0.5, 0.5, -0.3),
-            ]);
-            p
-        };
+        let mut p1 = PolyhedronBuilder::default();
+        _ = p1.points(vec![
+            Point3D::new(2., 0., 2.),
+            Point3D::new(1., 1., 1.),
+            Point3D::new(-1., 1., 0.),
+            Point3D::new(1., 0., -1.),
+            Point3D::new(0.5, 0.5, 0.7),
+            Point3D::new(-0.5, 0.5, -0.3),
+        ]);
         assert_eq!(
-            p1.clone().paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
+            p1.paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
             "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], paths = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
@@ -426,7 +443,7 @@ mod tests {
         assert_eq!(
             Import3DBuilder::default()
                 .file("shape.stl")
-                .convexity(10 as u64)
+                .convexity(10_u64)
                 .build()
                 .unwrap()
                 .to_code(),
@@ -448,7 +465,7 @@ mod tests {
         assert_eq!(
             SurfaceBuilder::default()
                 .file("shape.dat")
-                .convexity(10 as u64)
+                .convexity(10_u64)
                 .center(true)
                 .invert(true)
                 .build()

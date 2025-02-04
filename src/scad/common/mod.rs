@@ -5,7 +5,7 @@ mod value_type;
 pub use value_type::*;
 
 mod internal;
-pub(crate) use internal::*;
+pub use internal::*;
 
 use std::fmt::Debug;
 
@@ -33,11 +33,11 @@ pub trait ScadObject: Debug + DynClone {
             Some(c) => {
                 let unindented_str = c.join("\n");
                 let children = unindented_str
-                    .split("\n")
+                    .split('\n')
                     .map(|s| format!("{}{}", " ".repeat(INDENT), s))
                     .collect::<Vec<_>>()
                     .join("\n");
-                format!("{} {{\n{}\n}}", body, children)
+                format!("{body} {{\n{children}\n}}")
             }
             None => body + ";",
         };

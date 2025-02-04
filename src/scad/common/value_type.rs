@@ -15,9 +15,9 @@ pub enum Angle {
 
 impl Angle {
     pub fn deg(&self) -> Unit {
-        match self {
-            Angle::Deg(d) => *d,
-            Angle::Rad(r) => r.to_degrees(),
+        match *self {
+            Self::Deg(d) => d,
+            Self::Rad(r) => r.to_degrees(),
         }
     }
 }
@@ -49,9 +49,9 @@ impl ScadDisplay for RGBA {
 }
 
 impl Color {
-    pub fn name(&self) -> &'static str {
-        match self {
-            Color::Name(_) => "",
+    pub const fn name(&self) -> &'static str {
+        match *self {
+            Self::Name(_) => "",
             _ => "c",
         }
     }
@@ -65,10 +65,10 @@ pub enum RoundSize {
 }
 
 impl RoundSize {
-    pub fn name(&self) -> &'static str {
-        match self {
-            RoundSize::Radius(_) => "r",
-            RoundSize::Diameter(_) => "d",
+    pub const fn name(&self) -> &'static str {
+        match *self {
+            Self::Radius(_) => "r",
+            Self::Diameter(_) => "d",
         }
     }
 }

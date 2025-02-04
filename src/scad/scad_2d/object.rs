@@ -5,7 +5,8 @@ use derive_more::derive::From;
 use crate::{
     __generate_scad_options, __impl_scad2d,
     scad::{
-        ambassador_impl_ScadDisplay, generate_body, RoundSize, Point2D, ScadDisplay, ScadObject, ScadObject2D, Unit
+        ambassador_impl_ScadDisplay, generate_body, Point2D, RoundSize, ScadDisplay, ScadObject,
+        ScadObject2D, Unit,
     },
 };
 
@@ -16,7 +17,7 @@ pub enum SquareSize {
     V(Point2D),
 }
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Square {
     #[builder(setter(into))]
     pub size: SquareSize,
@@ -38,7 +39,7 @@ impl ScadObject for Square {
     }
 }
 
-#[derive(Builder, Clone, Debug, PartialEq)]
+#[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Circle {
     #[builder(setter(custom))]
     pub size: RoundSize,
@@ -98,10 +99,7 @@ impl PolygonBuilder {
             for (i, pa) in pas.into_iter().enumerate() {
                 for (j, vtx) in pa.into_iter().enumerate() {
                     if vtx >= pts.len() {
-                        return Some(Err(format!(
-                            "path index out of bounds: [{}][{}]:{}",
-                            i, j, vtx
-                        )));
+                        return Some(Err(format!("path index out of bounds: [{i}][{j}]:{vtx}")));
                     }
                 }
             }
@@ -244,7 +242,7 @@ mod tests {
                 .to_code(),
             "square(size = [3, 2], center = true);"
         );
-        assert!(SquareBuilder::default().center(true).build().is_err())
+        let _x = SquareBuilder::default().center(true).build().unwrap_err();
     }
 
     #[test]
@@ -261,7 +259,7 @@ mod tests {
             CircleBuilder::default()
                 .r(3.0)
                 .fa(0.5)
-                .r#fn(20 as u64)
+                .r#fn(20_u64)
                 .build()
                 .unwrap()
                 .to_code(),
@@ -277,27 +275,24 @@ mod tests {
                 .to_code(),
             "circle(r = 3, $fa = 0.5, $fs = 40);"
         );
-        assert!(CircleBuilder::default()
+        let _x = CircleBuilder::default()
             .fa(0.5)
-            .r#fn(20 as u64)
+            .r#fn(20_u64)
             .fs(40.)
             .build()
-            .is_err());
+            .unwrap_err();
     }
 
     #[test]
     fn test_polygon() {
-        let p0 = {
-            let mut p = PolygonBuilder::default();
-            p.points(vec![
-                Point2D::new(1., 1.),
-                Point2D::new(-1., 2.),
-                Point2D::new(0., 0.),
-            ]);
-            p
-        };
+        let mut p0 = PolygonBuilder::default();
+        _ = p0.points(vec![
+            Point2D::new(1., 1.),
+            Point2D::new(-1., 2.),
+            Point2D::new(0., 0.),
+        ]);
         assert_eq!(
-            p0.clone().build().unwrap().to_code(),
+            p0.build().unwrap().to_code(),
             "polygon(points = [[1, 1], [-1, 2], [0, 0]]);"
         );
         assert_eq!(
@@ -309,29 +304,25 @@ mod tests {
             "polygon(points = [[1, 1], [-1, 2], [0, 0]], paths = [[0, 2, 1]]);"
         );
         assert_eq!(
-            p0.clone().convexity(2 as u64).build().unwrap().to_code(),
+            p0.convexity(2_u64).build().unwrap().to_code(),
             "polygon(points = [[1, 1], [-1, 2], [0, 0]], convexity = 2);"
         );
 
-        let p1 = {
-            let mut p = PolygonBuilder::default();
-            p.points(vec![
-                Point2D::new(2., 0.),
-                Point2D::new(1., 1.),
-                Point2D::new(-1., 1.),
-                Point2D::new(1., 0.),
-                Point2D::new(0.5, 0.5),
-                Point2D::new(-0.5, 0.5),
-            ]);
-            p
-        };
+        let mut p1 = PolygonBuilder::default();
+        _ = p1.points(vec![
+            Point2D::new(2., 0.),
+            Point2D::new(1., 1.),
+            Point2D::new(-1., 1.),
+            Point2D::new(1., 0.),
+            Point2D::new(0.5, 0.5),
+            Point2D::new(-0.5, 0.5),
+        ]);
         assert_eq!(
             p1.clone().paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
             "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
-            p1.clone()
-                .paths(vec![vec![0, 1, 2], vec![6, 4, 5]])
+            p1.paths(vec![vec![0, 1, 2], vec![6, 4, 5]])
                 .build()
                 .err()
                 .map(|e| e.to_string())
@@ -384,7 +375,7 @@ mod tests {
         assert_eq!(
             Import2DBuilder::default()
                 .file("shape.svg")
-                .convexity(10 as u64)
+                .convexity(10_u64)
                 .build()
                 .unwrap()
                 .to_code(),

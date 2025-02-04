@@ -20,13 +20,15 @@ macro_rules! __scad_display_as_string_impl {
 
 const UNIT_PRECISION: usize = 8;
 fn format_float(x: f64, n: usize) -> String {
-    let mut s = format!("{0:.1$}", x, n);
+    let mut s = format!("{x:.n$}");
     if s.contains('.') {
         while s.ends_with('0') {
-            s.pop();
+            if s.pop().is_none() {
+                break;
+            }
         }
         if s.ends_with('.') {
-            s.pop();
+            _ = s.pop();
         }
     }
     s
@@ -62,7 +64,7 @@ impl<T: ScadDisplay, const N: usize> ScadDisplay for [T; N] {
         format!(
             "[{}]",
             self.iter()
-                .map(|x| x.repr_scad())
+                .map(ScadDisplay::repr_scad)
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -91,7 +93,7 @@ impl<T: ScadDisplay> ScadDisplay for Vec<T> {
         format!(
             "[{}]",
             self.iter()
-                .map(|x| x.repr_scad())
+                .map(ScadDisplay::repr_scad)
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -106,7 +108,7 @@ impl ScadDisplay for AffineMatrix3D {
                 .map(|row| format!(
                     "[{}]",
                     row.iter()
-                        .map(|x| x.repr_scad())
+                        .map(ScadDisplay::repr_scad)
                         .collect::<Vec<_>>()
                         .join(", ")
                 ))

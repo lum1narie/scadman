@@ -12,7 +12,7 @@ macro_rules! __impl_scad3d {
         impl ScadObject3D for $type {}
         impl From<$type> for Vec<Box<dyn ScadObject3D>> {
             fn from(value: $type) -> Self {
-                vec![Box::new(value) as Box<dyn ScadObject3D>]
+                vec![Box::new(value)]
             }
         }
     };

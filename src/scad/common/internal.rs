@@ -8,13 +8,14 @@ macro_rules! __impl_scad_box {
     ( $type:ty ) => {
         impl From<$type> for Vec<Box<dyn ScadObject>> {
             fn from(value: $type) -> Self {
-                vec![Box::new(value) as Box<dyn ScadObject>]
+                vec![Box::new(value)]
             }
         }
     };
 }
 
-pub(crate) enum ScadOption {
+#[derive(Debug, Clone)]
+pub enum ScadOption {
     Value(String),
     KeyValue((String, String)),
 }
@@ -22,11 +23,11 @@ pub(crate) enum ScadOption {
 impl Display for ScadOption {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScadOption::Value(v) => std::fmt::Display::fmt(&v, f),
-            ScadOption::KeyValue((k, v)) => {
-                std::fmt::Display::fmt(&k, f)?;
+            Self::Value(ref v) => Display::fmt(&v, f),
+            Self::KeyValue((k, v)) => {
+                Display::fmt(&k, f)?;
                 write!(f, " = ")?;
-                std::fmt::Display::fmt(&v, f)
+                Display::fmt(&v, f)
             }
         }
     }
@@ -49,14 +50,14 @@ impl ScadOption {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __generate_scad_options {
-    ( $(($name_req:expr, $value_req:expr)),*; $(;)? ) => {
+    ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(;)? ) => {
         {
             vec![
                 $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
             ]
         }
     };
-    ( $(($name_req:expr, $value_req:expr)),*; $(($name_opt:expr, $value_opt:expr)),+; ) => {
+    ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(($name_opt:expr_2021, $value_opt:expr_2021)),+; ) => {
         {
             let mut opts: Vec<$crate::scad::ScadOption> = vec![
                 $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
@@ -66,14 +67,14 @@ macro_rules! __generate_scad_options {
                 if let Some(opt) = maybe_opt {
                     opts.push(opt);
                 }
-            )*
+            )+
                 opts
         }
     };
 }
 
-pub(crate) fn generate_body(name: &str, opts: Vec<ScadOption>) -> String {
-    let reprs = opts.iter().map(|o| o.to_string()).collect::<Vec<_>>();
+pub fn generate_body(name: &str, opts: Vec<ScadOption>) -> String {
+    let reprs = opts.iter().map(ToString::to_string).collect::<Vec<_>>();
     format!("{}({})", name, reprs.join(", "))
 }
 
