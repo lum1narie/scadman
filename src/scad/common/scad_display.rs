@@ -4,10 +4,18 @@ use derive_more::derive::From;
 use super::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
 
 #[delegatable_trait]
+/// Trait for types that can be represented as a string in SCAD.
 pub trait ScadDisplay {
+    /// Returns a string representation of the type in SCAD.
+    ///
+    /// # Returns
+    ///
+    /// A [`String`] representation of the type in SCAD.
     fn repr_scad(&self) -> String;
 }
 
+/// A macro for implementing [`ScadDisplay`] for a types.
+/// This macro gives [`repr_scad`] just as a [`to_string`] implementation.
 macro_rules! __scad_display_as_string_impl {
     ( $type:ty ) => {
         impl ScadDisplay for $type {
@@ -18,7 +26,12 @@ macro_rules! __scad_display_as_string_impl {
     };
 }
 
+/// Precision of [`Unit`].
+/// This represents the number of decimal places in a decimal number.
 const UNIT_PRECISION: usize = 8;
+
+/// Formats a floating point number as a [`String`].
+/// This function rounds a float in [`UNIT_PRECISION`] decimal places.
 fn format_float(x: f64, n: usize) -> String {
     let mut s = format!("{x:.n$}");
     if s.contains('.') {
@@ -51,6 +64,7 @@ impl ScadDisplay for String {
 }
 
 #[derive(Clone, Debug, From)]
+/// A type for representing an identifier in SCAD.
 pub struct Identifier(pub String);
 
 impl ScadDisplay for Identifier {
