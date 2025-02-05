@@ -10,14 +10,22 @@ use crate::{
     },
 };
 
+/// Sphere object `sphere()` in SCAD.
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Sphere {
+    /// Size of sphere.
+    /// `r` or `d` option in SCAD.
+    ///
+    /// See also [`RoundSize`].
     #[builder(setter(custom))]
     pub size: RoundSize,
+    /// `$fa` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
@@ -25,11 +33,21 @@ pub struct Sphere {
 __impl_scad3d!(Sphere);
 
 impl SphereBuilder {
+    /// Set `r` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `r` option in SCAD. This is the radius of circle.
     pub fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Radius(value));
         new
     }
+    /// Set `d` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `d` option in SCAD. This is the diameter of circle.
     pub fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Diameter(value));
@@ -49,17 +67,32 @@ impl ScadObject for Sphere {
     }
 }
 
+/// Size of cube in SCAD.
 #[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
 pub enum CubeSize {
+    /// Edges' length of square.
+    /// `n` option in SCAD.
     N(Unit),
+    /// `[x, y, z]` length of rectangle.
+    /// `v` option in SCAD.
     V(Point3D),
 }
 
+/// Cube object `cube()` in SCAD.
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Cube {
+    /// Size of cube
+    /// `n` or `v` option in SCAD.
+    ///
+    /// See also [`CubeSize`].
     #[builder(setter(into))]
     pub size: CubeSize,
+    /// `center` option in SCAD.
+    ///
+    /// + `true` - square's origin is at center of square.
+    /// + `false` - square's origin is at the point where
+    ///     x, y, and z coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
 }
@@ -78,35 +111,68 @@ impl ScadObject for Cube {
     }
 }
 
+/// Size of cylinder in SCAD.
+///
+/// See also [`RoundSize`].
 #[derive(Copy, Clone, Debug, PartialEq, From)]
 pub enum CylinderSize {
+    /// Single size of cylinder.
+    /// `r` or `d` option in SCAD.
     Single(RoundSize),
+    /// Pair of size of cylinder.
+    /// `r1|d1, r2|d2` option in SCAD.
     Double((RoundSize, RoundSize)),
 }
 
+/// Numbers to generate [`CylinderSize`].
+///
+/// The numbers are the length.
+/// This type have no information about the size is radius or diameter.
 #[derive(Copy, Clone, Debug, PartialEq, From)]
 pub enum CylinderSizeEntry {
+    /// Number to generate [`CylinderSize::Single`].
     Single(Unit),
+    /// Pair of numbers to generate [`CylinderSize::Double`].
     Double([Unit; 2]),
 }
 
+/// Cylinder object `cylinder()` in SCAD.
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Cylinder {
+    /// Height of cylinder.
+    /// `h` option in SCAD.
     #[builder(setter(into))]
     pub h: Unit,
+    /// Size of cylinder.
+    /// `r` or `d` or `r1|d1, r2|d2` option in SCAD.
+    ///
+    /// See also [`CylinderSize`].
     #[builder(setter(custom))]
     pub size: CylinderSize,
+    /// `center` option in SCAD.
+    ///
+    /// + `true` - sphere's z origin is at center of cylinder.
+    /// + `false` - square's z origin is at the point where
+    ///     z coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
+    /// `$fa` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.$
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
 
 impl CylinderBuilder {
+    /// Set `r` or `r1, r2` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `r` or `r1, r2` option in SCAD. This is the radius of cylinder.
     pub fn r<T: Into<CylinderSizeEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
         new.size = match value.into() {
@@ -118,6 +184,11 @@ impl CylinderBuilder {
         };
         new
     }
+    /// Set `d` or `d1, d2` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `d` or `d1, d2` option in SCAD. This is the diameter of cylinder.
     pub fn d<T: Into<CylinderSizeEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
         new.size = match value.into() {
@@ -161,13 +232,23 @@ impl ScadObject for Cylinder {
     }
 }
 
+/// Polyhedron object `polyhedron()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
 pub struct Polyhedron {
+    /// Verticies of polyhedron.
+    /// `points` option in SCAD.
     #[builder(setter(into))]
     pub points: Vec<Point3D>,
+    /// Faces of polyhedron.
+    /// `paths` option in SCAD.
+    ///
+    /// Each element is a face.
+    /// Each two consecutive elements of a face are the paths. (include (last, first))
+    /// Each element of a path shows the index of a point.
     #[builder(setter(into, strip_option), default)]
     pub paths: Option<Vec<Vec<usize>>>,
+    /// `convexity` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
 }
@@ -175,6 +256,7 @@ pub struct Polyhedron {
 __impl_scad3d!(Polyhedron);
 
 impl PolyhedronBuilder {
+    /// Check if `paths` is in the range of `points`'s indicies.
     fn validate(&self) -> Result<(), String> {
         (|| -> Option<Result<(), String>> {
             let pts: Vec<Point3D> = self.points.clone()?;
@@ -206,16 +288,24 @@ impl ScadObject for Polyhedron {
     }
 }
 
+/// SCAD object imported from external file.
+/// `import()` in SCAD.
+/// This Rust type is regarded as 3D object.
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Import3D {
+    /// Path of the external file.
     #[builder(setter(into))]
     pub file: String,
+    /// `convexity` option in SCAD.:bp
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
+    /// `$fa` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
@@ -235,14 +325,25 @@ impl ScadObject for Import3D {
     }
 }
 
+/// SCAD object from heightmap information from text or image files
+/// `surface()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq, Eq)]
 pub struct Surface {
+    /// Path of the external file.
     #[builder(setter(into))]
     pub file: String,
+    /// `center` option in SCAD.
+    ///
+    /// + `true` - Object's xy origin is at center of it.
+    /// + `false` - Object's xy origin is at the point where
+    ///     x and y coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
+    /// Inverts how the color values of imported images are translated into height values.
+    /// `invert` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub invert: Option<bool>,
+    /// `convexity` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
 }

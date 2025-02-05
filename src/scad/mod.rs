@@ -1,3 +1,5 @@
+//! A library for working with OpenSCAD objects.
+
 mod common;
 pub use common::*;
 

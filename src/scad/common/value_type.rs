@@ -4,16 +4,36 @@ use nalgebra as na;
 
 use super::{ambassador_impl_ScadDisplay, ScadDisplay, Unit};
 
+/// Vector representing an RGB color.
 pub type RGB = na::Vector3<Unit>;
+/// Vector representing an RGBA color.
 pub type RGBA = na::Vector4<Unit>;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// Angle type for SCAD
 pub enum Angle {
+    /// Angle in degrees
     Deg(Unit),
+    /// Angle in radians
     Rad(Unit),
 }
 
 impl Angle {
+    /// Returns the angle in degrees
+    ///
+    /// # Returns
+    ///
+    /// The angle in degrees
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::scad::scad::{Angle, Unit};
+    /// let d = Angle::Deg(90.0 as Unit);
+    /// assert!((d.deg() - 90.0).abs() < 1e5);
+    /// let r = Angle::Rad(std::f64::consts::PI as Unit / 2.);
+    /// assert!((d.deg() - 90.0).abs() < 1e5);
+    /// ```
     pub fn deg(&self) -> Unit {
         match *self {
             Self::Deg(d) => d,
@@ -30,9 +50,13 @@ impl ScadDisplay for Angle {
 
 #[derive(Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
+/// Color type for SCAD
 pub enum Color {
+    /// Color in RGB format
     RGB(RGB),
+    /// Color in RGBA format
     RGBA(RGBA),
+    /// Named color
     Name(String),
 }
 
@@ -49,6 +73,11 @@ impl ScadDisplay for RGBA {
 }
 
 impl Color {
+    /// Returns the name of the key in SCAD code
+    ///
+    /// # Returns
+    ///
+    /// The name of the key in SCAD code
     pub const fn name(&self) -> &'static str {
         match *self {
             Self::Name(_) => "",
@@ -59,12 +88,20 @@ impl Color {
 
 #[derive(Copy, Clone, Debug, PartialEq, Delegate)]
 #[delegate(ScadDisplay)]
+/// Size of rounded shape type for SCAD
 pub enum RoundSize {
+    /// Radius of rounded shape
     Radius(Unit),
+    /// Diameter of rounded shape
     Diameter(Unit),
 }
 
 impl RoundSize {
+    /// Returns the name of the key in SCAD code
+    ///
+    /// # Returns
+    ///
+    /// The name of the key in SCAD code
     pub const fn name(&self) -> &'static str {
         match *self {
             Self::Radius(_) => "r",

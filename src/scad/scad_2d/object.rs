@@ -10,17 +10,32 @@ use crate::{
     },
 };
 
+/// Size of square in SCAD.
 #[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
 pub enum SquareSize {
+    /// Edges' length of square.
+    /// `n` option in SCAD.
     N(Unit),
+    /// `[x, y]` length of rectangle.
+    /// `v` option in SCAD.
     V(Point2D),
 }
 
+/// Square object `square()` in SCAD.
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Square {
+    /// Size of square.
+    /// `n` or `v` option in SCAD.
+    ///
+    /// See also [`SquareSize`].
     #[builder(setter(into))]
     pub size: SquareSize,
+    /// `center` option in SCAD.
+    ///
+    /// + `true` - square's origin is at center of square.
+    /// + `false` - square's origin is at the point where
+    ///     x and y coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
 }
@@ -39,14 +54,22 @@ impl ScadObject for Square {
     }
 }
 
+/// Circle object `circle()` in SCAD.
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Circle {
+    /// Size of circle.
+    /// `r` or `d` option in SCAD.
+    ///
+    /// See also [`RoundSize`].
     #[builder(setter(custom))]
     pub size: RoundSize,
+    /// `$fa` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
@@ -54,11 +77,22 @@ pub struct Circle {
 __impl_scad2d!(Circle);
 
 impl CircleBuilder {
+    /// Set `r` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `r` option in SCAD. This is the radius of circle.
     pub fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Radius(value));
         new
     }
+    /// Set `d` option in SCAD.
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `d` option in SCAD. This is the diameter of circle.
     pub fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Diameter(value));
@@ -78,12 +112,21 @@ impl ScadObject for Circle {
     }
 }
 
+/// Polygon object `polygon()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
 pub struct Polygon {
+    /// Verticies of polygon.
+    /// `points` option in SCAD.
+    #[builder(setter(into))]
     pub points: Vec<Point2D>,
+    /// Edges of polygon.
+    /// `paths` option in SCAD.
+    ///
+    /// Each element is a path. Each element of a path shows the index of a point.
     #[builder(setter(into, strip_option), default)]
     pub paths: Option<Vec<Vec<usize>>>,
+    /// `convexity` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
 }
@@ -91,6 +134,7 @@ pub struct Polygon {
 __impl_scad2d!(Polygon);
 
 impl PolygonBuilder {
+    /// Check if `paths` is in the range of `points`'s indicies.
     fn validate(&self) -> Result<(), String> {
         (|| -> Option<Result<(), String>> {
             let pts: Vec<Point2D> = self.points.clone()?;
@@ -122,26 +166,48 @@ impl ScadObject for Polygon {
     }
 }
 
+/// Text object `text()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Text {
+    /// Text to show.
     #[builder(setter(into))]
     pub text: String,
+    /// Font size of text.
+    /// `size` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub size: Option<Unit>,
+    /// Font of text.
+    /// `font` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub font: Option<String>,
+    /// Horizontal alignment of text.
+    /// Possible values are `"left"`, `"center"`, and `"right"`.
+    /// `halign` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub halign: Option<String>,
+    /// Vertical alignment of text.
+    /// Possible values are `"top"`, `"center"`, `"baseline"`, and `"bottom"`.
+    /// `valign` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub valign: Option<String>,
+    /// Spacing of text.
+    /// `spacing` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub spacing: Option<String>,
+    /// Direction of text.
+    /// Possible values are `"ltr"`, `"rtl"`, `"ttb"`, and `"btt"`.
+    /// `direction` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub direction: Option<String>,
+    /// Language of text. (e.g., `"en"`, `"ar"`, `"ch"`).
+    /// `language` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub language: Option<String>,
+    /// Script of text. (e.g., `"latin"`, `"arabic"`, `"hani"`)
+    /// `script` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub script: Option<String>,
+    /// `$fn` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
 }
@@ -168,20 +234,34 @@ impl ScadObject for Text {
     }
 }
 
+/// SCAD object imported from external file.
+/// `import()` in SCAD.
+/// This Rust type is regarded as 2D object.
 #[derive(Builder, Clone, Debug, PartialEq)]
 pub struct Import2D {
+    /// Path of the external file.
     #[builder(setter(into))]
     pub file: String,
+    /// `convexity` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
+    /// Id of an element or group to import.
+    /// For SVG import only,
+    /// `id` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub id: Option<u64>,
+    /// Specify a specific layer to import.
+    /// For DXF and SVG import only.
+    /// `layer` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub layer: Option<u64>,
+    /// `$fa` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
 }
