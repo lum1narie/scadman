@@ -10,9 +10,9 @@ use crate::{
     },
 };
 
+/// Size of square in SCAD.
 #[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
-/// Size of square in SCAD.
 pub enum SquareSize {
     /// Edges' length of square.
     /// `n` option in SCAD.
@@ -31,11 +31,11 @@ pub struct Square {
     /// See also [`SquareSize`].
     #[builder(setter(into))]
     pub size: SquareSize,
+    /// `center` option in SCAD.
+    ///
     /// + `true` - square's origin is at center of square.
     /// + `false` - square's origin is at the point where
     ///     x and y coordinate is the smallest.
-    ///
-    /// `center` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
 }
@@ -116,11 +116,11 @@ impl ScadObject for Circle {
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
 pub struct Polygon {
-    /// Points of polygon.
+    /// Verticies of polygon.
     /// `points` option in SCAD.
     #[builder(setter(into))]
     pub points: Vec<Point2D>,
-    /// Paths of polygon.
+    /// Edges of polygon.
     /// `paths` option in SCAD.
     ///
     /// Each element is a path. Each element of a path shows the index of a point.
