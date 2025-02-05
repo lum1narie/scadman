@@ -3,8 +3,8 @@ use derive_more::derive::From;
 
 use super::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
 
-#[delegatable_trait]
 /// Trait for types that can be represented as a string in SCAD.
+#[delegatable_trait]
 pub trait ScadDisplay {
     /// Returns a string representation of the type in SCAD.
     ///
@@ -63,8 +63,8 @@ impl ScadDisplay for String {
     }
 }
 
-#[derive(Clone, Debug, From)]
 /// A type for representing an identifier in SCAD.
+#[derive(Clone, Debug, From)]
 pub struct Identifier(pub String);
 
 impl ScadDisplay for Identifier {

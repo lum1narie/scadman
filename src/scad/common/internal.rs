@@ -14,8 +14,8 @@ macro_rules! __impl_scad_box {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// Single option with a SCAD object.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScadOption {
     /// Single value, no key
     Value(String),
@@ -73,7 +73,7 @@ impl ScadOption {
     ///
     /// + `name` - name of the option, empty string for unnamed option
     /// + `value` - value of the option, `None` to fail.
-    /// 
+    ///
     /// # Returns
     ///
     /// + [`ScadOption`] - if the `value` is [`Some<T>`]
@@ -92,9 +92,9 @@ impl ScadOption {
     }
 }
 
+/// Create a [`Vec<ScadOption>`] from key-value pairs with arbitrarily [`impl ScadDisplay`] value.
 #[doc(hidden)]
 #[macro_export]
-/// Create a [`Vec<ScadOption>`] from key-value pairs with arbitrarily [`impl ScadDisplay`] value.
 macro_rules! __generate_scad_options {
     ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(;)? ) => {
         {
@@ -145,11 +145,11 @@ pub fn generate_body(name: &str, opts: Vec<ScadOption>) -> String {
     format!("{}({})", name, reprs.join(", "))
 }
 
-#[doc(hidden)]
-#[macro_export]
 /// Give a default implementation of [`ScadObject::get_children`].
 ///
 /// This macro is for the [`impl ScadObject`] having `self.childern` as `Vec<Box<dyn ScadObject>>`.
+#[doc(hidden)]
+#[macro_export]
 macro_rules! __get_children_impl {
     () => {
         fn get_children(&self) -> Option<Vec<String>> {

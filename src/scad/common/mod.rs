@@ -55,7 +55,7 @@ pub trait ScadObject: Debug + DynClone {
     ///
     /// # Returns
     ///
-    /// + [`Some<Vec<String>>`]: SCAD code of the children 
+    /// + [`Some<Vec<String>>`]: SCAD code of the children
     /// + [`None`]: if the object has no children
     fn get_children(&self) -> Option<Vec<String>> {
         None
