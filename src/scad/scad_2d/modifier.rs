@@ -20,7 +20,7 @@ macro_rules! __impl_operator_2d {
         #[allow(missing_debug_implementations)]
         #[derive(Builder, Debug, Clone)]
         pub struct $type {
-            /// Children objects.
+            /// Children objects to apply this modifier.
             #[builder(setter(name = "apply_to"))]
             pub children: Vec<Box<dyn ScadObject2D>>,
         }
@@ -48,7 +48,7 @@ pub struct Translate2D {
     /// `v` option in SCAD.
     #[builder(setter(into))]
     pub v: Point2D,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -77,7 +77,7 @@ pub struct Rotate2D {
     /// See also [`Angle`].
     #[builder(setter(custom))]
     pub a: Angle,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -127,7 +127,7 @@ pub struct Scale2D {
     /// `v` option in SCAD.
     #[builder(setter(into))]
     pub v: Point2D,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -171,7 +171,7 @@ pub struct Resize2D {
     /// See also [`ResizeAuto`].
     #[builder(setter(into, strip_option), default)]
     pub auto: Option<ResizeAuto>,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -198,7 +198,7 @@ pub struct Mirror2D {
     /// Normal vector of the mirror plane.
     #[builder(setter(into))]
     pub v: Point2D,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -224,7 +224,7 @@ pub struct MultMatrix2D {
     /// Affine transformation matrix for 2D vector.
     #[builder(setter(into))]
     pub m: AffineMatrix2D,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -258,7 +258,7 @@ pub struct Color2D {
     /// Set when the `color` is NOT [`Color::RGBA`].
     #[builder(setter(into, strip_option), default)]
     pub a: Option<Unit>,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -326,7 +326,7 @@ pub struct Offset {
     /// `$fs` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
@@ -388,7 +388,7 @@ pub struct Projection {
     /// If `cut` is `false`, the shape is as projected.
     #[builder(setter(into, strip_option), default)]
     pub cut: Option<bool>,
-    /// Children objects.
+    /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to"))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
