@@ -33,7 +33,7 @@ impl Angle {
     /// # Examples
     ///
     /// ```
-    /// use scad::{Unit, value_type::Angle};
+    /// use scadman::{Unit, value_type::Angle};
     /// let d = Angle::Deg(90.0 as Unit);
     /// assert!((d.deg() - 90.0).abs() < 1e5);
     /// let r = Angle::Rad(std::f64::consts::PI as Unit / 2.);

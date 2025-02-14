@@ -52,7 +52,7 @@ impl ScadOption {
     /// # Examples
     ///
     /// ```text
-    /// use scad::internal::ScadOption;
+    /// use scadman::internal::ScadOption;
     /// assert_eq!(ScadOption::from_key_value("key", false),
     ///            ScadOption::KeyValue(("key".to_string(), "false".to_string())));
     /// assert_eq!(ScadOption::from_key_value("", true), ScadOption::Value("true".to_string()));
@@ -82,7 +82,7 @@ impl ScadOption {
     /// # Examples
     ///
     /// ```text
-    /// use scad::internal::ScadOption;
+    /// use scadman::internal::ScadOption;
     /// assert_eq!(ScadOption::from_key_value_option("key", Some(false)),
     ///            Some(ScadOption::KeyValue(("key".to_string(), "false".to_string()))));
     /// assert_eq!(ScadOption::from_key_value_option::<bool>("key", None), None);
@@ -133,7 +133,7 @@ macro_rules! __generate_scad_options {
 /// # Examples
 ///
 /// ```text
-/// use scad::{scad::Unit, internal::ScadOption};
+/// use scadman::{scad::Unit, internal::ScadOption};
 /// let opts = vec![
 ///    ScadOption::from_key_value("size", 1 as Unit),
 ///    ScadOption::from_key_value("center", true),

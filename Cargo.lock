@@ -279,7 +279,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "scad"
+name = "scadman"
 version = "0.1.0"
 dependencies = [
  "ambassador",
