@@ -1,3 +1,5 @@
+//! A collection of helper macros exported for extenal use.
+
 /// Helper macro to create [`Vec<Box<dyn ScadObject>>`] from raw objects
 #[macro_export]
 macro_rules! any_scads {

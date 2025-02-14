@@ -4,10 +4,10 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad3d,
-    scad::{
-        ambassador_impl_ScadDisplay, generate_body, Identifier, Point3D, RoundSize, ScadDisplay,
-        ScadObject, ScadObject3D, Unit,
-    },
+    internal::generate_body,
+    common::{Point3D, ScadObject, ScadObject3D, Unit},
+    scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
+    value_type::RoundSize,
 };
 
 /// Sphere object `sphere()` in SCAD.

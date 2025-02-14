@@ -1,3 +1,5 @@
+//! 3D objects in SCAD.
+
 mod object;
 pub use object::*;
 

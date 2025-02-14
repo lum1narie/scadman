@@ -1,7 +1,9 @@
+//! Trait and types that can be represented as a string in SCAD.
+
 use ambassador::delegatable_trait;
 use derive_more::derive::From;
 
-use super::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
+use crate::common::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Unit};
 
 /// Trait for types that can be represented as a string in SCAD.
 #[delegatable_trait]

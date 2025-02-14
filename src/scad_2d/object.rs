@@ -4,10 +4,10 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad2d,
-    scad::{
-        ambassador_impl_ScadDisplay, generate_body, Point2D, RoundSize, ScadDisplay, ScadObject,
-        ScadObject2D, Unit,
-    },
+    internal::generate_body,
+    common::{Point2D, ScadObject, ScadObject2D, Unit},
+    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    value_type::RoundSize,
 };
 
 /// Size of square in SCAD.

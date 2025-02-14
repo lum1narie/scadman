@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use super::ScadDisplay;
+use crate::scad_display::ScadDisplay;
 
 #[doc(hidden)]
 #[macro_export]
@@ -26,7 +26,7 @@ pub enum ScadOption {
 impl Display for ScadOption {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Value(ref v) => Display::fmt(&v, f),
+            Self::Value(v) => Display::fmt(&v, f),
             Self::KeyValue((k, v)) => {
                 Display::fmt(&k, f)?;
                 write!(f, " = ")?;
@@ -51,8 +51,8 @@ impl ScadOption {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use crate::scad::scad::ScadOption;
+    /// ```text
+    /// use scad::internal::ScadOption;
     /// assert_eq!(ScadOption::from_key_value("key", false),
     ///            ScadOption::KeyValue(("key".to_string(), "false".to_string())));
     /// assert_eq!(ScadOption::from_key_value("", true), ScadOption::Value("true".to_string()));
@@ -81,8 +81,8 @@ impl ScadOption {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use crate::scad::scad::ScadOption;
+    /// ```text
+    /// use scad::internal::ScadOption;
     /// assert_eq!(ScadOption::from_key_value_option("key", Some(false)),
     ///            Some(ScadOption::KeyValue(("key".to_string(), "false".to_string()))));
     /// assert_eq!(ScadOption::from_key_value_option::<bool>("key", None), None);
@@ -99,17 +99,17 @@ macro_rules! __generate_scad_options {
     ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(;)? ) => {
         {
             vec![
-                $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
+                $($crate::internal::ScadOption::from_key_value($name_req, $value_req),)*
             ]
         }
     };
     ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(($name_opt:expr_2021, $value_opt:expr_2021)),+; ) => {
         {
-            let mut opts: Vec<$crate::scad::ScadOption> = vec![
-                $($crate::scad::ScadOption::from_key_value($name_req, $value_req),)*
+            let mut opts: Vec<$crate::internal::ScadOption> = vec![
+                $($crate::internal::ScadOption::from_key_value($name_req, $value_req),)*
             ];
             $(
-                let maybe_opt = $crate::scad::ScadOption::from_key_value_option($name_opt, $value_opt);
+                let maybe_opt = $crate::internal::ScadOption::from_key_value_option($name_opt, $value_opt);
                 if let Some(opt) = maybe_opt {
                     opts.push(opt);
                 }
@@ -132,8 +132,8 @@ macro_rules! __generate_scad_options {
 ///
 /// # Examples
 ///
-/// ```
-/// use crate::scad::scad::{generate_body, ScadOption, Unit};
+/// ```text
+/// use scad::{scad::Unit, internal::ScadOption};
 /// let opts = vec![
 ///    ScadOption::from_key_value("size", 1 as Unit),
 ///    ScadOption::from_key_value("center", true),
@@ -156,4 +156,44 @@ macro_rules! __get_children_impl {
             Some(self.children.iter().map(|c| c.to_code()).collect())
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::common::Unit;
+
+    use super::*;
+
+    #[test]
+    fn test_scad_option() {
+        assert_eq!(
+            ScadOption::from_key_value("key", false),
+            ScadOption::KeyValue(("key".to_string(), "false".to_string()))
+        );
+        assert_eq!(
+            ScadOption::from_key_value("", true),
+            ScadOption::Value("true".to_string())
+        );
+
+        assert_eq!(
+            ScadOption::from_key_value_option("key", Some(false)),
+            Some(ScadOption::KeyValue((
+                "key".to_string(),
+                "false".to_string()
+            )))
+        );
+        assert_eq!(ScadOption::from_key_value_option::<bool>("key", None), None);
+    }
+
+    #[test]
+    fn test_generate_body() {
+        let opts = vec![
+            ScadOption::from_key_value("size", Unit::from(1)),
+            ScadOption::from_key_value("center", true),
+        ];
+        assert_eq!(
+            generate_body("square", opts),
+            "square(size = 1, center = true)"
+        );
+    }
 }

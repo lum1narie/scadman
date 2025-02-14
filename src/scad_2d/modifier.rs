@@ -4,19 +4,19 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __get_children_impl, __impl_scad2d,
-    scad::{
-        ambassador_impl_ScadDisplay, generate_body, AffineMatrix2D, Angle, Color, Point2D,
-        ScadDisplay, ScadObject, ScadObject2D, ScadObject3D, Unit,
-    },
+    internal::generate_body,
+    common::{AffineMatrix2D, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
+    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    value_type::{Angle, Color},
 };
 
 /// Give an implementation of a modifier 2D object
 /// that has no parameters and is applied to 2D objects.
 macro_rules! __impl_operator_2d {
     ( $type:ident, $name:expr_2021 ) => {
-
-        /// $name modifier `$name()` in SCAD.
-        /// This Rust type is regarded as 2D object and only applys to 2D objects.
+        #[doc = concat!($name,
+        " modifier `", $name, "()` in SCAD.
+        This Rust type is regarded as 2D object and only applys to 2D objects.")]
         #[allow(missing_debug_implementations)]
         #[derive(Builder, Debug, Clone)]
         pub struct $type {
@@ -411,12 +411,13 @@ impl ScadObject for Projection {
 mod tests {
     use std::f64::consts::PI;
 
+    use super::*;
     use crate::{
         any_scads2d, any_scads3d,
-        scad::{CircleBuilder, SphereBuilder, SquareBuilder, RGB, RGBA},
+        scad_2d::{CircleBuilder, SquareBuilder},
+        scad_3d::SphereBuilder,
+        value_type::{RGB, RGBA},
     };
-
-    use super::*;
 
     #[test]
     fn test_translate2d() {
