@@ -1,9 +1,14 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
+use nalgebra as na;
 
 use crate::{
-    ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d, internal::generate_body, scad_display::{ambassador_impl_ScadDisplay, ScadDisplay}, value_type::{Angle, Color}, AffineMatrix3D, Point3D, ScadObject2D, ScadObject3D, Unit
+    ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d,
+    internal::generate_body,
+    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    value_type::{Angle, Color},
+    AffineMatrix3D, Point3D, ScadObject2D, ScadObject3D, Unit,
 };
 
 /// Give an implementation of a modifier 3D object
@@ -63,6 +68,30 @@ impl ScadObject for Translate3D {
     __get_children_impl!();
 }
 
+/// Angle of rotate (3D) in SCAD.
+///
+/// `a` option in SCAD.
+#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[delegate(ScadDisplay)]
+pub enum Rotate3DAngle {
+    /// Rotation angle on `v`
+    A(Angle),
+    /// Rotation angles in `[x, y, z]` axes
+    V(na::Vector3<Angle>),
+}
+
+/// Numbers to generate [`Rotate3DAngle`].
+///
+/// The numbers are the angle.
+/// This type have no information about the angle is rad or deg.
+#[derive(Copy, Clone, Debug, PartialEq, From)]
+pub enum Rotate3DAngleEntry {
+    /// Number to generate [`Rotate3DAngle::A`].
+    Single(Unit),
+    /// Pair of numbers to generate [`Rotate3DAngle::V`].
+    Triple([Unit; 3]),
+}
+
 /// Rotate modifier `rotate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
 #[derive(Builder, Debug, Clone)]
@@ -70,9 +99,12 @@ pub struct Rotate3D {
     /// Rotation angle.
     /// `a` option in SCAD.
     ///
-    /// See also [`Angle`].
+    /// See also [`AngleRotate3D`].
     #[builder(setter(custom))]
-    pub a: Angle,
+    pub a: Rotate3DAngle,
+    /// Rotation axis.
+    #[builder(setter(into, strip_option), default)]
+    pub v: Option<Point3D>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
@@ -86,19 +118,30 @@ impl Rotate3DBuilder {
     /// # Arguments
     ///
     /// + `value` - The rotation angle in degrees.
-    pub fn deg(&mut self, value: Unit) -> &mut Self {
+    pub fn deg<T: Into<Rotate3DAngleEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
-        new.a = Some(Angle::Deg(value));
+        new.a = match value.into() {
+            Rotate3DAngleEntry::Single(a) => Some(Rotate3DAngle::A(Angle::Deg(a))),
+            Rotate3DAngleEntry::Triple(a) => Some(Rotate3DAngle::V(na::Vector3::from_iterator(
+                a.into_iter().map(|x| Angle::Deg(x)),
+            ))),
+        };
         new
     }
+
     /// Set rotation angle in radians.
     ///
     /// # Arguments
     ///
     /// + `value` - The rotation angle in radians.
-    pub fn rad(&mut self, value: Unit) -> &mut Self {
+    pub fn rad<T: Into<Rotate3DAngleEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
-        new.a = Some(Angle::Rad(value));
+        new.a = match value.into() {
+            Rotate3DAngleEntry::Single(a) => Some(Rotate3DAngle::A(Angle::Rad(a))),
+            Rotate3DAngleEntry::Triple(a) => Some(Rotate3DAngle::V(na::Vector3::from_iterator(
+                a.into_iter().map(|x| Angle::Rad(x)),
+            ))),
+        };
         new
     }
 }
@@ -108,7 +151,8 @@ impl ScadObject for Rotate3D {
         generate_body(
             "rotate",
             __generate_scad_options!(
-                ("", self.a);;
+                ("a", self.a);
+                ("v", self.v);
             ),
         )
     }
@@ -404,7 +448,7 @@ mod tests {
     use crate::{
         any_scads2d, any_scads3d,
         scad_2d::SquareBuilder,
-        scad_3d::{CubeBuilder, SphereBuilder},
+        scad_3d::{Cube, CubeBuilder, Sphere, SphereBuilder},
         value_type::{RGB, RGBA},
     };
 
@@ -428,26 +472,33 @@ mod tests {
     #[test]
     fn test_rotate3d() {
         let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
+            Cube::build_with(|cb| {
+                let _ = cb.size(10.);
+            }),
+            Sphere::build_with(|sb| {
+                let _ = sb.r(5.);
+            }),
         ];
         assert_eq!(
-            Rotate3DBuilder::default()
-                .deg(45.)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
-            "rotate(45) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+            Rotate3D::build_with(|rb| {
+                let _ = rb.deg([45., 0., 90.]).apply_to(children.clone());
+            })
+            .to_code(),
+            "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Rotate3DBuilder::default()
-                .rad(PI / 4.)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
-            "rotate(45) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+            Rotate3D::build_with(|rb| {
+                let _ = rb.rad([PI / 4., 0., PI / 2.]).apply_to(children.clone());
+            })
+            .to_code(),
+            "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+        );
+        assert_eq!(
+            Rotate3D::build_with(|rb| {
+                let _ = rb.rad(PI / 4.).v([1., 1., 0.]).apply_to(children);
+            })
+            .to_code(),
+            "rotate(a = 45, v = [1, 1, 0]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
@@ -697,20 +748,20 @@ mod tests {
         ];
 
         let scad = Rotate3DBuilder::default()
-            .deg(45.)
+            .deg([45., 0., 90.])
             .apply_to(
                 Translate3DBuilder::default()
                     .v(Point3D::new(8., -4., 6.))
                     .apply_to(objs.clone())
                     .build()
-                    .unwrap()
+                    .unwrap(),
             )
             .build()
             .unwrap();
 
         assert_eq!(
             scad.to_code(),
-            "rotate(45) {\n  translate([8, -4, 6]) {\n    cube(size = 10);\n    sphere(r = 5);\n  }\n}"
+            "rotate(a = [45, 0, 90]) {\n  translate([8, -4, 6]) {\n    cube(size = 10);\n    sphere(r = 5);\n  }\n}"
         );
     }
 }
