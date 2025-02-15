@@ -17,7 +17,7 @@ macro_rules! __impl_operator_3d {
         #[derive(Builder, Debug, Clone)]
         pub struct $type {
             /// Children objects to apply this modifier.
-            #[builder(setter(name = "apply_to"))]
+            #[builder(setter(name = "apply_to", into))]
             pub children: Vec<Box<dyn ScadObject3D>>,
         }
         $crate::__impl_scad3d!($type);
@@ -45,7 +45,7 @@ pub struct Translate3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -74,7 +74,7 @@ pub struct Rotate3D {
     #[builder(setter(custom))]
     pub a: Angle,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -124,7 +124,7 @@ pub struct Scale3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -168,7 +168,7 @@ pub struct Resize3D {
     #[builder(setter(into, strip_option), default)]
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -195,7 +195,7 @@ pub struct Mirror3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -221,7 +221,7 @@ pub struct MultMatrix3D {
     #[builder(setter(into))]
     pub m: AffineMatrix3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -255,7 +255,7 @@ pub struct Color3D {
     #[builder(setter(into, strip_option), default)]
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject3D>>,
 }
 
@@ -317,7 +317,7 @@ pub struct LinearExtrude {
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
 
@@ -372,7 +372,7 @@ pub struct RotateExtrude {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to"))]
+    #[builder(setter(name = "apply_to", into))]
     pub children: Vec<Box<dyn ScadObject2D>>,
 }
 
@@ -704,7 +704,6 @@ mod tests {
                     .apply_to(objs.clone())
                     .build()
                     .unwrap()
-                    .into(),
             )
             .build()
             .unwrap();
