@@ -4,8 +4,8 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad2d,
-    internal::generate_body,
     common::{Point2D, ScadObject, ScadObject2D, Unit},
+    internal::generate_body,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::RoundSize,
 };
@@ -289,40 +289,22 @@ mod tests {
     #[test]
     fn test_square() {
         assert_eq!(
-            SquareBuilder::default()
-                .size(3.0)
-                .build()
-                .unwrap()
-                .to_code(),
+            Square::build_with(|b| {b.size(3.);}).to_code(),
             "square(size = 3);"
         );
         assert_eq!(
-            SquareBuilder::default()
-                .size(3.0)
-                .center(true)
-                .build()
-                .unwrap()
-                .to_code(),
+            Square::build_with(|b| {b.size(3.).center(true);}).to_code(),
             "square(size = 3, center = true);"
         );
         assert_eq!(
-            SquareBuilder::default()
-                .size(Point2D::new(3., 2.))
-                .build()
-                .unwrap()
-                .to_code(),
+            Square::build_with(|b| {b.size(Point2D::new(3., 2.));}).to_code(),
             "square(size = [3, 2]);"
         );
         assert_eq!(
-            SquareBuilder::default()
-                .size(Point2D::new(3., 2.))
-                .center(true)
-                .build()
-                .unwrap()
-                .to_code(),
+            Square::build_with(|b| {b.size(Point2D::new(3., 2.)).center(true);}).to_code(),
             "square(size = [3, 2], center = true);"
         );
-        let _x = SquareBuilder::default().center(true).build().unwrap_err();
+        drop(SquareBuilder::default().center(true).build().unwrap_err());
     }
 
     #[test]

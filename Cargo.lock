@@ -287,6 +287,7 @@ dependencies = [
  "derive_more",
  "dyn-clone",
  "nalgebra",
+ "paste",
 ]
 
 [[package]]

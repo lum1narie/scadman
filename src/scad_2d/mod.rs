@@ -17,5 +17,7 @@ macro_rules! __impl_scad2d {
                 vec![Box::new(value)]
             }
         }
+
+        $crate::__build_with_impl!($type);
     };
 }

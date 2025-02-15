@@ -158,6 +158,25 @@ macro_rules! __get_children_impl {
     };
 }
 
+/// TODO: doc
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __build_with_impl {
+    ( $type:tt ) => {
+        paste::paste! {
+            impl $type {
+                pub fn build_with(
+                    builder_config: impl FnOnce(&mut [<$type Builder>])
+                ) -> Self {
+                    let mut builder = [<$type Builder>]::default();
+                    let _ = builder_config(&mut builder);
+                    builder.build().expect("required fields are not set")
+                    }
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::common::Unit;
