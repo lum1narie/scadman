@@ -3,11 +3,7 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d,
-    internal::generate_body,
-    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    value_type::{Angle, Color},
-    AffineMatrix3D, Point3D, ScadObject3D, Unit,
+    ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d, internal::generate_body, scad_display::{ambassador_impl_ScadDisplay, ScadDisplay}, value_type::{Angle, Color}, AffineMatrix3D, Point3D, ScadObject2D, ScadObject3D, Unit
 };
 
 /// Give an implementation of a modifier 3D object
@@ -284,14 +280,130 @@ __impl_operator_3d!(Union3D, "union");
 __impl_operator_3d!(Difference3D, "difference");
 __impl_operator_3d!(Intersection3D, "intersection");
 
+/// Linear extrude modifier `linear_extrude()` in SCAD.
+/// This Rust type is regarded as 3D object and only applys to 2D objects.
+#[derive(Builder, Debug, Clone)]
+pub struct LinearExtrude {
+    /// The length of the extruded object.
+    ///
+    /// `height` must be positive.
+    #[builder(setter(into), default)]
+    pub height: Unit,
+    /// The vector that extrusion follows.
+    #[builder(setter(into, strip_option), default)]
+    pub v: Option<Point3D>,
+    /// `center` option in SCAD.
+    ///
+    /// + `true` - Z range is from 0 to height.
+    /// + `false` - Z range is -height/2 to height/2.
+    #[builder(setter(into, strip_option), default)]
+    pub center: Option<bool>,
+    /// Twist degrees of through which the shape is extruded.
+    ///
+    /// Setting the parameter twist = 360 extrudes through one revolution.
+    /// The twist direction follows the left hand rule.
+    #[builder(setter(into, strip_option), default)]
+    pub twist: Option<Unit>,
+    /// `convexity` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub convexity: Option<u64>,
+    /// The number of intermediate points along the Z axis of the extrusion.
+    #[builder(setter(into, strip_option), default)]
+    pub slices: Option<u64>,
+    /// Scales value over the height of the extrusion.
+    #[builder(setter(into, strip_option), default)]
+    pub scale: Option<Unit>,
+    /// `$fn` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub r#fn: Option<u64>,
+    /// Children objects to apply this modifier.
+    #[builder(setter(name = "apply_to"))]
+    pub children: Vec<Box<dyn ScadObject2D>>,
+}
+
+__impl_scad3d!(LinearExtrude);
+
+impl ScadObject for LinearExtrude {
+    fn get_body(&self) -> String {
+        generate_body(
+            "linear_extrude",
+            __generate_scad_options!(
+                ("height", self.height);
+                ("v", self.v),
+                ("center", self.center),
+                ("twist", self.twist),
+                ("convexity", self.convexity),
+                ("slices", self.slices),
+                ("scale", self.scale),
+                ("$fn", self.r#fn);
+            ),
+        )
+    }
+    __get_children_impl!();
+}
+
+/// Rotate extrude modifier `rotate_extrude()` in SCAD.
+/// This Rust type is regarded as 3D object and only applys to 2D objects.
+#[derive(Builder, Debug, Clone)]
+pub struct RotateExtrude {
+    /// The number of degrees to sweep.
+    ///
+    /// Starting at the positive X axis.
+    /// The direction of the sweep follows the Right Hand Rule,
+    /// hence a negative angle sweeps clockwise.
+    #[builder(setter(into, strip_option), default)]
+    pub angle: Option<Unit>,
+    /// Specifies the starting angle of the extrusion,
+    /// counter-clockwise from the positive X axis.
+    ///
+    /// Defaults to 0 if angle is specified, and 180 if not.
+    #[builder(setter(into, strip_option), default)]
+    pub start: Option<Unit>,
+    /// `convexity` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub convexity: Option<u64>,
+    /// `$fa` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub fa: Option<Unit>,
+    /// `$fn` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub r#fn: Option<u64>,
+    /// `$fs` option in SCAD.
+    #[builder(setter(into, strip_option), default)]
+    pub fs: Option<Unit>,
+    /// Children objects to apply this modifier.
+    #[builder(setter(name = "apply_to"))]
+    pub children: Vec<Box<dyn ScadObject2D>>,
+}
+
+__impl_scad3d!(RotateExtrude);
+
+impl ScadObject for RotateExtrude {
+    fn get_body(&self) -> String {
+        generate_body(
+            "rotate_extrude",
+            __generate_scad_options!(
+                ;
+                ("angle", self.angle),
+                ("start", self.start),
+                ("convexity", self.convexity),
+                ("$fa", self.fa),
+                ("$fn", self.r#fn),
+                ("$fs", self.fs);
+            ),
+        )
+    }
+    __get_children_impl!();
+}
+
 #[cfg(test)]
 mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-
     use crate::{
-        any_scads3d,
+        any_scads2d, any_scads3d,
+        scad_2d::SquareBuilder,
         scad_3d::{CubeBuilder, SphereBuilder},
         value_type::{RGB, RGBA},
     };
@@ -524,12 +636,57 @@ mod tests {
 
     #[test]
     fn test_linear_extrude() {
-        todo!()
+        let children = any_scads2d![SquareBuilder::default().size(10.).build().unwrap()];
+        assert_eq!(
+            LinearExtrudeBuilder::default()
+                .apply_to(children.clone())
+                .height(5.)
+                .build()
+                .unwrap()
+                .to_code(),
+            "linear_extrude(height = 5) {\n  square(size = 10);\n}"
+        );
+        assert_eq!(
+            LinearExtrudeBuilder::default()
+                .apply_to(children)
+                .height(5.)
+                .v(Point3D::new(0., 0.2, 1.))
+                .center(true)
+                .twist(180.)
+                .convexity(10_u64)
+                .slices(30_u64)
+                .scale(0.7)
+                .r#fn(20_u64)
+                .build()
+                .unwrap()
+                .to_code(),
+            "linear_extrude(height = 5, v = [0, 0.2, 1], center = true, twist = 180, convexity = 10, slices = 30, scale = 0.7, $fn = 20) {\n  square(size = 10);\n}"
+        );
     }
 
     #[test]
     fn test_rotate_extrude() {
-        todo!()
+        let children = any_scads2d![SquareBuilder::default().size(10.).build().unwrap()];
+        assert_eq!(
+            RotateExtrudeBuilder::default()
+                .apply_to(children.clone())
+                .build()
+                .unwrap()
+                .to_code(),
+            "rotate_extrude() {\n  square(size = 10);\n}"
+        );
+        assert_eq!(
+            RotateExtrudeBuilder::default()
+                .apply_to(children.clone())
+                .angle(180.)
+                .start(90.)
+                .convexity(10_u64)
+                .fa(5.)
+                .build()
+                .unwrap()
+                .to_code(),
+            "rotate_extrude(angle = 180, start = 90, convexity = 10, $fa = 5) {\n  square(size = 10);\n}"
+        );
     }
 
     #[test]
