@@ -104,7 +104,7 @@ impl ScadObject for Cube {
         generate_body(
             "cube",
             __generate_scad_options!(
-                ("", self.size);
+                ("size", self.size);
                 ("center", self.center);
             ),
         )
@@ -410,7 +410,7 @@ mod tests {
     fn test_cube() {
         assert_eq!(
             CubeBuilder::default().size(3.0).build().unwrap().to_code(),
-            "cube(3);"
+            "cube(size = 3);"
         );
         assert_eq!(
             CubeBuilder::default()
@@ -418,7 +418,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "cube([4, 2, 3]);"
+            "cube(size = [4, 2, 3]);"
         );
         assert_eq!(
             CubeBuilder::default()
@@ -427,7 +427,7 @@ mod tests {
                 .build()
                 .unwrap()
                 .to_code(),
-            "cube(3, center = true);"
+            "cube(size = 3, center = true);"
         );
     }
 
