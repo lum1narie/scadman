@@ -123,7 +123,7 @@ impl Rotate3DBuilder {
         new.a = match value.into() {
             Rotate3DAngleEntry::Single(a) => Some(Rotate3DAngle::A(Angle::Deg(a))),
             Rotate3DAngleEntry::Triple(a) => Some(Rotate3DAngle::V(na::Vector3::from_iterator(
-                a.into_iter().map(|x| Angle::Deg(x)),
+                a.into_iter().map(Angle::Deg),
             ))),
         };
         new
@@ -139,7 +139,7 @@ impl Rotate3DBuilder {
         new.a = match value.into() {
             Rotate3DAngleEntry::Single(a) => Some(Rotate3DAngle::A(Angle::Rad(a))),
             Rotate3DAngleEntry::Triple(a) => Some(Rotate3DAngle::V(na::Vector3::from_iterator(
-                a.into_iter().map(|x| Angle::Rad(x)),
+                a.into_iter().map(Angle::Rad),
             ))),
         };
         new
@@ -460,7 +460,7 @@ mod tests {
         ];
         assert_eq!(
             Translate3DBuilder::default()
-                .v(Point3D::new(8., -4., 6.))
+                .v([8., -4., 6.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -510,7 +510,7 @@ mod tests {
         ];
         assert_eq!(
             Mirror3DBuilder::default()
-                .v(Point3D::new(1., -1., 0.))
+                .v([1., -1., 0.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -527,7 +527,7 @@ mod tests {
         ];
         assert_eq!(
             Scale3DBuilder::default()
-                .v(Point3D::new(3., 2., 4.))
+                .v([3., 2., 4.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -543,7 +543,7 @@ mod tests {
             SphereBuilder::default().r(5.).build().unwrap(),
         ];
         let mut r1 = Resize3DBuilder::default();
-        _ = r1.size(Point3D::new(3., 2., 1.)).apply_to(children);
+        _ = r1.size([3., 2., 1.]).apply_to(children);
         assert_eq!(
             r1.clone().build().unwrap().to_code(),
             "resize([3, 2, 1]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
@@ -701,7 +701,7 @@ mod tests {
             LinearExtrudeBuilder::default()
                 .apply_to(children)
                 .height(5.)
-                .v(Point3D::new(0., 0.2, 1.))
+                .v([0., 0.2, 1.])
                 .center(true)
                 .twist(180.)
                 .convexity(10_u64)
@@ -751,7 +751,7 @@ mod tests {
             .deg([45., 0., 90.])
             .apply_to(
                 Translate3DBuilder::default()
-                    .v(Point3D::new(8., -4., 6.))
+                    .v([8., -4., 6.])
                     .apply_to(objs.clone())
                     .build()
                     .unwrap(),

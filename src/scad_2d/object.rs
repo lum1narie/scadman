@@ -1,6 +1,5 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
-use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad2d,
@@ -11,7 +10,7 @@ use crate::{
 };
 
 /// Size of square in SCAD.
-#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
 #[delegate(ScadDisplay)]
 pub enum SquareSize {
     /// Edges' length of square.
@@ -20,6 +19,25 @@ pub enum SquareSize {
     /// `[x, y]` length of rectangle.
     /// `v` option in SCAD.
     V(Point2D),
+}
+
+impl From<Unit> for SquareSize {
+    fn from(value: Unit) -> Self {
+        Self::N(value)
+    }
+}
+
+impl From<Point2D> for SquareSize {
+    fn from(value: Point2D) -> Self {
+        Self::V(value)
+    }
+}
+
+impl From<[Unit; 2]> for SquareSize {
+    fn from(value: [Unit; 2]) -> Self {
+        let [x, y] = value;
+        Self::V(Point2D::new(x, y))
+    }
 }
 
 /// Square object `square()` in SCAD.
@@ -112,13 +130,35 @@ impl ScadObject for Circle {
     }
 }
 
+/// Numbers to generate [`vec<Points2D>`].
+#[derive(Clone, Debug, PartialEq, derive_more::Deref)]
+pub struct VecPoint2DEntry(Vec<Point2D>);
+
+impl From<Vec<[Unit; 2]>> for VecPoint2DEntry {
+    fn from(value: Vec<[Unit; 2]>) -> Self {
+        Self(value.into_iter().map(|[x, y]| Point2D::new(x, y)).collect())
+    }
+}
+
+impl From<Vec<Point2D>> for VecPoint2DEntry {
+    fn from(value: Vec<Point2D>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<VecPoint2DEntry> for Vec<Point2D> {
+    fn from(value: VecPoint2DEntry) -> Self {
+        value.0
+    }
+}
+
 /// Polygon object `polygon()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
 pub struct Polygon {
     /// Verticies of polygon.
     /// `points` option in SCAD.
-    #[builder(setter(into))]
+    #[builder(setter(custom))]
     pub points: Vec<Point2D>,
     /// Edges of polygon.
     /// `paths` option in SCAD.
@@ -151,6 +191,13 @@ impl PolygonBuilder {
             Some(Ok(()))
         })()
         .unwrap_or(Ok(()))
+    }
+
+    fn points<T: Into<VecPoint2DEntry>>(&mut self, value: T) -> &mut Self {
+        let new = self;
+        let entry: VecPoint2DEntry = value.into();
+        new.points = Some(entry.into());
+        new
     }
 }
 
@@ -289,19 +336,38 @@ mod tests {
     #[test]
     fn test_square() {
         assert_eq!(
-            Square::build_with(|b| {b.size(3.);}).to_code(),
+            Square::build_with(|b| {
+                let _ = b.size(3.);
+            })
+            .to_code(),
             "square(size = 3);"
         );
         assert_eq!(
-            Square::build_with(|b| {b.size(3.).center(true);}).to_code(),
+            Square::build_with(|b| {
+                let _ = b.size(3.).center(true);
+            })
+            .to_code(),
             "square(size = 3, center = true);"
         );
         assert_eq!(
-            Square::build_with(|b| {b.size(Point2D::new(3., 2.));}).to_code(),
+            Square::build_with(|b| {
+                let _ = b.size([3., 2.]);
+            })
+            .to_code(),
             "square(size = [3, 2]);"
         );
         assert_eq!(
-            Square::build_with(|b| {b.size(Point2D::new(3., 2.)).center(true);}).to_code(),
+            Square::build_with(|b| {
+                let _ = b.size(Point2D::new(3., 2.));
+            })
+            .to_code(),
+            "square(size = [3, 2]);"
+        );
+        assert_eq!(
+            Square::build_with(|b| {
+                let _ = b.size([3., 2.]).center(true);
+            })
+            .to_code(),
             "square(size = [3, 2], center = true);"
         );
         drop(SquareBuilder::default().center(true).build().unwrap_err());
@@ -310,39 +376,41 @@ mod tests {
     #[test]
     fn test_circle() {
         assert_eq!(
-            CircleBuilder::default().r(3.0).build().unwrap().to_code(),
+            Circle::build_with(|b| {
+                let _ = b.r(3.);
+            })
+            .to_code(),
             "circle(r = 3);"
         );
         assert_eq!(
-            CircleBuilder::default().d(4.0).build().unwrap().to_code(),
+            Circle::build_with(|b| {
+                let _ = b.d(4.);
+            })
+            .to_code(),
             "circle(d = 4);"
         );
         assert_eq!(
-            CircleBuilder::default()
-                .r(3.0)
-                .fa(0.5)
-                .r#fn(20_u64)
-                .build()
-                .unwrap()
-                .to_code(),
+            Circle::build_with(|b| {
+                let _ = b.r(3.).fa(0.5).r#fn(20_u64);
+            })
+            .to_code(),
             "circle(r = 3, $fa = 0.5, $fn = 20);"
         );
         assert_eq!(
-            CircleBuilder::default()
-                .r(3.0)
-                .fs(40.)
-                .fa(0.5)
-                .build()
-                .unwrap()
-                .to_code(),
+            Circle::build_with(|b| {
+                let _ = b.r(3.).fs(40).fa(0.5);
+            })
+            .to_code(),
             "circle(r = 3, $fa = 0.5, $fs = 40);"
         );
-        let _x = CircleBuilder::default()
-            .fa(0.5)
-            .r#fn(20_u64)
-            .fs(40.)
-            .build()
-            .unwrap_err();
+        drop(
+            CircleBuilder::default()
+                .fa(0.5)
+                .r#fn(20_u64)
+                .fs(40.)
+                .build()
+                .unwrap_err(),
+        );
     }
 
     #[test]
@@ -372,19 +440,19 @@ mod tests {
 
         let mut p1 = PolygonBuilder::default();
         _ = p1.points(vec![
-            Point2D::new(2., 0.),
-            Point2D::new(1., 1.),
-            Point2D::new(-1., 1.),
-            Point2D::new(1., 0.),
-            Point2D::new(0.5, 0.5),
-            Point2D::new(-0.5, 0.5),
+            [2., 0.],
+            [1., 1.],
+            [-1., 1.],
+            [1., 0.],
+            [0.5, 0.5],
+            [-0.5, 0.5],
         ]);
         assert_eq!(
-            p1.clone().paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
+            p1.clone().paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
             "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
-            p1.paths(vec![vec![0, 1, 2], vec![6, 4, 5]])
+            p1.paths([vec![0, 1, 2], vec![6, 4, 5]])
                 .build()
                 .err()
                 .map(|e| e.to_string())

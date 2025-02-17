@@ -4,8 +4,8 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad3d,
-    internal::generate_body,
     common::{Point3D, ScadObject, ScadObject3D, Unit},
+    internal::generate_body,
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
     value_type::RoundSize,
 };
@@ -68,7 +68,7 @@ impl ScadObject for Sphere {
 }
 
 /// Size of cube in SCAD.
-#[derive(Copy, Clone, Debug, PartialEq, From, Delegate)]
+#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
 #[delegate(ScadDisplay)]
 pub enum CubeSize {
     /// Edges' length of square.
@@ -77,6 +77,25 @@ pub enum CubeSize {
     /// `[x, y, z]` length of rectangle.
     /// `v` option in SCAD.
     V(Point3D),
+}
+
+impl From<Unit> for CubeSize {
+    fn from(value: Unit) -> Self {
+        Self::N(value)
+    }
+}
+
+impl From<Point3D> for CubeSize {
+    fn from(value: Point3D) -> Self {
+        Self::V(value)
+    }
+}
+
+impl From<[Unit; 3]> for CubeSize {
+    fn from(value: [Unit; 3]) -> Self {
+        let [x, y, z] = value;
+        Self::V(Point3D::new(x, y, z))
+    }
 }
 
 /// Cube object `cube()` in SCAD.
@@ -232,13 +251,40 @@ impl ScadObject for Cylinder {
     }
 }
 
+/// Numbers to generate [`vec<Points3D>`].
+#[derive(Clone, Debug, PartialEq, derive_more::Deref)]
+pub struct VecPoint3DEntry(Vec<Point3D>);
+
+impl From<Vec<[Unit; 3]>> for VecPoint3DEntry {
+    fn from(value: Vec<[Unit; 3]>) -> Self {
+        Self(
+            value
+                .into_iter()
+                .map(|[x, y, z]| Point3D::new(x, y, z))
+                .collect(),
+        )
+    }
+}
+
+impl From<Vec<Point3D>> for VecPoint3DEntry {
+    fn from(value: Vec<Point3D>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<VecPoint3DEntry> for Vec<Point3D> {
+    fn from(value: VecPoint3DEntry) -> Self {
+        value.0
+    }
+}
+
 /// Polyhedron object `polyhedron()` in SCAD.
 #[derive(Builder, Clone, Debug, PartialEq)]
 #[builder(build_fn(validate = "Self::validate"))]
 pub struct Polyhedron {
     /// Verticies of polyhedron.
     /// `points` option in SCAD.
-    #[builder(setter(into))]
+    #[builder(setter(custom))]
     pub points: Vec<Point3D>,
     /// Faces of polyhedron.
     /// `paths` option in SCAD.
@@ -273,6 +319,13 @@ impl PolyhedronBuilder {
             Some(Ok(()))
         })()
         .unwrap_or(Ok(()))
+    }
+
+    fn points<T: Into<VecPoint3DEntry>>(&mut self, value: T) -> &mut Self {
+        let new = self;
+        let entry: VecPoint3DEntry = value.into();
+        new.points = Some(entry.into());
+        new
     }
 }
 
@@ -414,6 +467,14 @@ mod tests {
         );
         assert_eq!(
             CubeBuilder::default()
+                .size([4.0, 2.0, 3.0])
+                .build()
+                .unwrap()
+                .to_code(),
+            "cube(size = [4, 2, 3]);"
+        );
+        assert_eq!(
+            CubeBuilder::default()
                 .size(Point3D::new(4.0, 2.0, 3.0))
                 .build()
                 .unwrap()
@@ -508,20 +569,20 @@ mod tests {
 
         let mut p1 = PolyhedronBuilder::default();
         _ = p1.points(vec![
-            Point3D::new(2., 0., 2.),
-            Point3D::new(1., 1., 1.),
-            Point3D::new(-1., 1., 0.),
-            Point3D::new(1., 0., -1.),
-            Point3D::new(0.5, 0.5, 0.7),
-            Point3D::new(-0.5, 0.5, -0.3),
+            [2., 0., 2.],
+            [1., 1., 1.],
+            [-1., 1., 0.],
+            [1., 0., -1.],
+            [0.5, 0.5, 0.7],
+            [-0.5, 0.5, -0.3],
         ]);
         assert_eq!(
-            p1.paths(vec![vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
+            p1.paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
             "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], paths = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
             p1.clone()
-                .paths(vec![vec![0, 1, 2], vec![6, 4, 5]])
+                .paths([vec![0, 1, 2], vec![6, 4, 5]])
                 .build()
                 .err()
                 .map(|e| e.to_string())

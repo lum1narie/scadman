@@ -4,8 +4,8 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __get_children_impl, __impl_scad2d,
-    internal::generate_body,
     common::{AffineMatrix2D, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
+    internal::generate_body,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
 };
@@ -409,6 +409,7 @@ impl ScadObject for Projection {
 
 #[cfg(test)]
 mod tests {
+    
     use std::f64::consts::PI;
 
     use super::*;
@@ -427,7 +428,7 @@ mod tests {
         ];
         assert_eq!(
             Translate2DBuilder::default()
-                .v(Point2D::new(8., -4.))
+                .v([8., -4.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -470,7 +471,7 @@ mod tests {
         ];
         assert_eq!(
             Mirror2DBuilder::default()
-                .v(Point2D::new(1., -1.))
+                .v([1., -1.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -487,7 +488,7 @@ mod tests {
         ];
         assert_eq!(
             Scale2DBuilder::default()
-                .v(Point2D::new(3., 2.))
+                .v([3., 2.])
                 .apply_to(children)
                 .build()
                 .unwrap()
@@ -503,7 +504,7 @@ mod tests {
             CircleBuilder::default().r(5.).build().unwrap(),
         ];
         let mut r1 = Resize2DBuilder::default();
-        _ = r1.size(Point2D::new(3., 2.)).apply_to(children);
+        _ = r1.size([3., 2.]).apply_to(children);
         assert_eq!(
             r1.clone().build().unwrap().to_code(),
             "resize([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
@@ -715,10 +716,10 @@ mod tests {
             .deg(45.)
             .apply_to(
                 Translate2DBuilder::default()
-                    .v(Point2D::new(8., -4.))
+                    .v([8., -4.])
                     .apply_to(objs.clone())
                     .build()
-                    .unwrap()
+                    .unwrap(),
             )
             .build()
             .unwrap();

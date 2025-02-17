@@ -164,7 +164,7 @@ variant-size-differences = "warn"
 [dependencies]
 ambassador = "0.4.1"
 derive_builder = "0.20.2"
-derive_more = { version = "1.0.0", features = ["from"] }
+derive_more = { version = "1.0.0", features = ["deref", "from"] }
 dyn-clone = "1.0.17"
 nalgebra = "0.33.2"
 paste = "1.0.15"
