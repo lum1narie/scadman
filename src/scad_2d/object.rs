@@ -193,8 +193,12 @@ impl PolygonBuilder {
         .unwrap_or(Ok(()))
     }
 
-    #[allow(unused)]
-    fn points<T: Into<VecPoint2DEntry>>(&mut self, value: T) -> &mut Self {
+    /// Set `points` option in SCAD.
+    ///
+    /// # Arguments
+    ///
+    /// + `value` - `points` option in SCAD. This is the verticies of polygon.
+    pub fn points<T: Into<VecPoint2DEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
         let entry: VecPoint2DEntry = value.into();
         new.points = Some(entry.into());
