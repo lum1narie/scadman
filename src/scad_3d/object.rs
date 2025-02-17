@@ -287,13 +287,13 @@ pub struct Polyhedron {
     #[builder(setter(custom))]
     pub points: Vec<Point3D>,
     /// Faces of polyhedron.
-    /// `paths` option in SCAD.
+    /// `faces` option in SCAD.
     ///
     /// Each element is a face.
-    /// Each two consecutive elements of a face are the paths. (include (last, first))
+    /// Each two consecutive elements of a face are the faces. (include (last, first))
     /// Each element of a path shows the index of a point.
     #[builder(setter(into, strip_option), default)]
-    pub paths: Option<Vec<Vec<usize>>>,
+    pub faces: Option<Vec<Vec<usize>>>,
     /// `convexity` option in SCAD.
     #[builder(setter(into, strip_option), default)]
     pub convexity: Option<u64>,
@@ -302,11 +302,11 @@ pub struct Polyhedron {
 __impl_scad3d!(Polyhedron);
 
 impl PolyhedronBuilder {
-    /// Check if `paths` is in the range of `points`'s indicies.
+    /// Check if `faces` is in the range of `points`'s indicies.
     fn validate(&self) -> Result<(), String> {
         (|| -> Option<Result<(), String>> {
             let pts: Vec<Point3D> = self.points.clone()?;
-            let pas: Vec<Vec<usize>> = self.paths.clone()??;
+            let pas: Vec<Vec<usize>> = self.faces.clone()??;
 
             for (i, pa) in pas.into_iter().enumerate() {
                 for (j, vtx) in pa.into_iter().enumerate() {
@@ -340,7 +340,7 @@ impl ScadObject for Polyhedron {
             "polyhedron",
             __generate_scad_options!(
                 ("points", self.points.clone());
-                ("paths", self.paths.clone()), ("convexity", self.convexity);
+                ("faces", self.faces.clone()), ("convexity", self.convexity);
             ),
         )
     }
@@ -561,11 +561,11 @@ mod tests {
         );
         assert_eq!(
             p0.clone()
-                .paths(vec![vec![0, 2, 1]])
+                .faces(vec![vec![0, 2, 1]])
                 .build()
                 .unwrap()
                 .to_code(),
-            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], paths = [[0, 2, 1]]);"
+            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], faces = [[0, 2, 1]]);"
         );
         assert_eq!(
             p0.convexity(2_u64).build().unwrap().to_code(),
@@ -582,12 +582,12 @@ mod tests {
             [-0.5, 0.5, -0.3],
         ]);
         assert_eq!(
-            p1.paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
-            "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], paths = [[0, 1, 2], [3, 4, 5]]);"
+            p1.faces([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().to_code(),
+            "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], faces = [[0, 1, 2], [3, 4, 5]]);"
         );
         assert_eq!(
             p1.clone()
-                .paths([vec![0, 1, 2], vec![6, 4, 5]])
+                .faces([vec![0, 1, 2], vec![6, 4, 5]])
                 .build()
                 .err()
                 .map(|e| e.to_string())
