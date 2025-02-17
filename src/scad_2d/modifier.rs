@@ -409,7 +409,7 @@ impl ScadObject for Projection {
 
 #[cfg(test)]
 mod tests {
-    
+
     use std::f64::consts::PI;
 
     use super::*;

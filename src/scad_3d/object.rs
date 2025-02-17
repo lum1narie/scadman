@@ -321,6 +321,7 @@ impl PolyhedronBuilder {
         .unwrap_or(Ok(()))
     }
 
+    #[allow(unused)]
     fn points<T: Into<VecPoint3DEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
         let entry: VecPoint3DEntry = value.into();

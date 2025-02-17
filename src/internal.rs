@@ -158,20 +158,30 @@ macro_rules! __get_children_impl {
     };
 }
 
-/// TODO: doc
+/// Give a default implementation of [`build_with()`].
+///
+/// This macro is for the [`impl ScadObject`] having its own builder.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __build_with_impl {
     ( $type:tt ) => {
         paste::paste! {
             impl $type {
-                pub fn build_with(
-                    builder_config: impl FnOnce(&mut [<$type Builder>])
-                ) -> Self {
-                    let mut builder = [<$type Builder>]::default();
-                    let _ = builder_config(&mut builder);
-                    builder.build().expect("required fields are not set")
-                    }
+                /// Create a new instance with a closure to configure its builder.
+                ///
+                /// # Arguments
+                ///
+                /// + `builder_config` - closure to configure the builder
+                ///
+                /// # Returns
+                ///
+                /// New instance of the [`Self`]
+                pub fn build_with<T: FnOnce(&mut [<$type Builder>])>
+                    (builder_config: T) -> Self {
+                        let mut builder = [<$type Builder>]::default();
+                        let _ = builder_config(&mut builder);
+                        builder.build().expect("required fields are not set")
+                }
             }
         }
     };

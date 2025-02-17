@@ -193,6 +193,7 @@ impl PolygonBuilder {
         .unwrap_or(Ok(()))
     }
 
+    #[allow(unused)]
     fn points<T: Into<VecPoint2DEntry>>(&mut self, value: T) -> &mut Self {
         let new = self;
         let entry: VecPoint2DEntry = value.into();
