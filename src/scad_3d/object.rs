@@ -253,7 +253,7 @@ impl ScadObject for Cylinder {
 
 /// Numbers to generate [`vec<Points3D>`].
 #[derive(Clone, Debug, PartialEq, derive_more::Deref)]
-pub struct VecPoint3DEntry(Vec<Point3D>);
+pub struct VecPoint3DEntry(pub Vec<Point3D>);
 
 impl From<Vec<[Unit; 3]>> for VecPoint3DEntry {
     fn from(value: Vec<[Unit; 3]>) -> Self {

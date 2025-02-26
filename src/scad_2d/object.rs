@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use ambassador::Delegate;
 use derive_builder::Builder;
 
@@ -132,7 +134,7 @@ impl ScadObject for Circle {
 
 /// Numbers to generate [`vec<Points2D>`].
 #[derive(Clone, Debug, PartialEq, derive_more::Deref)]
-pub struct VecPoint2DEntry(Vec<Point2D>);
+pub struct VecPoint2DEntry(pub Vec<Point2D>);
 
 impl From<Vec<[Unit; 2]>> for VecPoint2DEntry {
     fn from(value: Vec<[Unit; 2]>) -> Self {

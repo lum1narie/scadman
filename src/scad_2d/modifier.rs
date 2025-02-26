@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul, Sub};
+
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
@@ -6,9 +8,12 @@ use crate::{
     __generate_scad_options, __get_children_impl, __impl_scad2d,
     common::{AffineMatrix2D, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
     internal::generate_body,
+    scad_3d::Objects3D,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
 };
+
+use super::Objects2D;
 
 /// Give an implementation of a modifier 2D object
 /// that has no parameters and is applied to 2D objects.
@@ -22,7 +27,7 @@ macro_rules! __impl_operator_2d {
         pub struct $type {
             /// Children objects to apply this modifier.
             #[builder(setter(name = "apply_to", into))]
-            pub children: Vec<Box<dyn ScadObject2D>>,
+            pub children: $crate::scad_2d::Objects2D,
         }
         $crate::__impl_scad2d!($type);
 
@@ -50,7 +55,7 @@ pub struct Translate2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Translate2D);
@@ -79,7 +84,7 @@ pub struct Rotate2D {
     pub a: Angle,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Rotate2D);
@@ -129,7 +134,7 @@ pub struct Scale2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Scale2D);
@@ -173,7 +178,7 @@ pub struct Resize2D {
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Resize2D);
@@ -200,7 +205,7 @@ pub struct Mirror2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Mirror2D);
@@ -226,7 +231,7 @@ pub struct MultMatrix2D {
     pub m: AffineMatrix2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(MultMatrix2D);
@@ -260,7 +265,7 @@ pub struct Color2D {
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Color2D);
@@ -328,7 +333,7 @@ pub struct Offset {
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad2d!(Offset);
@@ -390,7 +395,7 @@ pub struct Projection {
     pub cut: Option<bool>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad2d!(Projection);
@@ -405,6 +410,40 @@ impl ScadObject for Projection {
         )
     }
     __get_children_impl!();
+}
+
+impl Add for Objects2D {
+    type Output = Union2D;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Union2D::build_with(|ub| {
+            let _ = ub.apply_to(Objects2D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
+}
+impl Mul for Objects2D {
+    type Output = Intersection2D;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Intersection2D::build_with(|ib| {
+            let _ = ib.apply_to(Objects2D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
+}
+impl Sub for Objects2D {
+    type Output = Difference2D;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Difference2D::build_with(|db| {
+            let _ = db.apply_to(Objects2D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
 }
 
 #[cfg(test)]

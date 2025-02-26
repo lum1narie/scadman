@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul, Sub};
+
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
@@ -6,10 +8,13 @@ use nalgebra as na;
 use crate::{
     ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d,
     internal::generate_body,
+    scad_2d::Objects2D,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
     AffineMatrix3D, Point3D, ScadObject2D, ScadObject3D, Unit,
 };
+
+use super::Objects3D;
 
 /// Give an implementation of a modifier 3D object
 /// that has no parameters and is applied to 3D objects.
@@ -23,7 +28,7 @@ macro_rules! __impl_operator_3d {
         pub struct $type {
             /// Children objects to apply this modifier.
             #[builder(setter(name = "apply_to", into))]
-            pub children: Vec<Box<dyn ScadObject3D>>,
+            pub children: Objects3D,
         }
         $crate::__impl_scad3d!($type);
 
@@ -51,7 +56,7 @@ pub struct Translate3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Translate3D);
@@ -107,7 +112,7 @@ pub struct Rotate3D {
     pub v: Option<Point3D>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Rotate3D);
@@ -169,7 +174,7 @@ pub struct Scale3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Scale3D);
@@ -213,7 +218,7 @@ pub struct Resize3D {
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Resize3D);
@@ -240,7 +245,7 @@ pub struct Mirror3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Mirror3D);
@@ -266,7 +271,7 @@ pub struct MultMatrix3D {
     pub m: AffineMatrix3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(MultMatrix3D);
@@ -300,7 +305,7 @@ pub struct Color3D {
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject3D>>,
+    pub children: Objects3D,
 }
 
 __impl_scad3d!(Color3D);
@@ -362,7 +367,7 @@ pub struct LinearExtrude {
     pub r#fn: Option<u64>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad3d!(LinearExtrude);
@@ -417,7 +422,7 @@ pub struct RotateExtrude {
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Vec<Box<dyn ScadObject2D>>,
+    pub children: Objects2D,
 }
 
 __impl_scad3d!(RotateExtrude);
@@ -438,6 +443,40 @@ impl ScadObject for RotateExtrude {
         )
     }
     __get_children_impl!();
+}
+
+impl Add for Objects3D {
+    type Output = Union3D;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Union3D::build_with(|ub| {
+            let _ = ub.apply_to(Objects3D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
+}
+impl Mul for Objects3D {
+    type Output = Intersection3D;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Intersection3D::build_with(|ib| {
+            let _ = ib.apply_to(Objects3D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
+}
+impl Sub for Objects3D {
+    type Output = Difference3D;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Difference3D::build_with(|db| {
+            let _ = db.apply_to(Objects3D(
+                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
+            ));
+        })
+    }
 }
 
 #[cfg(test)]

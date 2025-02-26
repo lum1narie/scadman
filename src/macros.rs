@@ -16,7 +16,7 @@ macro_rules! any_scads {
 macro_rules! any_scads2d {
     [ $($scad:expr_2021),* $(,)? ] => {
         {
-            let v: Vec<Box<dyn ScadObject2D>> = vec![$(Box::new($scad)),*];
+            let v: Vec<Box<dyn $crate::ScadObject2D>> = vec![$(Box::new($scad)),*];
             v
         }
     };
@@ -27,8 +27,28 @@ macro_rules! any_scads2d {
 macro_rules! any_scads3d {
     [ $($scad:expr_2021),* $(,)? ] => {
         {
-            let v: Vec<Box<dyn ScadObject3D>> = vec![$(Box::new($scad)),*];
+            let v: Vec<Box<dyn $crate::ScadObject3D>> = vec![$(Box::new($scad)),*];
             v
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! objects2d {
+    [ $($scad:expr_2021),* $(,)? ] => {
+        {
+            let v: Vec<Box<dyn $crate::ScadObject2D>> = vec![$(Box::new($scad)),*];
+            $crate::scad_2d::Objects2D(v)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! objects3d {
+    [ $($scad:expr_2021),* $(,)? ] => {
+        {
+            let v: Vec<Box<dyn $crate::ScadObject3D>> = vec![$(Box::new($scad)),*];
+            $crate::scad_3d::Objects3D(v)
         }
     };
 }
