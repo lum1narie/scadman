@@ -27,7 +27,7 @@ macro_rules! __impl_operator_3d {
         #[derive(derive_builder::Builder, Debug, Clone)]
         pub struct $type {
             /// Children objects to apply this modifier.
-            #[builder(setter(name = "apply_to", into))]
+            #[builder(setter(name = "apply_to", into), default)]
             pub children: Vec<$crate::scad_3d::ScadObject3D>,
         }
         $crate::__impl_scad3d!($type);
@@ -45,6 +45,13 @@ macro_rules! __impl_operator_3d {
             $crate::__impl_modifier_to_code!();
         }
 
+        impl $type {
+            #[allow(dead_code)]
+            const fn new() -> Self {
+                Self {children: Vec::new()}
+            }
+        }
+
         $crate::__impl_modifier!($type, $crate::scad_3d::ScadObject3D);
     };
 }
@@ -58,7 +65,7 @@ pub struct Translate3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -117,7 +124,7 @@ pub struct Rotate3D {
     #[builder(setter(into, strip_option), default)]
     pub v: Option<Point3D>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -182,7 +189,7 @@ pub struct Scale3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -229,7 +236,7 @@ pub struct Resize3D {
     #[builder(setter(into, strip_option), default)]
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -259,7 +266,7 @@ pub struct Mirror3D {
     #[builder(setter(into))]
     pub v: Point3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -288,7 +295,7 @@ pub struct MultMatrix3D {
     #[builder(setter(into))]
     pub m: AffineMatrix3D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -325,7 +332,7 @@ pub struct Color3D {
     #[builder(setter(into, strip_option), default)]
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -341,6 +348,8 @@ impl ScadObjectTrait for Color3D {
             ),
         )
     }
+
+    __impl_modifier_to_code!();
 }
 
 __impl_modifier!(Color3D, ScadObject3D);
@@ -388,7 +397,7 @@ pub struct LinearExtrude {
     #[builder(setter(into, strip_option), default)]
     pub r#fn: Option<u64>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -446,7 +455,7 @@ pub struct RotateExtrude {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -507,56 +516,62 @@ mod tests {
 
     use super::*;
     use crate::{
-        scad_2d::SquareBuilder,
-        scad_3d::{Cube, CubeBuilder, Sphere, SphereBuilder},
+        scad_2d::Square,
+        scad_3d::{Cube, Sphere},
         value_type::{RGB, RGBA},
+        ScadModifier as _,
     };
+
+    fn get_children() -> Vec<ScadObject3D> {
+        vec![
+            Cube::build_with(|cb| {
+                let _ = cb.size(10.);
+            })
+            .into(),
+            Sphere::build_with(|cb| {
+                let _ = cb.r(5.);
+            })
+            .into(),
+        ]
+    }
 
     #[test]
     fn test_translate3d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Translate3DBuilder::default()
-                .v([8., -4., 6.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Translate3D::build_with(|tb| {
+                let _ = tb.v([8., -4., 6.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "translate([8, -4, 6]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_rotate3d() {
-        let children = any_scads3d![
-            Cube::build_with(|cb| {
-                let _ = cb.size(10.);
-            }),
-            Sphere::build_with(|sb| {
-                let _ = sb.r(5.);
-            }),
-        ];
+        let children = get_children();
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.deg([45., 0., 90.]).apply_to(children.clone());
+                let _ = rb.deg([45., 0., 90.]);
             })
+            .apply_to(&children)
             .to_code(),
             "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.rad([PI / 4., 0., PI / 2.]).apply_to(children.clone());
+                let _ = rb.rad([PI / 4., 0., PI / 2.]);
             })
+            .apply_to(&children)
             .to_code(),
             "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.rad(PI / 4.).v([1., 1., 0.]).apply_to(children);
+                let _ = rb.rad(PI / 4.).v([1., 1., 0.]);
             })
+            .apply_to(&children)
             .to_code(),
             "rotate(a = 45, v = [1, 1, 0]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -564,44 +579,33 @@ mod tests {
 
     #[test]
     fn test_mirror3d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Mirror3DBuilder::default()
-                .v([1., -1., 0.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Mirror3D::build_with(|mb| {
+                let _ = mb.v([1., -1., 0.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "mirror([1, -1, 0]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_scale3d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Scale3DBuilder::default()
-                .v([3., 2., 4.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Scale3D::build_with(|sb| {
+                let _ = sb.v([3., 2., 4.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "scale([3, 2, 4]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_resize3d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         let mut r1 = Resize3DBuilder::default();
         _ = r1.size([3., 2., 1.]).apply_to(children);
         assert_eq!(
@@ -620,204 +624,168 @@ mod tests {
 
     #[test]
     fn test_multimatrix2d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         let m = AffineMatrix3D::new(1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.);
         assert_eq!(
-            MultMatrix3DBuilder::default()
-                .m(m)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            MultMatrix3D::build_with(|mb| {
+            let _ =     mb.m(m);
+            }).apply_to(&children).to_code(),
             "multmatrix(m = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_color3d() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Color3DBuilder::default()
-                .c(RGB::new(0.3, 0.5, 0.2))
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Color3D::build_with(|cb| {
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Color3DBuilder::default()
-                .c(RGB::new(0.3, 0.5, 0.2))
-                .a(1.0)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Color3D::build_with(|cb| {
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2], a = 1) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Color3DBuilder::default()
-                .c(RGBA::new(0.3, 0.5, 0.2, 1.0))
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Color3D::build_with(|cb| {
+                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2, 1]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Color3DBuilder::default()
-                .c("#C0FFEE".to_string())
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Color3D::build_with(|cb| {
+                let _ = cb.c("#C0FFEE".to_string());
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(\"#C0FFEE\") {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_hull() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Hull3DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Hull3D::new().apply_to(&children).to_code(),
             "hull() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_minkowski() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Minkowski3DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Minkowski3D::new().apply_to(&children).to_code(),
             "minkowski() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_binary_op() {
-        let children = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Union3DBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Union3D::new().apply_to(&children).to_code(),
             "union() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Difference3DBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Difference3D::new().apply_to(&children).to_code(),
             "difference() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
-            Intersection3DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Intersection3D::new().apply_to(&children).to_code(),
+            "intersection() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+        );
+
+        assert_eq!(
+            (children[0].clone() + children[1].clone()).to_code(),
+            "union() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+        );
+        assert_eq!(
+            (children[0].clone() - children[1].clone()).to_code(),
+            "difference() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
+        );
+        assert_eq!(
+            (children[0].clone() * children[1].clone()).to_code(),
             "intersection() {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_linear_extrude() {
-        let children = any_scads2d![SquareBuilder::default().size(10.).build().unwrap()];
+        let children: Vec<ScadObject2D> = vec![Square::build_with(|sb| {
+            let _ = sb.size(10.);
+        })
+        .into()];
         assert_eq!(
-            LinearExtrudeBuilder::default()
-                .apply_to(children.clone())
-                .height(5.)
-                .build()
-                .unwrap()
-                .to_code(),
+            LinearExtrude::build_with(|lb| {
+                let _ = lb.height(5.);
+            })
+            .apply_to(&children)
+            .to_code(),
             "linear_extrude(height = 5) {\n  square(size = 10);\n}"
         );
         assert_eq!(
-            LinearExtrudeBuilder::default()
-                .apply_to(children)
-                .height(5.)
+            LinearExtrude::build_with(|lb| {
+                 let _ = lb.height(5.)
                 .v([0., 0.2, 1.])
                 .center(true)
                 .twist(180.)
                 .convexity(10_u64)
                 .slices(30_u64)
                 .scale(0.7)
-                .r#fn(20_u64)
-                .build()
-                .unwrap()
-                .to_code(),
+                .r#fn(20_u64);
+            })
+            .apply_to(&children)
+            .to_code(),
             "linear_extrude(height = 5, v = [0, 0.2, 1], center = true, twist = 180, convexity = 10, slices = 30, scale = 0.7, $fn = 20) {\n  square(size = 10);\n}"
         );
     }
 
     #[test]
     fn test_rotate_extrude() {
-        let children = any_scads2d![SquareBuilder::default().size(10.).build().unwrap()];
+        let children: Vec<ScadObject2D> = vec![Square::build_with(|sb| {
+            let _ = sb.size(10.);
+        })
+        .into()];
         assert_eq!(
-            RotateExtrudeBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
+            RotateExtrude::build_with(|_| {})
+                .apply_to(&children)
                 .to_code(),
             "rotate_extrude() {\n  square(size = 10);\n}"
         );
         assert_eq!(
-            RotateExtrudeBuilder::default()
-                .apply_to(children.clone())
-                .angle(180.)
-                .start(90.)
-                .convexity(10_u64)
-                .fa(5.)
-                .build()
-                .unwrap()
-                .to_code(),
+            RotateExtrude::build_with(|rb| {
+                let _ = rb.angle(180.)
+                    .start(90.)
+                    .convexity(10_u64)
+                    .fa(5.);
+                })
+            .apply_to(&children)
+            .to_code(),
             "rotate_extrude(angle = 180, start = 90, convexity = 10, $fa = 5) {\n  square(size = 10);\n}"
         );
     }
 
     #[test]
     fn test_multi_level() {
-        let objs = any_scads3d![
-            CubeBuilder::default().size(10.).build().unwrap(),
-            SphereBuilder::default().r(5.).build().unwrap(),
-        ];
-
-        let scad = Rotate3DBuilder::default()
-            .deg([45., 0., 90.])
-            .apply_to(
-                Translate3DBuilder::default()
-                    .v([8., -4., 6.])
-                    .apply_to(objs.clone())
-                    .build()
-                    .unwrap(),
-            )
-            .build()
-            .unwrap();
+        let objs = get_children();
+        let scad = Rotate3D::build_with(|rb| {
+            let _ = rb
+                .deg([45., 0., 90.])
+                .apply_to(vec![Translate3D::build_with(|tb| {
+                    let _ = tb.v([8., -4., 6.]).apply_to(objs);
+                })
+                .into()]);
+        });
 
         assert_eq!(
             scad.to_code(),

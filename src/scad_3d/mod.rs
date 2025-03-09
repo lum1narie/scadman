@@ -1,5 +1,6 @@
 //! 3D objects in SCAD.
 use ambassador::Delegate;
+use derive_more::derive::From;
 
 use crate::ambassador_impl_ScadObjectTrait;
 use crate::ScadObjectTrait;
@@ -11,7 +12,7 @@ mod modifier;
 pub use modifier::*;
 
 /// A 3D object in SCAD.
-#[derive(Debug, Clone, Delegate)]
+#[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadObjectTrait)]
 pub enum ScadObject3D {
     /// `cube()` in SCAD.

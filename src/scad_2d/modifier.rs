@@ -26,7 +26,7 @@ macro_rules! __impl_operator_2d {
         #[derive(derive_builder::Builder, Debug, Clone)]
         pub struct $type {
             /// Children objects to apply this modifier.
-            #[builder(setter(name = "apply_to", into))]
+            #[builder(setter(name = "apply_to", into), default)]
             pub children: Vec<$crate::scad_2d::ScadObject2D>,
         }
 
@@ -45,6 +45,13 @@ macro_rules! __impl_operator_2d {
             $crate::__impl_modifier_to_code!();
         }
 
+        impl $type {
+            #[allow(dead_code)]
+            const fn new() -> Self {
+                Self {children: Vec::new()}
+            }
+        }
+
         $crate::__impl_modifier!($type, $crate::scad_2d::ScadObject2D);
     };
 }
@@ -58,7 +65,7 @@ pub struct Translate2D {
     #[builder(setter(into))]
     pub v: Point2D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -90,7 +97,7 @@ pub struct Rotate2D {
     #[builder(setter(custom))]
     pub a: Angle,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -143,7 +150,7 @@ pub struct Scale2D {
     #[builder(setter(into))]
     pub v: Point2D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -190,7 +197,7 @@ pub struct Resize2D {
     #[builder(setter(into, strip_option), default)]
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -220,7 +227,7 @@ pub struct Mirror2D {
     #[builder(setter(into))]
     pub v: Point2D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -249,7 +256,7 @@ pub struct MultMatrix2D {
     #[builder(setter(into))]
     pub m: AffineMatrix2D,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -286,7 +293,7 @@ pub struct Color2D {
     #[builder(setter(into, strip_option), default)]
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -357,7 +364,7 @@ pub struct Offset {
     #[builder(setter(into, strip_option), default)]
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject2D>,
 }
 
@@ -399,6 +406,8 @@ impl ScadObjectTrait for Offset {
             ),
         )
     }
+
+    __impl_modifier_to_code!();
 }
 
 __impl_modifier!(Offset, ScadObject2D);
@@ -420,7 +429,7 @@ pub struct Projection {
     #[builder(setter(into, strip_option), default)]
     pub cut: Option<bool>,
     /// Children objects to apply this modifier.
-    #[builder(setter(name = "apply_to", into))]
+    #[builder(setter(name = "apply_to", into), default)]
     pub children: Vec<ScadObject3D>,
 }
 
@@ -476,94 +485,88 @@ mod tests {
 
     use super::*;
     use crate::{
-        scad_2d::{CircleBuilder, SquareBuilder},
+        scad_2d::{Circle, Square},
         scad_3d::SphereBuilder,
         value_type::{RGB, RGBA},
+        ScadModifier as _,
     };
+
+    fn get_children() -> Vec<ScadObject2D> {
+        vec![
+            Square::build_with(|sb| {
+                let _ = sb.size(10.);
+            })
+            .into(),
+            Circle::build_with(|cb| {
+                let _ = cb.r(5.);
+            })
+            .into(),
+        ]
+    }
 
     #[test]
     fn test_translate2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Translate2DBuilder::default()
-                .v([8., -4.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Translate2D::build_with(|tb| {
+                let _ = tb.v([8., -4.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "translate([8, -4]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_rotate2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Rotate2DBuilder::default()
-                .deg(45.)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Rotate2D::build_with(|rb| {
+                let _ = rb.deg(45.);
+            })
+            .apply_to(&children)
+            .to_code(),
             "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Rotate2DBuilder::default()
-                .rad(PI / 4.)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Rotate2D::build_with(|rb| {
+                let _ = rb.rad(PI / 4.);
+            })
+            .apply_to(&children)
+            .to_code(),
             "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_mirror2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Mirror2DBuilder::default()
-                .v([1., -1.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Mirror2D::build_with(|mb| {
+                let _ = mb.v([1., -1.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "mirror([1, -1]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_scale2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Scale2DBuilder::default()
-                .v([3., 2.])
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Scale2D::build_with(|sb| {
+                let _ = sb.v([3., 2.]);
+            })
+            .apply_to(&children)
+            .to_code(),
             "scale([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_resize2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         let mut r1 = Resize2DBuilder::default();
         _ = r1.size([3., 2.]).apply_to(children);
         assert_eq!(
@@ -582,209 +585,167 @@ mod tests {
 
     #[test]
     fn test_multimatrix2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         let m = AffineMatrix2D::new(1., 2., 3., 4., 5., 6.);
         assert_eq!(
-            MultMatrix2DBuilder::default()
-                .m(m)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            MultMatrix2D::build_with(|mb| {
+                let _ = mb.m(m);
+            })
+            .apply_to(&children)
+            .to_code(),
             "multmatrix(m = [[1, 2, 0, 3], [4, 5, 0, 6], [0, 0, 1, 0]]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_color2d() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Color2DBuilder::default()
-                .c(RGB::new(0.3, 0.5, 0.2))
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Color2D::build_with(|cb| {
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Color2DBuilder::default()
-                .c(RGB::new(0.3, 0.5, 0.2))
-                .a(1.0)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            // Color2DBuilder::default()
+            //     .c(RGB::new(0.3, 0.5, 0.2))
+            //     .a(1.0)
+            //     .apply_to(children.clone())
+            //     .build()
+            //     .unwrap()
+            //     .to_code(),
+            Color2D::build_with(|cb| {
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2], a = 1) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Color2DBuilder::default()
-                .c(RGBA::new(0.3, 0.5, 0.2, 1.0))
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Color2D::build_with(|cb| {
+                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(c = [0.3, 0.5, 0.2, 1]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Color2DBuilder::default()
-                .c("#C0FFEE".to_string())
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Color2D::build_with(|cb| {
+                let _ = cb.c("#C0FFEE".to_string());
+            })
+            .apply_to(&children)
+            .to_code(),
             "color(\"#C0FFEE\") {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_offset() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            OffsetBuilder::default()
-                .r(1.)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Offset::build_with(|ob| {
+                let _ = ob.r(1.);
+            })
+            .apply_to(&children)
+            .to_code(),
             "offset(r = 1) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            OffsetBuilder::default()
-                .delta(1.)
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
-            "offset(delta = 1) {\n  square(size = 10);\n  circle(r = 5);\n}"
+            Offset::build_with(|ob| {
+                let _ = ob.delta(2.);
+            })
+            .apply_to(&children)
+            .to_code(),
+            "offset(delta = 2) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            OffsetBuilder::default()
-                .r(1.)
-                .chamfer(true)
-                .fs(10)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Offset::build_with(|ob| {
+                let _ = ob.r(1.).chamfer(true).fs(10);
+            })
+            .apply_to(&children)
+            .to_code(),
             "offset(r = 1, chamfer = true, $fs = 10) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_hull() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Hull2DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Hull2D::new().apply_to(&children).to_code(),
             "hull() {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_minkowski() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Minkowski2DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Minkowski2D::new().apply_to(&children).to_code(),
             "minkowski() {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_binary_op() {
-        let children = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
+        let children = get_children();
         assert_eq!(
-            Union2DBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Union2D::new().apply_to(&children).to_code(),
             "union() {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Difference2DBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Difference2D::new().apply_to(&children).to_code(),
             "difference() {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
-            Intersection2DBuilder::default()
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Intersection2D::new().apply_to(&children).to_code(),
+            "intersection() {\n  square(size = 10);\n  circle(r = 5);\n}"
+        );
+
+        assert_eq!(
+            (children[0].clone() + children[1].clone()).to_code(),
+            "union() {\n  square(size = 10);\n  circle(r = 5);\n}"
+        );
+        assert_eq!(
+            (children[0].clone() - children[1].clone()).to_code(),
+            "difference() {\n  square(size = 10);\n  circle(r = 5);\n}"
+        );
+        assert_eq!(
+            (children[0].clone() * children[1].clone()).to_code(),
             "intersection() {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
     }
 
     #[test]
     fn test_projection() {
-        let children = any_scads3d![SphereBuilder::default().r(10.).build().unwrap()];
+        let children: Vec<ScadObject3D> =
+            vec![SphereBuilder::default().r(10.).build().unwrap().into()];
+
         assert_eq!(
-            ProjectionBuilder::default()
-                .apply_to(children.clone())
-                .build()
-                .unwrap()
-                .to_code(),
+            Projection::build_with(|_| {}).apply_to(&children).to_code(),
             "projection() {\n  sphere(r = 10);\n}"
         );
         assert_eq!(
-            ProjectionBuilder::default()
-                .cut(true)
-                .apply_to(children)
-                .build()
-                .unwrap()
-                .to_code(),
+            Projection::build_with(|pb| {
+                let _ = pb.cut(true);
+            })
+            .apply_to(&children)
+            .to_code(),
             "projection(cut = true) {\n  sphere(r = 10);\n}"
         );
     }
 
     #[test]
     fn test_multilevel() {
-        let objs = any_scads2d![
-            SquareBuilder::default().size(10.).build().unwrap(),
-            CircleBuilder::default().r(5.).build().unwrap(),
-        ];
-
-        let scad = Rotate2DBuilder::default()
-            .deg(45.)
-            .apply_to(
-                Translate2DBuilder::default()
-                    .v([8., -4.])
-                    .apply_to(objs.clone())
-                    .build()
-                    .unwrap(),
-            )
-            .build()
-            .unwrap();
-
+        let objs = get_children();
+        let scad = Rotate2D::build_with(|rb| {
+            let _ = rb.deg(45.).apply_to(vec![Translate2D::build_with(|tb| {
+                let _ = tb.v([8., -4.]).apply_to(objs);
+            })
+            .into()]);
+        });
         assert_eq!(
             scad.to_code(),
             "rotate(45) {\n  translate([8, -4]) {\n    square(size = 10);\n    circle(r = 5);\n  }\n}"

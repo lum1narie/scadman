@@ -90,8 +90,13 @@ pub trait ScadModifier: ScadObjectTrait {
     /// SCAD code of the object as a [`String`].
     fn to_code_with_children(&self) -> String {
         let body = self.get_body();
-        let unindented_lines_iter = self.get_children().iter().map(ScadObjectTrait::to_code);
-        let children = unindented_lines_iter
+        let unindented_lines_itr = self.get_children().iter().flat_map(|sobj| {
+            sobj.to_code()
+                .split('\n')
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        });
+        let children = unindented_lines_itr
             .map(|s| format!("{}{}", " ".repeat(INDENT), s))
             .collect::<Vec<_>>()
             .join("\n");

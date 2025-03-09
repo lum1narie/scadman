@@ -469,29 +469,24 @@ mod tests {
     #[test]
     fn test_text() {
         assert_eq!(
-            TextBuilder::default()
-                .text("Hello World")
-                .build()
-                .unwrap()
-                .to_code(),
+            Text::build_with(|tb| {
+                let _ = tb.text("Hello World");
+            })
+            .to_code(),
             "text(\"Hello World\");"
         );
         assert_eq!(
-            TextBuilder::default()
-                .text("Hello World")
-                .font("LiberationSans-Regular")
-                .build()
-                .unwrap()
-                .to_code(),
+            Text::build_with(|tb| {
+                let _ = tb.text("Hello World").font("LiberationSans-Regular");
+            })
+            .to_code(),
             "text(\"Hello World\", font = \"LiberationSans-Regular\");"
         );
         assert_eq!(
-            TextBuilder::default()
-                .text("Hello World")
-                .size(3.0)
-                .build()
-                .unwrap()
-                .to_code(),
+            Text::build_with(|tb| {
+                let _ = tb.text("Hello World").size(3.);
+            })
+            .to_code(),
             "text(\"Hello World\", size = 3);"
         );
     }
@@ -499,21 +494,18 @@ mod tests {
     #[test]
     fn test_import2d() {
         assert_eq!(
-            Import2DBuilder::default()
-                .file("shape.svg")
-                .build()
-                .unwrap()
-                .to_code(),
+            Import2D::build_with(|ib| {
+                let _ = ib.file("shape.svg");
+            })
+            .to_code(),
             "import(\"shape.svg\");"
         );
 
         assert_eq!(
-            Import2DBuilder::default()
-                .file("shape.svg")
-                .convexity(10_u64)
-                .build()
-                .unwrap()
-                .to_code(),
+            Import2D::build_with(|ib| {
+                let _ = ib.file("shape.svg").convexity(10_u64);
+            })
+            .to_code(),
             "import(\"shape.svg\", convexity = 10);"
         );
     }
