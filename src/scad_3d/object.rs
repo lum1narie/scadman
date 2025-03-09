@@ -4,7 +4,7 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_scad3d,
-    common::{Point3D, ScadObject, ScadObject3D, Unit},
+    common::{Point3D, ScadObjectTrait, Unit},
     internal::generate_body,
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
     value_type::RoundSize,
@@ -55,7 +55,7 @@ impl SphereBuilder {
     }
 }
 
-impl ScadObject for Sphere {
+impl ScadObjectTrait for Sphere {
     fn get_body(&self) -> String {
         generate_body(
             "sphere",
@@ -118,7 +118,7 @@ pub struct Cube {
 
 __impl_scad3d!(Cube);
 
-impl ScadObject for Cube {
+impl ScadObjectTrait for Cube {
     fn get_body(&self) -> String {
         generate_body(
             "cube",
@@ -223,7 +223,7 @@ impl CylinderBuilder {
 
 __impl_scad3d!(Cylinder);
 
-impl ScadObject for Cylinder {
+impl ScadObjectTrait for Cylinder {
     fn get_body(&self) -> String {
         let size_str = match self.size {
             CylinderSize::Single(size) => format!("{} = {}", size.name(), size.repr_scad()),
@@ -334,7 +334,7 @@ impl PolyhedronBuilder {
     }
 }
 
-impl ScadObject for Polyhedron {
+impl ScadObjectTrait for Polyhedron {
     fn get_body(&self) -> String {
         generate_body(
             "polyhedron",
@@ -370,7 +370,7 @@ pub struct Import3D {
 
 __impl_scad3d!(Import3D);
 
-impl ScadObject for Import3D {
+impl ScadObjectTrait for Import3D {
     fn get_body(&self) -> String {
         generate_body(
             "import",
@@ -408,7 +408,7 @@ pub struct Surface {
 
 __impl_scad3d!(Surface);
 
-impl ScadObject for Surface {
+impl ScadObjectTrait for Surface {
     fn get_body(&self) -> String {
         generate_body(
             "surface",

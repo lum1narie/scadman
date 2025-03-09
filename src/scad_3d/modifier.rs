@@ -6,15 +6,15 @@ use derive_more::derive::From;
 use nalgebra as na;
 
 use crate::{
-    ScadObject, __generate_scad_options, __get_children_impl, __impl_scad3d,
+    ScadObjectTrait, __generate_scad_options, __impl_scad3d,
     internal::generate_body,
-    scad_2d::Objects2D,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
-    AffineMatrix3D, Point3D, ScadObject2D, ScadObject3D, Unit,
+    AffineMatrix3D, Point3D, Unit, __impl_modifier, __impl_modifier_to_code,
+    scad_2d::ScadObject2D,
 };
 
-use super::Objects3D;
+use super::ScadObject3D;
 
 /// Give an implementation of a modifier 3D object
 /// that has no parameters and is applied to 3D objects.
@@ -24,25 +24,28 @@ macro_rules! __impl_operator_3d {
         " modifier `", $name, "()` in SCAD.
         This Rust type is regarded as 3D object and only applys to 3D objects.")]
         #[allow(missing_debug_implementations)]
-        #[derive(Builder, Debug, Clone)]
+        #[derive(derive_builder::Builder, Debug, Clone)]
         pub struct $type {
             /// Children objects to apply this modifier.
             #[builder(setter(name = "apply_to", into))]
-            pub children: Objects3D,
+            pub children: Vec<$crate::scad_3d::ScadObject3D>,
         }
         $crate::__impl_scad3d!($type);
 
-        impl ScadObject for $type {
+        impl $crate::ScadObjectTrait for $type {
             fn get_body(&self) -> String {
                 generate_body(
                     $name,
-                    __generate_scad_options!(
+                    $crate::__generate_scad_options!(
                         ;;
                     ),
                 )
             }
-            $crate::__get_children_impl!();
+
+            $crate::__impl_modifier_to_code!();
         }
+
+        $crate::__impl_modifier!($type, $crate::scad_3d::ScadObject3D);
     };
 }
 
@@ -56,12 +59,12 @@ pub struct Translate3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Translate3D);
 
-impl ScadObject for Translate3D {
+impl ScadObjectTrait for Translate3D {
     fn get_body(&self) -> String {
         generate_body(
             "translate",
@@ -70,8 +73,11 @@ impl ScadObject for Translate3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Translate3D, ScadObject3D);
 
 /// Angle of rotate (3D) in SCAD.
 ///
@@ -112,7 +118,7 @@ pub struct Rotate3D {
     pub v: Option<Point3D>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Rotate3D);
@@ -151,7 +157,7 @@ impl Rotate3DBuilder {
     }
 }
 
-impl ScadObject for Rotate3D {
+impl ScadObjectTrait for Rotate3D {
     fn get_body(&self) -> String {
         generate_body(
             "rotate",
@@ -161,8 +167,11 @@ impl ScadObject for Rotate3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Rotate3D, ScadObject3D);
 
 /// Scale modifier `scale()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -174,12 +183,12 @@ pub struct Scale3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Scale3D);
 
-impl ScadObject for Scale3D {
+impl ScadObjectTrait for Scale3D {
     fn get_body(&self) -> String {
         generate_body(
             "scale",
@@ -188,8 +197,11 @@ impl ScadObject for Scale3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Scale3D, ScadObject3D);
 
 /// `auto` option in 3D resize modifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, From, Delegate)]
@@ -218,12 +230,12 @@ pub struct Resize3D {
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Resize3D);
 
-impl ScadObject for Resize3D {
+impl ScadObjectTrait for Resize3D {
     fn get_body(&self) -> String {
         generate_body(
             "resize",
@@ -233,8 +245,11 @@ impl ScadObject for Resize3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Resize3D, ScadObject3D);
 
 /// Mirror modifier `mirror()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -245,12 +260,12 @@ pub struct Mirror3D {
     pub v: Point3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Mirror3D);
 
-impl ScadObject for Mirror3D {
+impl ScadObjectTrait for Mirror3D {
     fn get_body(&self) -> String {
         generate_body(
             "mirror",
@@ -259,8 +274,11 @@ impl ScadObject for Mirror3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Mirror3D, ScadObject3D);
 
 /// Affine tranformation modifier `multmatrix()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -271,12 +289,12 @@ pub struct MultMatrix3D {
     pub m: AffineMatrix3D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(MultMatrix3D);
 
-impl ScadObject for MultMatrix3D {
+impl ScadObjectTrait for MultMatrix3D {
     fn get_body(&self) -> String {
         generate_body(
             "multmatrix",
@@ -285,8 +303,11 @@ impl ScadObject for MultMatrix3D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(MultMatrix3D, ScadObject3D);
 
 /// Color modifier `color()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -305,12 +326,12 @@ pub struct Color3D {
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad3d!(Color3D);
 
-impl ScadObject for Color3D {
+impl ScadObjectTrait for Color3D {
     fn get_body(&self) -> String {
         generate_body(
             "color",
@@ -320,8 +341,9 @@ impl ScadObject for Color3D {
             ),
         )
     }
-    __get_children_impl!();
 }
+
+__impl_modifier!(Color3D, ScadObject3D);
 
 __impl_operator_3d!(Hull3D, "hull");
 __impl_operator_3d!(Minkowski3D, "minkowski");
@@ -367,12 +389,12 @@ pub struct LinearExtrude {
     pub r#fn: Option<u64>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad3d!(LinearExtrude);
 
-impl ScadObject for LinearExtrude {
+impl ScadObjectTrait for LinearExtrude {
     fn get_body(&self) -> String {
         generate_body(
             "linear_extrude",
@@ -388,8 +410,11 @@ impl ScadObject for LinearExtrude {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(LinearExtrude, ScadObject2D);
 
 /// Rotate extrude modifier `rotate_extrude()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 2D objects.
@@ -422,12 +447,12 @@ pub struct RotateExtrude {
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad3d!(RotateExtrude);
 
-impl ScadObject for RotateExtrude {
+impl ScadObjectTrait for RotateExtrude {
     fn get_body(&self) -> String {
         generate_body(
             "rotate_extrude",
@@ -442,39 +467,36 @@ impl ScadObject for RotateExtrude {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
 
-impl Add for Objects3D {
+__impl_modifier!(RotateExtrude, ScadObject2D);
+
+impl Add for ScadObject3D {
     type Output = Union3D;
 
     fn add(self, rhs: Self) -> Self::Output {
         Union3D::build_with(|ub| {
-            let _ = ub.apply_to(Objects3D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = ub.apply_to(vec![self, rhs]);
         })
     }
 }
-impl Mul for Objects3D {
+impl Mul for ScadObject3D {
     type Output = Intersection3D;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Intersection3D::build_with(|ib| {
-            let _ = ib.apply_to(Objects3D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = ib.apply_to(vec![self, rhs]);
         })
     }
 }
-impl Sub for Objects3D {
+impl Sub for ScadObject3D {
     type Output = Difference3D;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Difference3D::build_with(|db| {
-            let _ = db.apply_to(Objects3D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = db.apply_to(vec![self, rhs]);
         })
     }
 }
@@ -485,7 +507,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        any_scads2d, any_scads3d,
         scad_2d::SquareBuilder,
         scad_3d::{Cube, CubeBuilder, Sphere, SphereBuilder},
         value_type::{RGB, RGBA},

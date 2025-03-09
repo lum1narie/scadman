@@ -1,11 +1,9 @@
-use std::ops::Add;
-
 use ambassador::Delegate;
 use derive_builder::Builder;
 
 use crate::{
     __generate_scad_options, __impl_scad2d,
-    common::{Point2D, ScadObject, ScadObject2D, Unit},
+    common::{Point2D, ScadObjectTrait, Unit},
     internal::generate_body,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::RoundSize,
@@ -62,7 +60,7 @@ pub struct Square {
 
 __impl_scad2d!(Square);
 
-impl ScadObject for Square {
+impl ScadObjectTrait for Square {
     fn get_body(&self) -> String {
         generate_body(
             "square",
@@ -120,7 +118,7 @@ impl CircleBuilder {
     }
 }
 
-impl ScadObject for Circle {
+impl ScadObjectTrait for Circle {
     fn get_body(&self) -> String {
         generate_body(
             "circle",
@@ -208,7 +206,7 @@ impl PolygonBuilder {
     }
 }
 
-impl ScadObject for Polygon {
+impl ScadObjectTrait for Polygon {
     fn get_body(&self) -> String {
         generate_body(
             "polygon",
@@ -268,7 +266,7 @@ pub struct Text {
 
 __impl_scad2d!(Text);
 
-impl ScadObject for Text {
+impl ScadObjectTrait for Text {
     fn get_body(&self) -> String {
         generate_body(
             "text",
@@ -322,7 +320,7 @@ pub struct Import2D {
 
 __impl_scad2d!(Import2D);
 
-impl ScadObject for Import2D {
+impl ScadObjectTrait for Import2D {
     fn get_body(&self) -> String {
         generate_body(
             "import",

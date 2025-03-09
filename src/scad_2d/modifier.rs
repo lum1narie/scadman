@@ -5,15 +5,15 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    __generate_scad_options, __get_children_impl, __impl_scad2d,
-    common::{AffineMatrix2D, Point2D, ScadObject, ScadObject2D, ScadObject3D, Unit},
+    __generate_scad_options, __impl_modifier, __impl_modifier_to_code, __impl_scad2d,
+    common::{AffineMatrix2D, Point2D, ScadObjectTrait, Unit},
     internal::generate_body,
-    scad_3d::Objects3D,
+    scad_3d::ScadObject3D,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
 };
 
-use super::Objects2D;
+use super::ScadObject2D;
 
 /// Give an implementation of a modifier 2D object
 /// that has no parameters and is applied to 2D objects.
@@ -23,25 +23,29 @@ macro_rules! __impl_operator_2d {
         " modifier `", $name, "()` in SCAD.
         This Rust type is regarded as 2D object and only applys to 2D objects.")]
         #[allow(missing_debug_implementations)]
-        #[derive(Builder, Debug, Clone)]
+        #[derive(derive_builder::Builder, Debug, Clone)]
         pub struct $type {
             /// Children objects to apply this modifier.
             #[builder(setter(name = "apply_to", into))]
-            pub children: $crate::scad_2d::Objects2D,
+            pub children: Vec<$crate::scad_2d::ScadObject2D>,
         }
+
         $crate::__impl_scad2d!($type);
 
-        impl ScadObject for $type {
+        impl $crate::ScadObjectTrait for $type {
             fn get_body(&self) -> String {
                 generate_body(
                     $name,
-                    __generate_scad_options!(
+                    $crate::__generate_scad_options!(
                         ;;
                     ),
                 )
             }
-            $crate::__get_children_impl!();
+
+            $crate::__impl_modifier_to_code!();
         }
+
+        $crate::__impl_modifier!($type, $crate::scad_2d::ScadObject2D);
     };
 }
 
@@ -55,12 +59,12 @@ pub struct Translate2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Translate2D);
 
-impl ScadObject for Translate2D {
+impl ScadObjectTrait for Translate2D {
     fn get_body(&self) -> String {
         generate_body(
             "translate",
@@ -69,8 +73,11 @@ impl ScadObject for Translate2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Translate2D, ScadObject2D);
 
 /// Rotate modifier `rotate()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -84,7 +91,7 @@ pub struct Rotate2D {
     pub a: Angle,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Rotate2D);
@@ -112,7 +119,7 @@ impl Rotate2DBuilder {
     }
 }
 
-impl ScadObject for Rotate2D {
+impl ScadObjectTrait for Rotate2D {
     fn get_body(&self) -> String {
         generate_body(
             "rotate",
@@ -121,8 +128,11 @@ impl ScadObject for Rotate2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Rotate2D, ScadObject2D);
 
 /// Scale modifier `scale()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -134,12 +144,12 @@ pub struct Scale2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Scale2D);
 
-impl ScadObject for Scale2D {
+impl ScadObjectTrait for Scale2D {
     fn get_body(&self) -> String {
         generate_body(
             "scale",
@@ -148,8 +158,11 @@ impl ScadObject for Scale2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Scale2D, ScadObject2D);
 
 /// `auto` option in 2D resize modifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, From, Delegate)]
@@ -178,12 +191,12 @@ pub struct Resize2D {
     pub auto: Option<ResizeAuto>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Resize2D);
 
-impl ScadObject for Resize2D {
+impl ScadObjectTrait for Resize2D {
     fn get_body(&self) -> String {
         generate_body(
             "resize",
@@ -193,8 +206,11 @@ impl ScadObject for Resize2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Resize2D, ScadObject2D);
 
 /// Mirror modifier `mirror()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -205,12 +221,12 @@ pub struct Mirror2D {
     pub v: Point2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Mirror2D);
 
-impl ScadObject for Mirror2D {
+impl ScadObjectTrait for Mirror2D {
     fn get_body(&self) -> String {
         generate_body(
             "mirror",
@@ -219,8 +235,11 @@ impl ScadObject for Mirror2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Mirror2D, ScadObject2D);
 
 /// Affine tranformation modifier `multmatrix()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -231,12 +250,12 @@ pub struct MultMatrix2D {
     pub m: AffineMatrix2D,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(MultMatrix2D);
 
-impl ScadObject for MultMatrix2D {
+impl ScadObjectTrait for MultMatrix2D {
     fn get_body(&self) -> String {
         generate_body(
             "multmatrix",
@@ -245,8 +264,11 @@ impl ScadObject for MultMatrix2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(MultMatrix2D, ScadObject2D);
 
 /// Color modifier `color()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -265,12 +287,12 @@ pub struct Color2D {
     pub a: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Color2D);
 
-impl ScadObject for Color2D {
+impl ScadObjectTrait for Color2D {
     fn get_body(&self) -> String {
         generate_body(
             "color",
@@ -280,8 +302,11 @@ impl ScadObject for Color2D {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
+
+__impl_modifier!(Color2D, ScadObject2D);
 
 /// Size of offset modifier for SCAD
 #[derive(Copy, Clone, Debug, PartialEq, Delegate)]
@@ -333,7 +358,7 @@ pub struct Offset {
     pub fs: Option<Unit>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects2D,
+    pub children: Vec<ScadObject2D>,
 }
 
 __impl_scad2d!(Offset);
@@ -361,7 +386,7 @@ impl OffsetBuilder {
     }
 }
 
-impl ScadObject for Offset {
+impl ScadObjectTrait for Offset {
     fn get_body(&self) -> String {
         generate_body(
             "offset",
@@ -374,8 +399,9 @@ impl ScadObject for Offset {
             ),
         )
     }
-    __get_children_impl!();
 }
+
+__impl_modifier!(Offset, ScadObject2D);
 
 __impl_operator_2d!(Hull2D, "hull");
 __impl_operator_2d!(Minkowski2D, "minkowski");
@@ -395,12 +421,12 @@ pub struct Projection {
     pub cut: Option<bool>,
     /// Children objects to apply this modifier.
     #[builder(setter(name = "apply_to", into))]
-    pub children: Objects3D,
+    pub children: Vec<ScadObject3D>,
 }
 
 __impl_scad2d!(Projection);
 
-impl ScadObject for Projection {
+impl ScadObjectTrait for Projection {
     fn get_body(&self) -> String {
         generate_body(
             "projection",
@@ -409,39 +435,36 @@ impl ScadObject for Projection {
             ),
         )
     }
-    __get_children_impl!();
+
+    __impl_modifier_to_code!();
 }
 
-impl Add for Objects2D {
+__impl_modifier!(Projection, ScadObject3D);
+
+impl Add for ScadObject2D {
     type Output = Union2D;
 
     fn add(self, rhs: Self) -> Self::Output {
         Union2D::build_with(|ub| {
-            let _ = ub.apply_to(Objects2D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = ub.apply_to(vec![self, rhs]);
         })
     }
 }
-impl Mul for Objects2D {
+impl Mul for ScadObject2D {
     type Output = Intersection2D;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Intersection2D::build_with(|ib| {
-            let _ = ib.apply_to(Objects2D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = ib.apply_to(vec![self, rhs]);
         })
     }
 }
-impl Sub for Objects2D {
+impl Sub for ScadObject2D {
     type Output = Difference2D;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Difference2D::build_with(|db| {
-            let _ = db.apply_to(Objects2D(
-                self.iter().chain(rhs.iter()).cloned().collect::<Vec<_>>(),
-            ));
+            let _ = db.apply_to(vec![self, rhs]);
         })
     }
 }
@@ -453,7 +476,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        any_scads2d, any_scads3d,
         scad_2d::{CircleBuilder, SquareBuilder},
         scad_3d::SphereBuilder,
         value_type::{RGB, RGBA},
