@@ -516,6 +516,7 @@ mod tests {
 
     use super::*;
     use crate::{
+        objects_2d, objects_3d,
         scad_2d::Square,
         scad_3d::{Cube, Sphere},
         value_type::{RGB, RGBA},
@@ -523,15 +524,13 @@ mod tests {
     };
 
     fn get_children() -> Vec<ScadObject3D> {
-        vec![
+        objects_3d![
             Cube::build_with(|cb| {
                 let _ = cb.size(10.);
-            })
-            .into(),
+            }),
             Sphere::build_with(|cb| {
                 let _ = cb.r(5.);
-            })
-            .into(),
+            }),
         ]
     }
 
@@ -721,10 +720,9 @@ mod tests {
 
     #[test]
     fn test_linear_extrude() {
-        let children: Vec<ScadObject2D> = vec![Square::build_with(|sb| {
+        let children = objects_2d![Square::build_with(|sb| {
             let _ = sb.size(10.);
-        })
-        .into()];
+        })];
         assert_eq!(
             LinearExtrude::build_with(|lb| {
                 let _ = lb.height(5.);
@@ -752,10 +750,9 @@ mod tests {
 
     #[test]
     fn test_rotate_extrude() {
-        let children: Vec<ScadObject2D> = vec![Square::build_with(|sb| {
+        let children = objects_2d![Square::build_with(|sb| {
             let _ = sb.size(10.);
-        })
-        .into()];
+        })];
         assert_eq!(
             RotateExtrude::build_with(|_| {})
                 .apply_to(&children)
@@ -781,10 +778,9 @@ mod tests {
         let scad = Rotate3D::build_with(|rb| {
             let _ = rb
                 .deg([45., 0., 90.])
-                .apply_to(vec![Translate3D::build_with(|tb| {
+                .apply_to(objects_3d![Translate3D::build_with(|tb| {
                     let _ = tb.v([8., -4., 6.]).apply_to(objs);
-                })
-                .into()]);
+                })]);
         });
 
         assert_eq!(

@@ -485,22 +485,21 @@ mod tests {
 
     use super::*;
     use crate::{
+        objects_2d, objects_3d,
         scad_2d::{Circle, Square},
-        scad_3d::SphereBuilder,
+        scad_3d::Sphere,
         value_type::{RGB, RGBA},
         ScadModifier as _,
     };
 
     fn get_children() -> Vec<ScadObject2D> {
-        vec![
+        objects_2d![
             Square::build_with(|sb| {
                 let _ = sb.size(10.);
-            })
-            .into(),
+            }),
             Circle::build_with(|cb| {
                 let _ = cb.r(5.);
-            })
-            .into(),
+            }),
         ]
     }
 
@@ -720,8 +719,9 @@ mod tests {
 
     #[test]
     fn test_projection() {
-        let children: Vec<ScadObject3D> =
-            vec![SphereBuilder::default().r(10.).build().unwrap().into()];
+        let children = objects_3d![Sphere::build_with(|sb| {
+            let _ = sb.r(10.);
+        })];
 
         assert_eq!(
             Projection::build_with(|_| {}).apply_to(&children).to_code(),
@@ -741,10 +741,11 @@ mod tests {
     fn test_multilevel() {
         let objs = get_children();
         let scad = Rotate2D::build_with(|rb| {
-            let _ = rb.deg(45.).apply_to(vec![Translate2D::build_with(|tb| {
-                let _ = tb.v([8., -4.]).apply_to(objs);
-            })
-            .into()]);
+            let _ = rb
+                .deg(45.)
+                .apply_to(objects_2d![Translate2D::build_with(|tb| {
+                    let _ = tb.v([8., -4.]).apply_to(objs);
+                })]);
         });
         assert_eq!(
             scad.to_code(),
