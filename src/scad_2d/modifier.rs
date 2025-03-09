@@ -45,9 +45,15 @@ macro_rules! __impl_operator_2d {
             $crate::__impl_modifier_to_code!();
         }
 
+        impl Default for $type {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
         impl $type {
-            #[allow(dead_code)]
-            const fn new() -> Self {
+            /// generate new blank object
+            pub const fn new() -> Self {
                 Self {children: Vec::new()}
             }
         }
