@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use dyn_clone::DynClone;
+use ambassador::delegatable_trait;
 use nalgebra as na;
 
 /// Unit of length to write in SCAD code.
@@ -21,7 +21,8 @@ pub type AffineMatrix3D = na::Matrix3x4<Unit>;
 const INDENT: usize = 2;
 
 /// Trait for objects that can be written to SCAD code.
-pub trait ScadObject: Debug + DynClone {
+#[delegatable_trait]
+pub trait ScadObjectTrait: Debug + Clone {
     /// Returns the body of the SCAD code.
     ///
     /// Body means the part that is not include
@@ -36,53 +37,69 @@ pub trait ScadObject: Debug + DynClone {
     /// SCAD code body as a [`String`].
     fn get_body(&self) -> String;
 
-    /// Returns the SCAD code of the children of the object.
-    ///
-    /// Children means the objects in inner level of the object.
-    ///
-    /// Ex.
-    /// + circle has no children, so it returns [`None`]
-    /// + hull may has a body such as `Some(vec!["circle(r = 1)", "square(size = 2)"])`
-    ///
-    /// # Returns
-    ///
-    /// + [`Some<Vec<String>>`]: SCAD code of the children
-    /// + [`None`]: if the object has no children
-    fn get_children(&self) -> Option<Vec<String>> {
-        None
-    }
-
     /// Returns the SCAD code of the object.
     ///
     /// Ex.
     /// + circle may returns such as `"circle(r = 1);"`
-    /// + hull may returns such as `"hull(){\n  circle(r = 1);\n  square(size = 2);\n}"`
     ///
     /// # Returns
     ///
     /// SCAD code of the object as a [`String`].
     fn to_code(&self) -> String {
         let body = self.get_body();
-        let code = match self.get_children() {
-            Some(c) => {
-                let unindented_str = c.join("\n");
-                let children = unindented_str
-                    .split('\n')
-                    .map(|s| format!("{}{}", " ".repeat(INDENT), s))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                format!("{body} {{\n{children}\n}}")
-            }
-            None => body + ";",
-        };
-        code
+        body + ";"
     }
 }
-dyn_clone::clone_trait_object!(ScadObject);
 
-/// Trait for objects that shows 2D objects in SCAD.
-pub trait ScadObject2D: ScadObject {}
-/// Trait for objects that shows 3D objects in SCAD.
-pub trait ScadObject3D: ScadObject {}
-dyn_clone::clone_trait_object!(ScadObject2D);
-dyn_clone::clone_trait_object!(ScadObject3D);
+/// Trait for scad objects that modify other objects.
+pub trait ScadModifier: ScadObjectTrait {
+    /// Type of the objects to be modified.
+    /// This should be [`ScadObject2D`] or [`ScadObject3D`].
+    type Children: ScadObjectTrait;
+
+    /// Set the children of the modifier then return new object.
+    ///
+    /// # Arguments
+    ///
+    /// + `children`: Objects to be modified.
+    ///
+    /// # Returns
+    ///
+    /// The new object.
+    fn apply_to(self, children: &[Self::Children]) -> Self;
+
+    /// Returns the SCAD code of the children of the object.
+    ///
+    /// Children means the objects in inner level of the object.
+    ///
+    /// Ex.
+    /// + hull may has a body such as `Some(vec!["circle(r = 1)", "square(size = 2)"])`
+    ///
+    /// # Returns
+    ///
+    /// + SCAD object that are children
+    fn get_children(&self) -> &Vec<Self::Children>;
+
+    /// Returns the SCAD code of the object with children.
+    ///
+    /// Ex.
+    /// + hull may returns such as `"hull(){\n  circle(r = 1);\n  square(size = 2);\n}"`
+    ///
+    /// # Returns
+    ///
+    /// SCAD code of the object as a [`String`].
+    fn to_code_with_children(&self) -> String {
+        let body = self.get_body();
+        let unindented_lines_itr = self.get_children().iter().flat_map(|sobj| {
+            sobj.to_code()
+                .split('\n')
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        });
+        let children = unindented_lines_itr
+            .map(|s| format!("{}{}", " ".repeat(INDENT), s))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("{body} {{\n{children}\n}}")
+    }
+}

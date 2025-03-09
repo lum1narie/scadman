@@ -187,6 +187,35 @@ macro_rules! __build_with_impl {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_modifier {
+    ($type:ident, $child:ty) => {
+        impl $crate::ScadModifier for $type {
+            type Children = $child;
+
+            fn apply_to(self, children: &[Self::Children]) -> Self {
+                let mut result = self.clone();
+                result.children = children.to_vec();
+                result
+            }
+            fn get_children(&self) -> &Vec<Self::Children> {
+                &self.children
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_modifier_to_code {
+    () => {
+        fn to_code(&self) -> String {
+            $crate::ScadModifier::to_code_with_children(self)
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use crate::common::Unit;

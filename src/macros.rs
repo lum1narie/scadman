@@ -1,54 +1,21 @@
 //! A collection of helper macros exported for extenal use.
 
-/// Helper macro to create [`Vec<Box<dyn ScadObject>>`] from raw objects
+/// A macro for creating a [`Vec<ScadObject2D>`] from each variant.
 #[macro_export]
-macro_rules! any_scads {
+macro_rules! objects_2d {
     [ $($scad:expr_2021),* $(,)? ] => {
         {
-            let v: Vec<Box<dyn ScadObject>> = vec![$(Box::new($scad)),*];
-            v
+            vec![$($crate::scad_2d::ScadObject2D::from($scad)),*]
         }
     };
 }
 
-/// Helper macro to create [`Vec<Box<dyn ScadObject2D>>`] from raw objects
+/// A macro for creating a [`Vec<ScadObject3D>`] from each variant.
 #[macro_export]
-macro_rules! any_scads2d {
+macro_rules! objects_3d {
     [ $($scad:expr_2021),* $(,)? ] => {
         {
-            let v: Vec<Box<dyn $crate::ScadObject2D>> = vec![$(Box::new($scad)),*];
-            v
-        }
-    };
-}
-
-/// Helper macro to create [`Vec<Box<dyn ScadObject3D>>`] from raw objects
-#[macro_export]
-macro_rules! any_scads3d {
-    [ $($scad:expr_2021),* $(,)? ] => {
-        {
-            let v: Vec<Box<dyn $crate::ScadObject3D>> = vec![$(Box::new($scad)),*];
-            v
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! objects2d {
-    [ $($scad:expr_2021),* $(,)? ] => {
-        {
-            let v: Vec<Box<dyn $crate::ScadObject2D>> = vec![$(Box::new($scad)),*];
-            $crate::scad_2d::Objects2D(v)
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! objects3d {
-    [ $($scad:expr_2021),* $(,)? ] => {
-        {
-            let v: Vec<Box<dyn $crate::ScadObject3D>> = vec![$(Box::new($scad)),*];
-            $crate::scad_3d::Objects3D(v)
+            vec![$($crate::scad_3d::ScadObject3D::from($scad)),*]
         }
     };
 }
