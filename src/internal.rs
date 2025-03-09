@@ -194,9 +194,10 @@ macro_rules! __impl_modifier {
         impl $crate::ScadModifier for $type {
             type Children = $child;
 
-            fn apply_to(&mut self, children: &[Self::Children]) -> &mut Self {
-                self.children = children.to_vec();
-                self
+            fn apply_to(self, children: &[Self::Children]) -> Self {
+                let mut result = self.clone();
+                result.children = children.to_vec();
+                result
             }
             fn get_children(&self) -> &Vec<Self::Children> {
                 &self.children

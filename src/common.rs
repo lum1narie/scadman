@@ -57,7 +57,7 @@ pub trait ScadModifier: ScadObjectTrait {
     /// This should be [`ScadObject2D`] or [`ScadObject3D`].
     type Children: ScadObjectTrait;
 
-    /// Set the children of the modifier.
+    /// Set the children of the modifier then return new object.
     ///
     /// # Arguments
     ///
@@ -65,8 +65,8 @@ pub trait ScadModifier: ScadObjectTrait {
     ///
     /// # Returns
     ///
-    /// The reference of the object itself.
-    fn apply_to(&mut self, children: &[Self::Children]) -> &mut Self;
+    /// The new object.
+    fn apply_to(self, children: &[Self::Children]) -> Self;
 
     /// Returns the SCAD code of the children of the object.
     ///
