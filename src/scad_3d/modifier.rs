@@ -11,6 +11,7 @@ use crate::{
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
     AffineMatrix3D, Point3D, Unit, __impl_modifier, __impl_modifier_to_code,
+    common::ScadBuildable as _,
     scad_2d::ScadObject2D,
 };
 
@@ -489,7 +490,7 @@ impl ScadObjectTrait for RotateExtrude {
 __impl_modifier!(RotateExtrude, ScadObject2D);
 
 impl Add for ScadObject3D {
-    type Output = Union3D;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Union3D::build_with(|ub| {
@@ -498,7 +499,7 @@ impl Add for ScadObject3D {
     }
 }
 impl Mul for ScadObject3D {
-    type Output = Intersection3D;
+    type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Intersection3D::build_with(|ib| {
@@ -507,7 +508,7 @@ impl Mul for ScadObject3D {
     }
 }
 impl Sub for ScadObject3D {
-    type Output = Difference3D;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Difference3D::build_with(|db| {
@@ -522,7 +523,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        objects_2d, objects_3d,
         scad_2d::Square,
         scad_3d::{Cube, Sphere},
         value_type::{RGB, RGBA},
@@ -530,7 +530,7 @@ mod tests {
     };
 
     fn get_children() -> Vec<ScadObject3D> {
-        objects_3d![
+        vec![
             Cube::build_with(|cb| {
                 let _ = cb.size(10.);
             }),
@@ -545,9 +545,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Translate3D::build_with(|tb| {
-                let _ = tb.v([8., -4., 6.]);
+                let _ = tb.v([8., -4., 6.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "translate([8, -4, 6]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -558,25 +557,22 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.deg([45., 0., 90.]);
+                let _ = rb.deg([45., 0., 90.]).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.rad([PI / 4., 0., PI / 2.]);
+                let _ = rb.rad([PI / 4., 0., PI / 2.]).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "rotate(a = [45, 0, 90]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Rotate3D::build_with(|rb| {
-                let _ = rb.rad(PI / 4.).v([1., 1., 0.]);
+                let _ = rb.rad(PI / 4.).v([1., 1., 0.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "rotate(a = 45, v = [1, 1, 0]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -587,9 +583,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Mirror3D::build_with(|mb| {
-                let _ = mb.v([1., -1., 0.]);
+                let _ = mb.v([1., -1., 0.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "mirror([1, -1, 0]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -600,9 +595,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Scale3D::build_with(|sb| {
-                let _ = sb.v([3., 2., 4.]);
+                let _ = sb.v([3., 2., 4.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "scale([3, 2, 4]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -633,8 +627,8 @@ mod tests {
         let m = AffineMatrix3D::new(1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.);
         assert_eq!(
             MultMatrix3D::build_with(|mb| {
-            let _ =     mb.m(m);
-            }).apply_to(&children).to_code(),
+                let _ = mb.m(m).apply_to(children);
+            }).to_code(),
             "multmatrix(m = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
     }
@@ -644,33 +638,34 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Color3D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Color3D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
+                let _ = cb
+                    .c(RGB::new(0.3, 0.5, 0.2))
+                    .a(1.0)
+                    .apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2], a = 1) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Color3D::build_with(|cb| {
-                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
+                let _ = cb
+                    .c(RGBA::new(0.3, 0.5, 0.2, 1.0))
+                    .apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2, 1]) {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
         assert_eq!(
             Color3D::build_with(|cb| {
-                let _ = cb.c("#C0FFEE".to_string());
+                let _ = cb.c("#C0FFEE".to_string()).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "color(\"#C0FFEE\") {\n  cube(size = 10);\n  sphere(r = 5);\n}"
         );
@@ -726,29 +721,28 @@ mod tests {
 
     #[test]
     fn test_linear_extrude() {
-        let children = objects_2d![Square::build_with(|sb| {
+        let children = vec![Square::build_with(|sb| {
             let _ = sb.size(10.);
         })];
         assert_eq!(
             LinearExtrude::build_with(|lb| {
-                let _ = lb.height(5.);
+                let _ = lb.height(5.).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "linear_extrude(height = 5) {\n  square(size = 10);\n}"
         );
         assert_eq!(
             LinearExtrude::build_with(|lb| {
-                 let _ = lb.height(5.)
-                .v([0., 0.2, 1.])
-                .center(true)
-                .twist(180.)
-                .convexity(10_u64)
-                .slices(30_u64)
-                .scale(0.7)
-                .r#fn(20_u64);
+                let _ = lb.height(5.)
+                    .v([0., 0.2, 1.])
+                    .center(true)
+                    .twist(180.)
+                    .convexity(10_u64)
+                    .slices(30_u64)
+                    .scale(0.7)
+                    .r#fn(20_u64)
+                    .apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "linear_extrude(height = 5, v = [0, 0.2, 1], center = true, twist = 180, convexity = 10, slices = 30, scale = 0.7, $fn = 20) {\n  square(size = 10);\n}"
         );
@@ -756,13 +750,14 @@ mod tests {
 
     #[test]
     fn test_rotate_extrude() {
-        let children = objects_2d![Square::build_with(|sb| {
+        let children = vec![Square::build_with(|sb| {
             let _ = sb.size(10.);
         })];
         assert_eq!(
-            RotateExtrude::build_with(|_| {})
-                .apply_to(&children)
-                .to_code(),
+            RotateExtrude::build_with(|rb| {
+                let _ = rb.apply_to(children.clone());
+            })
+            .to_code(),
             "rotate_extrude() {\n  square(size = 10);\n}"
         );
         assert_eq!(
@@ -770,9 +765,9 @@ mod tests {
                 let _ = rb.angle(180.)
                     .start(90.)
                     .convexity(10_u64)
-                    .fa(5.);
+                    .fa(5.)
+                    .apply_to(children);
                 })
-            .apply_to(&children)
             .to_code(),
             "rotate_extrude(angle = 180, start = 90, convexity = 10, $fa = 5) {\n  square(size = 10);\n}"
         );
@@ -784,7 +779,7 @@ mod tests {
         let scad = Rotate3D::build_with(|rb| {
             let _ = rb
                 .deg([45., 0., 90.])
-                .apply_to(objects_3d![Translate3D::build_with(|tb| {
+                .apply_to(vec![Translate3D::build_with(|tb| {
                     let _ = tb.v([8., -4., 6.]).apply_to(objs);
                 })]);
         });

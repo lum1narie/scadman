@@ -6,6 +6,7 @@ use derive_more::derive::From;
 
 use crate::{
     __generate_scad_options, __impl_modifier, __impl_modifier_to_code, __impl_scad2d,
+    common::ScadBuildable as _,
     common::{AffineMatrix2D, Point2D, ScadObjectTrait, Unit},
     internal::generate_body,
     scad_3d::ScadObject3D,
@@ -457,7 +458,7 @@ impl ScadObjectTrait for Projection {
 __impl_modifier!(Projection, ScadObject3D);
 
 impl Add for ScadObject2D {
-    type Output = Union2D;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Union2D::build_with(|ub| {
@@ -466,7 +467,7 @@ impl Add for ScadObject2D {
     }
 }
 impl Mul for ScadObject2D {
-    type Output = Intersection2D;
+    type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Intersection2D::build_with(|ib| {
@@ -475,7 +476,7 @@ impl Mul for ScadObject2D {
     }
 }
 impl Sub for ScadObject2D {
-    type Output = Difference2D;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Difference2D::build_with(|db| {
@@ -491,7 +492,6 @@ mod tests {
 
     use super::*;
     use crate::{
-        objects_2d, objects_3d,
         scad_2d::{Circle, Square},
         scad_3d::Sphere,
         value_type::{RGB, RGBA},
@@ -499,7 +499,7 @@ mod tests {
     };
 
     fn get_children() -> Vec<ScadObject2D> {
-        objects_2d![
+        vec![
             Square::build_with(|sb| {
                 let _ = sb.size(10.);
             }),
@@ -514,9 +514,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Translate2D::build_with(|tb| {
-                let _ = tb.v([8., -4.]);
+                let _ = tb.v([8., -4.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "translate([8, -4]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -527,17 +526,15 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Rotate2D::build_with(|rb| {
-                let _ = rb.deg(45.);
+                let _ = rb.deg(45.).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Rotate2D::build_with(|rb| {
-                let _ = rb.rad(PI / 4.);
+                let _ = rb.rad(PI / 4.).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "rotate(45) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -548,9 +545,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Mirror2D::build_with(|mb| {
-                let _ = mb.v([1., -1.]);
+                let _ = mb.v([1., -1.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "mirror([1, -1]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -561,9 +557,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Scale2D::build_with(|sb| {
-                let _ = sb.v([3., 2.]);
+                let _ = sb.v([3., 2.]).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "scale([3, 2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -594,9 +589,9 @@ mod tests {
         let m = AffineMatrix2D::new(1., 2., 3., 4., 5., 6.);
         assert_eq!(
             MultMatrix2D::build_with(|mb| {
-                let _ = mb.m(m);
+                let _ = mb.m(m)
+            .apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "multmatrix(m = [[1, 2, 0, 3], [4, 5, 0, 6], [0, 0, 1, 0]]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -607,9 +602,8 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Color2D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
+                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -622,25 +616,27 @@ mod tests {
             //     .unwrap()
             //     .to_code(),
             Color2D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
+                let _ = cb
+                    .c(RGB::new(0.3, 0.5, 0.2))
+                    .a(1.0)
+                    .apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2], a = 1) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Color2D::build_with(|cb| {
-                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
+                let _ = cb
+                    .c(RGBA::new(0.3, 0.5, 0.2, 1.0))
+                    .apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "color(c = [0.3, 0.5, 0.2, 1]) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Color2D::build_with(|cb| {
-                let _ = cb.c("#C0FFEE".to_string());
+                let _ = cb.c("#C0FFEE".to_string()).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "color(\"#C0FFEE\") {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -651,25 +647,22 @@ mod tests {
         let children = get_children();
         assert_eq!(
             Offset::build_with(|ob| {
-                let _ = ob.r(1.);
+                let _ = ob.r(1.).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "offset(r = 1) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Offset::build_with(|ob| {
-                let _ = ob.delta(2.);
+                let _ = ob.delta(2.).apply_to(children.clone());
             })
-            .apply_to(&children)
             .to_code(),
             "offset(delta = 2) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
         assert_eq!(
             Offset::build_with(|ob| {
-                let _ = ob.r(1.).chamfer(true).fs(10);
+                let _ = ob.r(1.).chamfer(true).fs(10).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "offset(r = 1, chamfer = true, $fs = 10) {\n  square(size = 10);\n  circle(r = 5);\n}"
         );
@@ -725,19 +718,21 @@ mod tests {
 
     #[test]
     fn test_projection() {
-        let children = objects_3d![Sphere::build_with(|sb| {
+        let children = vec![Sphere::build_with(|sb| {
             let _ = sb.r(10.);
         })];
 
         assert_eq!(
-            Projection::build_with(|_| {}).apply_to(&children).to_code(),
+            Projection::build_with(|pb| {
+                let _ = pb.apply_to(children.clone());
+            })
+            .to_code(),
             "projection() {\n  sphere(r = 10);\n}"
         );
         assert_eq!(
             Projection::build_with(|pb| {
-                let _ = pb.cut(true);
+                let _ = pb.cut(true).apply_to(children);
             })
-            .apply_to(&children)
             .to_code(),
             "projection(cut = true) {\n  sphere(r = 10);\n}"
         );
@@ -747,11 +742,9 @@ mod tests {
     fn test_multilevel() {
         let objs = get_children();
         let scad = Rotate2D::build_with(|rb| {
-            let _ = rb
-                .deg(45.)
-                .apply_to(objects_2d![Translate2D::build_with(|tb| {
-                    let _ = tb.v([8., -4.]).apply_to(objs);
-                })]);
+            let _ = rb.deg(45.).apply_to(vec![Translate2D::build_with(|tb| {
+                let _ = tb.v([8., -4.]).apply_to(objs);
+            })]);
         });
         assert_eq!(
             scad.to_code(),

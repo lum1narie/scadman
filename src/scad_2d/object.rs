@@ -336,6 +336,8 @@ impl ScadObjectTrait for Import2D {
 
 #[cfg(test)]
 mod tests {
+    use crate::ScadBuildable as _;
+
     use super::*;
 
     #[test]

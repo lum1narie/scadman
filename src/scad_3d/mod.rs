@@ -61,6 +61,19 @@ pub enum ScadObject3D {
 #[macro_export]
 macro_rules! __impl_scad3d {
     ( $type:ident ) => {
-        $crate::__build_with_impl!($type);
+        paste::paste! {
+            impl $crate::ScadBuildable for $type {
+                type Builder = [<$type Builder>];
+                type Enum = super::ScadObject3D;
+            }
+
+            impl $crate::ScadBuilder for [<$type Builder>] {
+                type Target = $type;
+                type Error = [<$type BuilderError>];
+                fn build_scad(&self) -> Result<Self::Target, Self::Error> {
+                    Self::build(&self)
+                }
+            }
+        }
     };
 }
