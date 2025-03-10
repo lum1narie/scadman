@@ -187,6 +187,7 @@ macro_rules! __build_with_impl {
     };
 }
 
+/// implement inside of [`ScadModifier`] for each struct
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_modifier {
@@ -206,6 +207,7 @@ macro_rules! __impl_modifier {
     };
 }
 
+/// implement [`ScadObjectTrait::to_code()`] for [`ScadModifier`]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_modifier_to_code {

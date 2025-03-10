@@ -103,3 +103,47 @@ pub trait ScadModifier: ScadObjectTrait {
         format!("{body} {{\n{children}\n}}")
     }
 }
+
+/// Trait for scad objects that can be built from builder,
+/// then can be become into a [`ScadObject2D`] or [`ScadObject3D`].
+pub trait ScadBuildable: ScadObjectTrait + Into<Self::Enum> {
+    /// Type of the builder can be build this object.
+    type Builder: ScadBuilder<Target = Self>;
+    /// Type of the enum that this object can be converted.
+    /// This should be [`ScadObject2D`] or [`ScadObject3D`].
+    type Enum;
+
+    /// Create a new instance with a closure to configure its builder.
+    ///
+    /// # Arguments
+    ///
+    /// + `builder_config` - closure to configure the builder
+    ///
+    /// # Returns
+    ///
+    /// New instance of the [`Self::Enum`]
+    fn build_with<T: FnOnce(&mut Self::Builder)>(builder_config: T) -> Self::Enum {
+        let mut builder = Self::Builder::default();
+        builder_config(&mut builder);
+        builder
+            .build_scad()
+            .expect("required fields are not set")
+            .into()
+    }
+}
+
+/// Trait for builders that can be build [`ScadBuildable`]
+pub trait ScadBuilder: Default {
+    /// Type of the object that this object can build;
+    type Target: ScadBuildable;
+    /// Type of error that can be returned when building the [`Self::Target`].
+    type Error: Debug;
+
+    /// Build the [`Self::Target`] from the builder.
+    ///
+    /// # Returns
+    ///
+    /// + [`Ok(Self::Target)`] if the builder can build the [`Self::Target`]
+    /// + [`Err(Self::Error)`] if the builder cannot build the [`Self::Target`]
+    fn build_scad(&self) -> Result<Self::Target, Self::Error>;
+}
