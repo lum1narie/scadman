@@ -1,6 +1,6 @@
 [package]
 name = "scadman"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [lints.clippy]
@@ -165,6 +165,5 @@ variant-size-differences = "warn"
 ambassador = "0.4.1"
 derive_builder = "0.20.2"
 derive_more = { version = "1.0.0", features = ["deref", "from"] }
-dyn-clone = "1.0.17"
 nalgebra = "0.33.2"
 paste = "1.0.15"
