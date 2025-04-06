@@ -5,7 +5,6 @@ use nalgebra as na;
 
 use crate::{
     __generate_scad_options, __impl_scad3d,
-    common::ScadSentence as _,
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
@@ -415,7 +414,10 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::value_type::{RGB, RGBA};
+    use crate::{
+        value_type::{RGB, RGBA},
+        ScadBuildable as _,
+    };
 
     #[test]
     fn test_translate3d() {

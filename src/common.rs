@@ -28,9 +28,25 @@ pub type AffineMatrix3D = na::Matrix3x4<Unit>;
 
 pub const INDENT: usize = 2;
 
+/// Trait for builders that can be build [`ScadBuildable`]
+pub trait ScadBuilder: Default {
+    /// Type of the object that this object can build;
+    type Target: ScadBuildable;
+    /// Type of error that can be returned when building the [`Self::Target`].
+    type Error: Debug;
+
+    /// Build the [`Self::Target`] from the builder.
+    ///
+    /// # Returns
+    ///
+    /// + [`Ok(Self::Target)`] if the builder can build the [`Self::Target`]
+    /// + [`Err(Self::Error)`] if the builder cannot build the [`Self::Target`]
+    fn build_scad(&self) -> Result<Self::Target, Self::Error>;
+}
+
 /// Trait for scad objects that can be built from builder,
 /// then can be become into a [`ScadObject2D`] or [`ScadObject3D`].
-pub trait ScadSentence: ScadDisplay + Sized {
+pub trait ScadBuildable: Sized {
     /// Type of the builder can be build this object.
     type Builder: ScadBuilder<Target = Self>;
 
@@ -50,24 +66,10 @@ pub trait ScadSentence: ScadDisplay + Sized {
     }
 }
 
-/// Trait for builders that can be build [`ScadBuildable`]
-pub trait ScadBuilder: Default {
-    /// Type of the object that this object can build;
-    type Target: ScadSentence;
-    /// Type of error that can be returned when building the [`Self::Target`].
-    type Error: Debug;
-
-    /// Build the [`Self::Target`] from the builder.
-    ///
-    /// # Returns
-    ///
-    /// + [`Ok(Self::Target)`] if the builder can build the [`Self::Target`]
-    /// + [`Err(Self::Error)`] if the builder cannot build the [`Self::Target`]
-    fn build_scad(&self) -> Result<Self::Target, Self::Error>;
-}
+pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
 
 #[delegatable_trait]
-pub trait ScadCommentDisplay: ScadDisplay {
+pub(crate) trait ScadCommentDisplay: ScadDisplay {
     fn repr_scad_with_comment(&self, comment: &str) -> String {
         format!("/* {} */\n{}", comment, self.repr_scad())
     }

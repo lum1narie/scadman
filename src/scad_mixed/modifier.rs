@@ -2,7 +2,7 @@ use derive_builder::Builder;
 
 use crate::{
     __generate_scad_options, __impl_scad_mixed, internal::generate_sentence_repr,
-    scad_display::ScadDisplay, value_type::Color, ScadSentence as _, Unit,
+    scad_display::ScadDisplay, value_type::Color, Unit,
 };
 
 /// Color modifier `color()` in SCAD.
@@ -39,7 +39,10 @@ impl ScadDisplay for ColorMixed {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::value_type::{RGB, RGBA};
+    use crate::{
+        value_type::{RGB, RGBA},
+        ScadBuildable as _,
+    };
 
     #[test]
     fn test_colormixed() {

@@ -424,7 +424,7 @@ impl ScadDisplay for Surface {
 
 #[cfg(test)]
 mod tests {
-    use crate::ScadSentence as _;
+    use crate::ScadBuildable as _;
 
     use super::*;
 

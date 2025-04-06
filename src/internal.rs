@@ -170,7 +170,9 @@ pub fn generate_sentence_repr(name: &str, opts: Vec<ScadOption>) -> String {
 macro_rules! __impl_builder_sentence {
     ( $type:ident ) => {
         paste::paste! {
-            impl $crate::ScadSentence for $type {
+            impl $crate::ScadSentence for $type {}
+
+            impl $crate::ScadBuildable for $type {
                 type Builder = [<$type Builder>];
             }
 

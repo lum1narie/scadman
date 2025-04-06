@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    AffineMatrix2D, Point2D, ScadSentence as _, Unit, __generate_scad_options, __impl_scad2d,
+    AffineMatrix2D, Point2D, Unit, __generate_scad_options, __impl_scad2d,
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::{Angle, Color},
@@ -381,7 +381,10 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::value_type::{RGB, RGBA};
+    use crate::{
+        value_type::{RGB, RGBA},
+        ScadBuildable as _,
+    };
 
     #[test]
     fn test_translate2d() {

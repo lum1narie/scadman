@@ -3,6 +3,7 @@
 pub(crate) mod internal;
 mod macros;
 
+#[allow(clippy::redundant_pub_crate)]
 mod common;
 pub use common::*;
 
@@ -28,7 +29,7 @@ pub mod prelude {
             ScadObject3D, Scale3D, Sphere, Surface, Translate3D, Union3D,
         },
         value_type::{RGB, RGBA},
-        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, ScadSentence,
+        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, ScadBuildable as _,
         Unit,
     };
 }

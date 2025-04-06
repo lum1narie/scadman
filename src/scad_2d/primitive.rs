@@ -336,8 +336,7 @@ impl ScadDisplay for Import2D {
 
 #[cfg(test)]
 mod tests {
-    use crate::scad_display::ScadDisplay as _;
-    use crate::ScadSentence as _;
+    use crate::ScadBuildable as _;
 
     use super::*;
 
