@@ -39,7 +39,7 @@ impl Angle {
     /// let r = Angle::Rad(std::f64::consts::PI as Unit / 2.);
     /// assert!((d.deg() - 90.0).abs() < 1e5);
     /// ```
-    pub fn deg(&self) -> Unit {
+    pub const fn deg(&self) -> Unit {
         match *self {
             Self::Deg(d) => d,
             Self::Rad(r) => r.to_degrees(),

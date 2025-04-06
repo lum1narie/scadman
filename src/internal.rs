@@ -1,17 +1,36 @@
 use std::fmt::{Display, Formatter};
 
-use crate::scad_display::ScadDisplay;
+use crate::{scad_display::ScadDisplay, ScadObject, ScadObjectTrait, INDENT};
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_scad_box {
-    ( $type:ty ) => {
-        impl From<$type> for Vec<Box<dyn ScadObject>> {
-            fn from(value: $type) -> Self {
-                vec![Box::new(value)]
-            }
-        }
-    };
+pub fn indent_str(s: &str, indent: usize) -> String {
+    s.lines()
+        .map(|line| format!("{}{}", " ".repeat(indent), line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+pub fn primitive_repr<T: ScadDisplay>(body: &T) -> String {
+    format!("{};\n", body.repr_scad())
+}
+
+pub fn modifier_repr<T: ScadDisplay, U: ScadObjectTrait>(body: &T, child: &U) -> String {
+    let body_repr = body.repr_scad();
+    let child_repr = child.to_code();
+    if child_repr.chars().next().unwrap_or_default() == '{' {
+        format!("{body_repr} {child_repr}")
+    } else {
+        let indented_child = indent_str(&child_repr, INDENT);
+        format!("{body_repr}\n{indented_child}\n")
+    }
+}
+
+pub fn block_repr(objects: &[ScadObject]) -> String {
+    let children_repr = objects
+        .iter()
+        .map(ScadObjectTrait::to_code)
+        .collect::<String>();
+    let indented_children = indent_str(&children_repr, INDENT);
+    format!("{{\n{indented_children}\n}}\n")
 }
 
 /// Single option with a SCAD object.
@@ -140,80 +159,28 @@ macro_rules! __generate_scad_options {
 /// ];
 /// assert_eq!(generate_body("square", opts), "square(size = 1, center = true)");
 /// ```
-pub fn generate_body(name: &str, opts: Vec<ScadOption>) -> String {
+pub fn generate_sentence_repr(name: &str, opts: Vec<ScadOption>) -> String {
     let reprs = opts.iter().map(ToString::to_string).collect::<Vec<_>>();
     format!("{}({})", name, reprs.join(", "))
 }
 
-/// Give a default implementation of [`ScadObject::get_children`].
-///
-/// This macro is for the [`impl ScadObject`] having `self.childern` as `Vec<Box<dyn ScadObject>>`.
+/// implement [`ScadSentnece`] and [`ScadBuilder`] for certain type
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __get_children_impl {
-    () => {
-        fn get_children(&self) -> Option<Vec<String>> {
-            Some(self.children.iter().map(|c| c.to_code()).collect())
-        }
-    };
-}
-
-/// Give a default implementation of [`build_with()`].
-///
-/// This macro is for the [`impl ScadObject`] having its own builder.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __build_with_impl {
-    ( $type:tt ) => {
+macro_rules! __impl_builder_sentence {
+    ( $type:ident ) => {
         paste::paste! {
-            impl $type {
-                /// Create a new instance with a closure to configure its builder.
-                ///
-                /// # Arguments
-                ///
-                /// + `builder_config` - closure to configure the builder
-                ///
-                /// # Returns
-                ///
-                /// New instance of the [`Self`]
-                pub fn build_with<T: FnOnce(&mut [<$type Builder>])>
-                    (builder_config: T) -> Self {
-                        let mut builder = [<$type Builder>]::default();
-                        let _ = builder_config(&mut builder);
-                        builder.build().expect("required fields are not set")
+            impl $crate::ScadSentence for $type {
+                type Builder = [<$type Builder>];
+            }
+
+            impl $crate::ScadBuilder for [<$type Builder>] {
+                type Target = $type;
+                type Error = [<$type BuilderError>];
+                fn build_scad(&self) -> Result<Self::Target, Self::Error> {
+                    Self::build(&self)
                 }
             }
-        }
-    };
-}
-
-/// implement inside of [`ScadModifier`] for each struct
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_modifier {
-    ($type:ident, $child:ty) => {
-        impl $crate::ScadModifier for $type {
-            type Children = $child;
-
-            fn apply_to(self, children: &[Self::Children]) -> Self {
-                let mut result = self.clone();
-                result.children = children.to_vec();
-                result
-            }
-            fn get_children(&self) -> &Vec<Self::Children> {
-                &self.children
-            }
-        }
-    };
-}
-
-/// implement [`ScadObjectTrait::to_code()`] for [`ScadModifier`]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_modifier_to_code {
-    () => {
-        fn to_code(&self) -> String {
-            $crate::ScadModifier::to_code_with_children(self)
         }
     };
 }
@@ -252,7 +219,7 @@ mod tests {
             ScadOption::from_key_value("center", true),
         ];
         assert_eq!(
-            generate_body("square", opts),
+            generate_sentence_repr("square", opts),
             "square(size = 1, center = true)"
         );
     }

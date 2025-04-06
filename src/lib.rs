@@ -11,9 +11,11 @@ pub mod value_type;
 
 pub mod scad_2d;
 pub mod scad_3d;
+pub mod scad_mixed;
 
 /// import `prelude::*` so you can be ready to code!
 pub mod prelude {
+    // TODO:
     pub use crate::{
         scad_2d::{
             Circle, Color2D, Difference2D, Hull2D, Import2D, Intersection2D, Minkowski2D, Mirror2D,
@@ -26,7 +28,7 @@ pub mod prelude {
             ScadObject3D, Scale3D, Sphere, Surface, Translate3D, Union3D,
         },
         value_type::{RGB, RGBA},
-        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, ScadBuildable,
-        ScadModifier, ScadObjectTrait, Unit,
+        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, ScadSentence,
+        Unit,
     };
 }
