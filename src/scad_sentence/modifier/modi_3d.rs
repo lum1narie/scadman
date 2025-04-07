@@ -4,47 +4,12 @@ use derive_more::derive::From;
 use nalgebra as na;
 
 use crate::{
-    __generate_scad_options, __impl_scad3d,
+    __generate_scad_options,
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    value_type::{Angle, Color},
-    AffineMatrix3D, Point3D, Unit,
+    value_type::Angle,
+    AffineMatrix3D, Point3D, Unit, __impl_builder_sentence,
 };
-
-/// Give an implementation of a modifier 3D object
-/// that has no parameters and is applied to 3D objects.
-macro_rules! __impl_operator_3d {
-    ( $type:ident, $name:expr_2021 ) => {
-        #[doc = concat!($name,
-                                                                " modifier `", $name, "()` in SCAD.
-        This Rust type is regarded as 3D object and only applys to 3D objects.")]
-        #[allow(missing_debug_implementations)]
-        #[allow(clippy::missing_const_for_fn)]
-        #[derive(derive_builder::Builder, Debug, Clone)]
-        pub struct $type {}
-
-        $crate::__impl_scad3d!($type);
-
-        impl $crate::scad_display::ScadDisplay for $type {
-            fn repr_scad(&self) -> String {
-                generate_sentence_repr($name, Vec::new())
-            }
-        }
-
-        impl Default for $type {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-
-        impl $type {
-            /// generate new blank object
-            pub const fn new() -> Self {
-                Self {}
-            }
-        }
-    };
-}
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -56,7 +21,7 @@ pub struct Translate3D {
     pub v: Point3D,
 }
 
-__impl_scad3d!(Translate3D);
+__impl_builder_sentence!(Translate3D);
 
 impl ScadDisplay for Translate3D {
     fn repr_scad(&self) -> String {
@@ -108,7 +73,7 @@ pub struct Rotate3D {
     pub v: Option<Point3D>,
 }
 
-__impl_scad3d!(Rotate3D);
+__impl_builder_sentence!(Rotate3D);
 
 impl Rotate3DBuilder {
     /// Set rotation angle in degrees.
@@ -166,7 +131,7 @@ pub struct Scale3D {
     pub v: Point3D,
 }
 
-__impl_scad3d!(Scale3D);
+__impl_builder_sentence!(Scale3D);
 
 impl ScadDisplay for Scale3D {
     fn repr_scad(&self) -> String {
@@ -182,7 +147,7 @@ impl ScadDisplay for Scale3D {
 /// `auto` option in 3D resize modifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, From, Delegate)]
 #[delegate(ScadDisplay)]
-pub enum ResizeAuto {
+pub enum ResizeAuto3D {
     /// Same value for all dimensions.
     B(bool),
     /// Values for each dimension.
@@ -203,10 +168,10 @@ pub struct Resize3D {
     ///
     /// See also [`ResizeAuto`].
     #[builder(setter(into, strip_option), default)]
-    pub auto: Option<ResizeAuto>,
+    pub auto: Option<ResizeAuto3D>,
 }
 
-__impl_scad3d!(Resize3D);
+__impl_builder_sentence!(Resize3D);
 
 impl ScadDisplay for Resize3D {
     fn repr_scad(&self) -> String {
@@ -229,7 +194,7 @@ pub struct Mirror3D {
     pub v: Point3D,
 }
 
-__impl_scad3d!(Mirror3D);
+__impl_builder_sentence!(Mirror3D);
 
 impl ScadDisplay for Mirror3D {
     fn repr_scad(&self) -> String {
@@ -251,7 +216,7 @@ pub struct MultMatrix3D {
     pub m: AffineMatrix3D,
 }
 
-__impl_scad3d!(MultMatrix3D);
+__impl_builder_sentence!(MultMatrix3D);
 
 impl ScadDisplay for MultMatrix3D {
     fn repr_scad(&self) -> String {
@@ -263,43 +228,6 @@ impl ScadDisplay for MultMatrix3D {
         )
     }
 }
-
-/// Color modifier `color()` in SCAD.
-/// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
-pub struct Color3D {
-    /// Color.
-    ///
-    /// See also [`Color`].
-    #[builder(setter(into))]
-    pub c: Color,
-    /// Alpha value.
-    /// `a` option in SCAD.
-    ///
-    /// Set when the `color` is NOT [`Color::RGBA`].
-    #[builder(setter(into, strip_option), default)]
-    pub a: Option<Unit>,
-}
-
-__impl_scad3d!(Color3D);
-
-impl ScadDisplay for Color3D {
-    fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "color",
-            __generate_scad_options!(
-                (self.c.name(), self.c.clone());
-                ("a", self.a);
-            ),
-        )
-    }
-}
-
-__impl_operator_3d!(Hull3D, "hull");
-__impl_operator_3d!(Minkowski3D, "minkowski");
-__impl_operator_3d!(Union3D, "union");
-__impl_operator_3d!(Difference3D, "difference");
-__impl_operator_3d!(Intersection3D, "intersection");
 
 /// Linear extrude modifier `linear_extrude()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 2D objects.
@@ -339,7 +267,7 @@ pub struct LinearExtrude {
     pub r#fn: Option<u64>,
 }
 
-__impl_scad3d!(LinearExtrude);
+__impl_builder_sentence!(LinearExtrude);
 
 impl ScadDisplay for LinearExtrude {
     fn repr_scad(&self) -> String {
@@ -390,7 +318,7 @@ pub struct RotateExtrude {
     pub fs: Option<Unit>,
 }
 
-__impl_scad3d!(RotateExtrude);
+__impl_builder_sentence!(RotateExtrude);
 
 impl ScadDisplay for RotateExtrude {
     fn repr_scad(&self) -> String {
@@ -414,10 +342,7 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::{
-        value_type::{RGB, RGBA},
-        ScadBuildable as _,
-    };
+    use crate::ScadBuildable as _;
 
     #[test]
     fn test_translate3d() {
@@ -502,55 +427,6 @@ mod tests {
             .repr_scad(),
             "multmatrix(m = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])"
         );
-    }
-
-    #[test]
-    fn test_color3d() {
-        assert_eq!(
-            Color3D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2])"
-        );
-        assert_eq!(
-            Color3D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2], a = 1)"
-        );
-        assert_eq!(
-            Color3D::build_with(|cb| {
-                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2, 1])"
-        );
-        assert_eq!(
-            Color3D::build_with(|cb| {
-                let _ = cb.c("#C0FFEE".to_string());
-            })
-            .repr_scad(),
-            "color(\"#C0FFEE\")"
-        );
-    }
-
-    #[test]
-    fn test_hull() {
-        assert_eq!(Hull3D::new().repr_scad(), "hull()");
-    }
-
-    #[test]
-    fn test_minkowski() {
-        assert_eq!(Minkowski3D::new().repr_scad(), "minkowski()");
-    }
-
-    #[test]
-    fn test_binary_op() {
-        assert_eq!(Union3D::new().repr_scad(), "union()");
-        assert_eq!(Difference3D::new().repr_scad(), "difference()");
-        assert_eq!(Intersection3D::new().repr_scad(), "intersection()");
     }
 
     #[test]

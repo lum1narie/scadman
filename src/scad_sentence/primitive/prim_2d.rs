@@ -2,7 +2,7 @@ use ambassador::Delegate;
 use derive_builder::Builder;
 
 use crate::{
-    __generate_scad_options, __impl_scad2d,
+    __generate_scad_options, __impl_builder_sentence,
     common::{Point2D, Unit},
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
@@ -58,7 +58,7 @@ pub struct Square {
     pub center: Option<bool>,
 }
 
-__impl_scad2d!(Square);
+__impl_builder_sentence!(Square);
 
 impl ScadDisplay for Square {
     fn repr_scad(&self) -> String {
@@ -92,7 +92,7 @@ pub struct Circle {
     pub fs: Option<Unit>,
 }
 
-__impl_scad2d!(Circle);
+__impl_builder_sentence!(Circle);
 
 impl CircleBuilder {
     /// Set `r` option in SCAD.
@@ -171,7 +171,7 @@ pub struct Polygon {
     pub convexity: Option<u64>,
 }
 
-__impl_scad2d!(Polygon);
+__impl_builder_sentence!(Polygon);
 
 impl PolygonBuilder {
     /// Check if `paths` is in the range of `points`'s indicies.
@@ -264,7 +264,7 @@ pub struct Text {
     pub r#fn: Option<u64>,
 }
 
-__impl_scad2d!(Text);
+__impl_builder_sentence!(Text);
 
 impl ScadDisplay for Text {
     fn repr_scad(&self) -> String {
@@ -318,7 +318,7 @@ pub struct Import2D {
     pub fs: Option<Unit>,
 }
 
-__impl_scad2d!(Import2D);
+__impl_builder_sentence!(Import2D);
 
 impl ScadDisplay for Import2D {
     fn repr_scad(&self) -> String {

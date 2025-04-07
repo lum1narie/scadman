@@ -8,11 +8,9 @@ use crate::{
     ambassador_impl_ScadCommentDisplay,
     internal::{block_repr, modifier_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    scad_sentence::Color,
     ScadCommentDisplay, ScadObject, ScadObjectDimensionType, ScadObjectTrait,
 };
-
-mod modifier;
-pub use modifier::*;
 
 /// A Mixed object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
@@ -83,7 +81,7 @@ impl ScadCommentDisplay for ScadBlockMixed {}
 #[delegate(ScadDisplay)]
 pub enum ScadModifierBodyMixed {
     /// `color()` in SCAD.
-    Color(ColorMixed),
+    Color(Color),
 }
 
 impl ScadModifierBodyMixed {

@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    __generate_scad_options, __impl_scad3d,
+    __generate_scad_options, __impl_builder_sentence,
     common::{Point3D, Unit},
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
@@ -30,7 +30,7 @@ pub struct Sphere {
     pub fs: Option<Unit>,
 }
 
-__impl_scad3d!(Sphere);
+__impl_builder_sentence!(Sphere);
 
 impl SphereBuilder {
     /// Set `r` option in SCAD.
@@ -116,7 +116,7 @@ pub struct Cube {
     pub center: Option<bool>,
 }
 
-__impl_scad3d!(Cube);
+__impl_builder_sentence!(Cube);
 
 impl ScadDisplay for Cube {
     fn repr_scad(&self) -> String {
@@ -221,7 +221,7 @@ impl CylinderBuilder {
     }
 }
 
-__impl_scad3d!(Cylinder);
+__impl_builder_sentence!(Cylinder);
 
 impl ScadDisplay for Cylinder {
     fn repr_scad(&self) -> String {
@@ -299,7 +299,7 @@ pub struct Polyhedron {
     pub convexity: Option<u64>,
 }
 
-__impl_scad3d!(Polyhedron);
+__impl_builder_sentence!(Polyhedron);
 
 impl PolyhedronBuilder {
     /// Check if `faces` is in the range of `points`'s indicies.
@@ -368,7 +368,7 @@ pub struct Import3D {
     pub fs: Option<Unit>,
 }
 
-__impl_scad3d!(Import3D);
+__impl_builder_sentence!(Import3D);
 
 impl ScadDisplay for Import3D {
     fn repr_scad(&self) -> String {
@@ -406,7 +406,7 @@ pub struct Surface {
     pub convexity: Option<u64>,
 }
 
-__impl_scad3d!(Surface);
+__impl_builder_sentence!(Surface);
 
 impl ScadDisplay for Surface {
     fn repr_scad(&self) -> String {

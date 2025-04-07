@@ -14,19 +14,19 @@ pub mod scad_2d;
 pub mod scad_3d;
 pub mod scad_mixed;
 
+pub mod scad_sentence;
+
 /// import `prelude::*` so you can be ready to code!
 pub mod prelude {
     // TODO:
     pub use crate::{
-        scad_2d::{
-            Circle, Color2D, Difference2D, Hull2D, Import2D, Intersection2D, Minkowski2D, Mirror2D,
-            MultMatrix2D, Offset, Polygon, Resize2D, Rotate2D, ScadObject2D, Scale2D, Square, Text,
-            Translate2D, Union2D,
-        },
-        scad_3d::{
-            Color3D, Cube, Cylinder, Difference3D, Hull3D, Import3D, Intersection3D, LinearExtrude,
-            Minkowski3D, Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude,
-            ScadObject3D, Scale3D, Sphere, Surface, Translate3D, Union3D,
+        scad_2d::ScadObject2D,
+        scad_3d::ScadObject3D,
+        scad_sentence::{
+            Circle, Color, Cube, Cylinder, Difference, Hull, Import2D, Import3D, Intersection,
+            LinearExtrude, Minkowski, Mirror2D, Mirror3D, MultMatrix2D, MultMatrix3D, Offset,
+            Polygon, Polyhedron, Resize2D, Resize3D, Rotate2D, Rotate3D, RotateExtrude, Scale2D,
+            Scale3D, Sphere, Square, Surface, Text, Translate2D, Translate3D, Union,
         },
         value_type::{RGB, RGBA},
         AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D,

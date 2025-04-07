@@ -3,46 +3,11 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    AffineMatrix2D, Point2D, Unit, __generate_scad_options, __impl_scad2d,
+    AffineMatrix2D, Point2D, Unit, __generate_scad_options, __impl_builder_sentence,
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    value_type::{Angle, Color},
+    value_type::Angle,
 };
-
-/// Give an implementation of a modifier 2D object
-/// that has no parameters and is applied to 2D objects.
-macro_rules! __impl_operator_2d {
-    ( $type:ident, $name:expr_2021 ) => {
-        #[doc = concat!($name,
-                                                            " modifier `", $name, "()` in SCAD.
-        This Rust type is regarded as 2D object and only applys to 2D objects.")]
-        #[allow(missing_debug_implementations)]
-        #[allow(clippy::missing_const_for_fn)]
-        #[derive(derive_builder::Builder, Debug, Clone)]
-        pub struct $type {}
-
-        $crate::__impl_scad2d!($type);
-
-        impl $crate::scad_display::ScadDisplay for $type {
-            fn repr_scad(&self) -> String {
-                generate_sentence_repr($name, Vec::new())
-            }
-        }
-
-        impl Default for $type {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-
-        impl $type {
-            /// generate new blank object
-            pub const fn new() -> Self {
-                Self {}
-            }
-        }
-    };
-}
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -54,7 +19,7 @@ pub struct Translate2D {
     pub v: Point2D,
 }
 
-__impl_scad2d!(Translate2D);
+__impl_builder_sentence!(Translate2D);
 
 impl ScadDisplay for Translate2D {
     fn repr_scad(&self) -> String {
@@ -79,7 +44,7 @@ pub struct Rotate2D {
     pub a: Angle,
 }
 
-__impl_scad2d!(Rotate2D);
+__impl_builder_sentence!(Rotate2D);
 
 impl Rotate2DBuilder {
     /// Set rotation angle in degrees.
@@ -125,7 +90,7 @@ pub struct Scale2D {
     pub v: Point2D,
 }
 
-__impl_scad2d!(Scale2D);
+__impl_builder_sentence!(Scale2D);
 
 impl ScadDisplay for Scale2D {
     fn repr_scad(&self) -> String {
@@ -141,7 +106,7 @@ impl ScadDisplay for Scale2D {
 /// `auto` option in 2D resize modifier.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, From, Delegate)]
 #[delegate(ScadDisplay)]
-pub enum ResizeAuto {
+pub enum ResizeAuto2D {
     /// Same value for all dimensions.
     B(bool),
     /// Values for each dimension.
@@ -162,10 +127,10 @@ pub struct Resize2D {
     ///
     /// See also [`ResizeAuto`].
     #[builder(setter(into, strip_option), default)]
-    pub auto: Option<ResizeAuto>,
+    pub auto: Option<ResizeAuto2D>,
 }
 
-__impl_scad2d!(Resize2D);
+__impl_builder_sentence!(Resize2D);
 
 impl ScadDisplay for Resize2D {
     fn repr_scad(&self) -> String {
@@ -188,7 +153,7 @@ pub struct Mirror2D {
     pub v: Point2D,
 }
 
-__impl_scad2d!(Mirror2D);
+__impl_builder_sentence!(Mirror2D);
 
 impl ScadDisplay for Mirror2D {
     fn repr_scad(&self) -> String {
@@ -210,7 +175,7 @@ pub struct MultMatrix2D {
     pub m: AffineMatrix2D,
 }
 
-__impl_scad2d!(MultMatrix2D);
+__impl_builder_sentence!(MultMatrix2D);
 
 impl ScadDisplay for MultMatrix2D {
     fn repr_scad(&self) -> String {
@@ -218,37 +183,6 @@ impl ScadDisplay for MultMatrix2D {
             "multmatrix",
             __generate_scad_options!(
                 ("m", self.m);;
-            ),
-        )
-    }
-}
-
-/// Color modifier `color()` in SCAD.
-/// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
-pub struct Color2D {
-    /// Color.
-    ///
-    /// See also [`Color`].
-    #[builder(setter(into))]
-    pub c: Color,
-    /// Alpha value.
-    /// `a` option in SCAD.
-    ///
-    /// Set when the `color` is NOT [`Color::RGBA`].
-    #[builder(setter(into, strip_option), default)]
-    pub a: Option<Unit>,
-}
-
-__impl_scad2d!(Color2D);
-
-impl ScadDisplay for Color2D {
-    fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "color",
-            __generate_scad_options!(
-                (self.c.name(), self.c.clone());
-                ("a", self.a);
             ),
         )
     }
@@ -304,7 +238,7 @@ pub struct Offset {
     pub fs: Option<Unit>,
 }
 
-__impl_scad2d!(Offset);
+__impl_builder_sentence!(Offset);
 
 impl OffsetBuilder {
     /// Set `r` option in SCAD.
@@ -344,12 +278,6 @@ impl ScadDisplay for Offset {
     }
 }
 
-__impl_operator_2d!(Hull2D, "hull");
-__impl_operator_2d!(Minkowski2D, "minkowski");
-__impl_operator_2d!(Union2D, "union");
-__impl_operator_2d!(Difference2D, "difference");
-__impl_operator_2d!(Intersection2D, "intersection");
-
 /// Projection modifier `projection()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 3D objects.
 #[derive(Builder, Debug, Clone)]
@@ -362,7 +290,7 @@ pub struct Projection {
     pub cut: Option<bool>,
 }
 
-__impl_scad2d!(Projection);
+__impl_builder_sentence!(Projection);
 
 impl ScadDisplay for Projection {
     fn repr_scad(&self) -> String {
@@ -381,10 +309,7 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::{
-        value_type::{RGB, RGBA},
-        ScadBuildable as _,
-    };
+    use crate::ScadBuildable as _;
 
     #[test]
     fn test_translate2d() {
@@ -465,45 +390,6 @@ mod tests {
     }
 
     #[test]
-    fn test_color2d() {
-        assert_eq!(
-            Color2D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2])"
-        );
-        assert_eq!(
-            // Color2DBuilder::default()
-            //     .c(RGB::new(0.3, 0.5, 0.2))
-            //     .a(1.0)
-            //     .apply_to(children.clone())
-            //     .build()
-            //     .unwrap()
-            //     .repr_scad(),
-            Color2D::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2], a = 1)"
-        );
-        assert_eq!(
-            Color2D::build_with(|cb| {
-                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
-            })
-            .repr_scad(),
-            "color(c = [0.3, 0.5, 0.2, 1])"
-        );
-        assert_eq!(
-            Color2D::build_with(|cb| {
-                let _ = cb.c("#C0FFEE".to_string());
-            })
-            .repr_scad(),
-            "color(\"#C0FFEE\")"
-        );
-    }
-
-    #[test]
     fn test_offset() {
         assert_eq!(
             Offset::build_with(|ob| {
@@ -526,23 +412,6 @@ mod tests {
             .repr_scad(),
             "offset(r = 1, chamfer = true, $fs = 10)"
         );
-    }
-
-    #[test]
-    fn test_hull() {
-        assert_eq!(Hull2D::new().repr_scad(), "hull()");
-    }
-
-    #[test]
-    fn test_minkowski() {
-        assert_eq!(Minkowski2D::new().repr_scad(), "minkowski()");
-    }
-
-    #[test]
-    fn test_binary_op() {
-        assert_eq!(Union2D::new().repr_scad(), "union()");
-        assert_eq!(Difference2D::new().repr_scad(), "difference()");
-        assert_eq!(Intersection2D::new().repr_scad(), "intersection()");
     }
 
     #[test]

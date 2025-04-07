@@ -56,7 +56,7 @@ impl ScadDisplay for Angle {
 #[derive(Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
 /// Color type for SCAD
-pub enum Color {
+pub enum ScadColor {
     /// Color in RGB format
     RGB(RGB),
     /// Color in RGBA format
@@ -77,7 +77,7 @@ impl ScadDisplay for RGBA {
     }
 }
 
-impl Color {
+impl ScadColor {
     /// Returns the name of the key in SCAD code
     ///
     /// # Returns

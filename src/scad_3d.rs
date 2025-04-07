@@ -1,4 +1,4 @@
-//! 2D objects in SCAD.
+//! 3D objects in SCAD.
 use std::rc::Rc;
 
 use ambassador::Delegate;
@@ -8,67 +8,66 @@ use crate::{
     ambassador_impl_ScadCommentDisplay,
     internal::{block_repr, modifier_repr, primitive_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    scad_sentence::{
+        Color, Cube, Cylinder, Difference, Hull, Import3D, Intersection, LinearExtrude, Minkowski,
+        Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude, Scale3D, Sphere,
+        Surface, Translate3D, Union,
+    },
     ScadCommentDisplay, ScadObject, ScadObjectDimensionType, ScadObjectTrait,
 };
 
-mod primitive;
-pub use primitive::*;
-
-mod modifier;
-pub use modifier::*;
-
-/// A 2D object in SCAD.
+/// A 3D object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObject2D {
-    /// A primitive 2D object.
-    Primitive(ScadPrimitive2D),
-    /// A modifier 2D object.
-    Modifier(ScadModifier2D<ScadObject>),
-    /// A block of 2D objects.
-    Block(ScadBlock2D),
+pub enum ScadObject3D {
+    /// A primitive 3D object.
+    Primitive(ScadPrimitive3D),
+    /// A modifier 3D object.
+    Modifier(ScadModifier3D<ScadObject>),
+    /// A block of 3D objects.
+    Block(ScadBlock3D),
 }
 
-/// A primitive 2D object in SCAD.
+/// A primitive 3D object in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadPrimitive2D {
+pub struct ScadPrimitive3D {
     /// The body of the primitive.
-    pub body: ScadPrimitiveBody2D,
+    pub body: ScadPrimitiveBody3D,
 }
 
-impl ScadPrimitive2D {
-    /// Creates a new [`ScadPrimitive2D`].
-    pub const fn new(body: ScadPrimitiveBody2D) -> Self {
+impl ScadPrimitive3D {
+    /// Creates a new [`ScadPrimitive3D`].
+    pub const fn new(body: ScadPrimitiveBody3D) -> Self {
         Self { body }
     }
 }
 
-impl ScadDisplay for ScadPrimitive2D {
+impl ScadDisplay for ScadPrimitive3D {
     fn repr_scad(&self) -> String {
         primitive_repr(&self.body)
     }
 }
 
-impl ScadCommentDisplay for ScadPrimitive2D {}
+impl ScadCommentDisplay for ScadPrimitive3D {}
 
-/// A modifier for a 2D object in SCAD.
+/// A modifier for a 3D object in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadModifier2D<T: ScadObjectTrait> {
+pub struct ScadModifier3D<T: ScadObjectTrait> {
     /// The body of the modifier.
-    pub body: ScadModifierBody2D,
+    pub body: ScadModifierBody3D,
     /// The child object to be modified.
     pub child: Rc<T>,
 }
 
-impl<T: ScadObjectTrait> ScadModifier2D<T> {
-    /// Creates a new [`ScadModifier2D`] if the child's type matches the modifier's expected child type.
+impl<T: ScadObjectTrait> ScadModifier3D<T> {
+    /// Creates a new [`ScadModifier3D`] if the child's type matches the modifier's expected child type.
     ///
     /// # Returns
     ///
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
-    pub fn try_new(body: ScadModifierBody2D, child: Rc<T>) -> Option<Self> {
+    pub fn try_new(body: ScadModifierBody3D, child: Rc<T>) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then(|| Self { body, child })
     }
 
@@ -88,23 +87,23 @@ impl<T: ScadObjectTrait> ScadModifier2D<T> {
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadModifier2D<T> {
+impl<T: ScadObjectTrait> ScadDisplay for ScadModifier3D<T> {
     fn repr_scad(&self) -> String {
         modifier_repr(&self.body, &*self.child)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier2D<T> {}
+impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier3D<T> {}
 
-/// A block of 2D objects in SCAD.
+/// A block of 3D objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlock2D {
+pub struct ScadBlock3D {
     /// The objects in the block.
     pub objects: Vec<ScadObject>,
 }
 
-impl ScadBlock2D {
-    /// Creates a new [`ScadBlock2D`].
+impl ScadBlock3D {
+    /// Creates a new [`ScadBlock3D`].
     pub fn new(objects: &[ScadObject]) -> Self {
         Self {
             objects: objects.to_vec(),
@@ -112,66 +111,67 @@ impl ScadBlock2D {
     }
 }
 
-impl ScadDisplay for ScadBlock2D {
+impl ScadDisplay for ScadBlock3D {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl ScadCommentDisplay for ScadBlock2D {}
+impl ScadCommentDisplay for ScadBlock3D {}
 
-/// A primitive sentences for 2D objects in SCAD.
+/// A primitive sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
-pub enum ScadPrimitiveBody2D {
-    /// `circle()` in SCAD.
-    Circle(Circle),
+pub enum ScadPrimitiveBody3D {
+    /// `cube()` in SCAD.
+    Cube(Cube),
+    /// `cylinder()` in SCAD.
+    Cylinder(Cylinder),
     /// `import()` in SCAD.
-    Import(Import2D),
-    /// `polygon()` in SCAD.
-    Polygon(Polygon),
-    /// `square()` in SCAD.
-    Square(Square),
-    /// `text()` in SCAD.
-    Text(Text),
+    Import(Import3D),
+    /// `polyhedron()` in SCAD.
+    Polyhedron(Polyhedron),
+    /// `sphere()` in SCAD.
+    Sphere(Sphere),
+    /// `surface()` in SCAD.
+    Surface(Surface),
 }
 
-/// A modifier sentences for 2D objects in SCAD.
+/// A modifier sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
-pub enum ScadModifierBody2D {
+pub enum ScadModifierBody3D {
     /// `color()` in SCAD.
-    Color(Color2D),
+    Color(Color),
     /// `difference()` in SCAD.
-    Difference(Difference2D),
+    Difference(Difference),
     /// `hull()` in SCAD.
-    Hull(Hull2D),
+    Hull(Hull),
     /// `intersection()` in SCAD.
-    Intersection(Intersection2D),
+    Intersection(Intersection),
+    /// `linear_extrude()` in SCAD.
+    LinearExtrude(LinearExtrude),
     /// `minkowski()` in SCAD.
-    Minkowski(Minkowski2D),
+    Minkowski(Minkowski),
     /// `mirror()` in SCAD.
-    Mirror(Mirror2D),
+    Mirror(Mirror3D),
     /// `multmatrix()` in SCAD.
-    MultMatrix(MultMatrix2D),
-    /// `offset()` in SCAD.
-    Offset(Offset),
-    /// `projection()` in SCAD.
-    Projection(Projection),
+    MultMatrix(MultMatrix3D),
     /// `resize()` in SCAD.
-    Resize(Resize2D),
+    Resize(Resize3D),
     /// `rotate()` in SCAD.
-    Rotate(Rotate2D),
+    Rotate(Rotate3D),
+    /// `rotate_extrude()` in SCAD.
+    RotateExtrude(RotateExtrude),
     /// `scale()` in SCAD.
-    Scale(Scale2D),
+    Scale(Scale3D),
     /// `translate()` in SCAD.
-    Translate(Translate2D),
+    Translate(Translate3D),
     /// `union()` in SCAD.
-    Union(Union2D),
+    Union(Union),
 }
 
-impl ScadModifierBody2D {
-    /// Gets the expected child type for this modifier.
+impl ScadModifierBody3D {
     pub(crate) const fn get_children_type(&self) -> ScadObjectDimensionType {
         match self {
             Self::Color(_)
@@ -181,20 +181,19 @@ impl ScadModifierBody2D {
             | Self::Minkowski(_)
             | Self::Mirror(_)
             | Self::MultMatrix(_)
-            | Self::Offset(_)
             | Self::Resize(_)
             | Self::Rotate(_)
             | Self::Scale(_)
             | Self::Translate(_)
-            | Self::Union(_) => ScadObjectDimensionType::Object2D,
-            Self::Projection(_) => ScadObjectDimensionType::Object3D,
+            | Self::Union(_) => ScadObjectDimensionType::Object3D,
+            Self::LinearExtrude(_) | Self::RotateExtrude(_) => ScadObjectDimensionType::Object2D,
         }
     }
 }
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __impl_scad2d {
+macro_rules! __impl_scad3d {
     ( $type:ident ) => {
         $crate::__impl_builder_sentence!($type);
     };
