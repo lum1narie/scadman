@@ -11,7 +11,7 @@ use crate::{
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Translate2D {
     /// Translation vector.
     /// `v` option in SCAD.
@@ -34,7 +34,7 @@ impl ScadDisplay for Translate2D {
 
 /// Rotate modifier `rotate()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Rotate2D {
     /// Rotation angle.
     /// `a` option in SCAD.
@@ -82,7 +82,7 @@ impl ScadDisplay for Rotate2D {
 
 /// Scale modifier `scale()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Scale2D {
     /// Scaling vector.
     /// `v` option in SCAD.
@@ -115,7 +115,7 @@ pub enum ResizeAuto2D {
 
 /// Resize modifier `resize()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Resize2D {
     /// New size.
     ///
@@ -146,7 +146,7 @@ impl ScadDisplay for Resize2D {
 
 /// Mirror modifier `mirror()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Mirror2D {
     /// Normal vector of the mirror plane.
     #[builder(setter(into))]
@@ -168,7 +168,7 @@ impl ScadDisplay for Mirror2D {
 
 /// Affine tranformation modifier `multmatrix()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct MultMatrix2D {
     /// Affine transformation matrix for 2D vector.
     #[builder(setter(into))]
@@ -213,7 +213,7 @@ impl OffsetSize {
 }
 
 /// Offset modifier `offset()` in SCAD.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Offset {
     /// Size of the offset.
     /// `r` or `delta` option in SCAD.
@@ -280,7 +280,7 @@ impl ScadDisplay for Offset {
 
 /// Projection modifier `projection()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Projection {
     /// Flag to determine the shape should be cut at z = 0 or not.
     ///

@@ -11,7 +11,8 @@ macro_rules! __impl_operator {
         #[doc = concat!($name, " modifier `", $name, "()` in SCAD.")]
         #[allow(missing_debug_implementations)]
         #[allow(clippy::missing_const_for_fn)]
-        #[derive(derive_builder::Builder, Debug, Clone)]
+        #[allow(missing_copy_implementations)]
+        #[derive(derive_builder::Builder, Debug, Clone, Copy)]
         pub struct $type {}
 
         $crate::__impl_builder_sentence!($type);

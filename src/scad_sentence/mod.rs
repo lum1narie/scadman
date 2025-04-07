@@ -1,3 +1,5 @@
+//! Sentences in SCAD.
+
 #[allow(clippy::redundant_pub_crate)]
 mod primitive;
 pub use primitive::*;

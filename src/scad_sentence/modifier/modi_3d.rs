@@ -13,7 +13,7 @@ use crate::{
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Translate3D {
     /// Translation vector.
     /// `v` option in SCAD.
@@ -60,7 +60,7 @@ pub enum Rotate3DAngleEntry {
 
 /// Rotate modifier `rotate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Rotate3D {
     /// Rotation angle.
     /// `a` option in SCAD.
@@ -123,7 +123,7 @@ impl ScadDisplay for Rotate3D {
 
 /// Scale modifier `scale()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Scale3D {
     /// Scaling vector.
     /// `v` option in SCAD.
@@ -156,7 +156,7 @@ pub enum ResizeAuto3D {
 
 /// Resize modifier `resize()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Resize3D {
     /// New size.
     ///
@@ -187,7 +187,7 @@ impl ScadDisplay for Resize3D {
 
 /// Mirror modifier `mirror()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Mirror3D {
     /// Normal vector of the mirror plane.
     #[builder(setter(into))]
@@ -209,7 +209,7 @@ impl ScadDisplay for Mirror3D {
 
 /// Affine tranformation modifier `multmatrix()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct MultMatrix3D {
     /// Affine transformation matrix for 3D vector.
     #[builder(setter(into))]
@@ -231,7 +231,7 @@ impl ScadDisplay for MultMatrix3D {
 
 /// Linear extrude modifier `linear_extrude()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct LinearExtrude {
     /// The length of the extruded object.
     ///
@@ -289,7 +289,7 @@ impl ScadDisplay for LinearExtrude {
 
 /// Rotate extrude modifier `rotate_extrude()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 2D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct RotateExtrude {
     /// The number of degrees to sweep.
     ///
