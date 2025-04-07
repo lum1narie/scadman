@@ -22,17 +22,23 @@ pub use modifier::*;
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
 pub enum ScadObject3D {
+    /// A primitive 3D object.
     Primitive(ScadPrimitive3D),
+    /// A modifier 3D object.
     Modifier(ScadModifier3D<ScadObject>),
+    /// A block of 3D objects.
     Block(ScadBlock3D),
 }
 
+/// A primitive 3D object in SCAD.
 #[derive(Debug, Clone, From)]
 pub struct ScadPrimitive3D {
+    /// The body of the primitive.
     pub body: ScadPrimitiveBody3D,
 }
 
 impl ScadPrimitive3D {
+    /// Creates a new [`ScadPrimitive3D`].
     pub const fn new(body: ScadPrimitiveBody3D) -> Self {
         Self { body }
     }
@@ -46,17 +52,32 @@ impl ScadDisplay for ScadPrimitive3D {
 
 impl ScadCommentDisplay for ScadPrimitive3D {}
 
+/// A modifier for a 3D object in SCAD.
 #[derive(Debug, Clone, From)]
 pub struct ScadModifier3D<T: ScadObjectTrait> {
+    /// The body of the modifier.
     pub body: ScadModifierBody3D,
+    /// The child object to be modified.
     pub child: Rc<T>,
 }
 
 impl<T: ScadObjectTrait> ScadModifier3D<T> {
+    /// Creates a new [`ScadModifier3D`] if the child's type matches the modifier's expected child type.
+    ///
+    /// # Returns
+    ///
+    /// + `Some(Self)`: The new object generated.
+    /// + `None`: If type of `child`is not matched with `body`
     pub fn try_new(body: ScadModifierBody3D, child: Rc<T>) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then(|| Self { body, child })
     }
 
+    /// Sets the child of the modifier if the child's type matches the modifier's expected child type.
+    ///
+    /// # Returns
+    ///
+    /// `true`: If change is applied.
+    /// `false`: If type of `child` is not matched with `self.body`
     pub fn try_set_child(&mut self, child: Rc<T>) -> bool {
         let retv = child.get_type() == self.body.get_children_type();
 
@@ -75,12 +96,15 @@ impl<T: ScadObjectTrait> ScadDisplay for ScadModifier3D<T> {
 
 impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier3D<T> {}
 
+/// A block of 3D objects in SCAD.
 #[derive(Debug, Clone, From)]
 pub struct ScadBlock3D {
+    /// The objects in the block.
     pub objects: Vec<ScadObject>,
 }
 
 impl ScadBlock3D {
+    /// Creates a new [`ScadBlock3D`].
     pub fn new(objects: &[ScadObject]) -> Self {
         Self {
             objects: objects.to_vec(),
@@ -96,6 +120,7 @@ impl ScadDisplay for ScadBlock3D {
 
 impl ScadCommentDisplay for ScadBlock3D {}
 
+/// A primitive sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 pub enum ScadPrimitiveBody3D {
@@ -113,6 +138,7 @@ pub enum ScadPrimitiveBody3D {
     Surface(Surface),
 }
 
+/// A modifier sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 pub enum ScadModifierBody3D {

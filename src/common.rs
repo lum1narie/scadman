@@ -26,6 +26,7 @@ pub type AffineMatrix2D = na::Matrix2x3<Unit>;
 /// Data type for Affine transformations in 3D.
 pub type AffineMatrix3D = na::Matrix3x4<Unit>;
 
+/// The number of space for indent
 pub const INDENT: usize = 2;
 
 /// Trait for builders that can be build [`ScadBuildable`]
@@ -66,27 +67,45 @@ pub trait ScadBuildable: Sized {
     }
 }
 
+/// Trait for objects representing a single sentence in SCAD.
 pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
 
+/// Trait for object that can be shown with comment.
 #[delegatable_trait]
 pub(crate) trait ScadCommentDisplay: ScadDisplay {
+    /// Returns a string representation of the object with a comment.
+    ///
+    /// # Arguments
+    ///
+    /// + `comment` - The comment to be shown with the object.
+    ///
+    /// # Returns
+    ///
+    /// A string representation of the object with the comment.
     fn repr_scad_with_comment(&self, comment: &str) -> String {
         format!("/* {} */\n{}", comment, self.repr_scad())
     }
 }
 
+/// Trait for SCAD Objects
 pub trait ScadObjectTrait {
+    /// Returns a string representation of the object.
     fn to_code(&self) -> String;
+    /// Returns the dimension type of the object.
     fn get_type(&self) -> ScadObjectDimensionType;
 }
 
+/// Struct representing a Scad Object
 #[derive(Clone, Debug)]
 pub struct ScadObject {
+    /// The body of the SCAD Object
     pub body: ScadObjectBody,
+    /// An optional comment for the Scad Object
     pub comment: Option<String>,
 }
 
 impl ScadObject {
+    /// Creates a new [`ScadObject`] with a comment.
     pub fn new(body: ScadObjectBody, comment: &str) -> Self {
         Self {
             body,
@@ -94,6 +113,7 @@ impl ScadObject {
         }
     }
 
+    /// Sets the comment of the [`ScadObject`].
     pub fn set_comment(&mut self, comment: &str) {
         self.comment = Some(comment.to_string());
     }
@@ -125,18 +145,26 @@ impl From<ScadObjectBody> for ScadObject {
     }
 }
 
+/// Enum representing the body of a Scad Object.
 #[derive(Clone, Debug, From, Delegate)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
 pub enum ScadObjectBody {
+    /// 2D Scad Object
     Object2D(ScadObject2D),
+    /// 3D Scad Object
     Object3D(ScadObject3D),
+    /// Mixed Scad Object
     ObjectMixed(ScadObjectMixed),
 }
 
+/// Enum representing the dimension type of a Scad Object.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ScadObjectDimensionType {
+    /// 2D Scad Object
     Object2D,
+    /// 3D Scad Object
     Object3D,
+    /// Mixed Scad Object
     ObjectMixed,
 }
