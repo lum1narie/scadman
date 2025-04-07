@@ -90,6 +90,7 @@ pub(crate) trait ScadCommentDisplay: ScadDisplay {
 /// Trait for SCAD Objects
 pub trait ScadObjectTrait {
     /// Returns a string representation of the object.
+    /// Return value must include trailing '\n'
     fn to_code(&self) -> String;
     /// Returns the dimension type of the object.
     fn get_type(&self) -> ScadObjectDimensionType;

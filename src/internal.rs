@@ -2,17 +2,53 @@ use std::fmt::{Display, Formatter};
 
 use crate::{scad_display::ScadDisplay, ScadObject, ScadObjectTrait, INDENT};
 
+/// Indent a string
+///
+/// # Arguments
+///
+/// + `s` - The string to be indented
+/// + `indent` - The number of spaces to indent each line
+///
+/// # Returns
+///
+/// A new string with each line indented by the specified number of spaces
 pub fn indent_str(s: &str, indent: usize) -> String {
-    s.lines()
+    let mut lines: Vec<_> = s
+        .lines()
         .map(|line| format!("{}{}", " ".repeat(indent), line))
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect();
+    if s.ends_with('\n') {
+        lines.push("".to_string());
+    }
+    lines.join("\n")
 }
 
+/// Common code for primitive representation
+///
+/// # Arguments
+///
+/// + `body` - The SCAD sentence to be represented as a primitive
+///
+/// # Returns
+///
+/// A string representation of the primitive SCAD object, ending with a semicolon and newline
 pub fn primitive_repr<T: ScadDisplay>(body: &T) -> String {
     format!("{};\n", body.repr_scad())
 }
 
+/// Represent a modifier with its child object in SCAD
+///
+/// - If the child's representation starts with '{', the modifier is placed directly before the block
+/// - Otherwise, the child is indented and placed on a new line after the modifier
+///
+/// # Arguments
+///
+/// * `body` - The modifier to be applied
+/// * `child` - The child object to which the modifier is applied
+///
+/// # Returns
+///
+/// A string representation of the modifier and its child
 pub fn modifier_repr<T: ScadDisplay, U: ScadObjectTrait>(body: &T, child: &U) -> String {
     let body_repr = body.repr_scad();
     let child_repr = child.to_code();
@@ -20,17 +56,26 @@ pub fn modifier_repr<T: ScadDisplay, U: ScadObjectTrait>(body: &T, child: &U) ->
         format!("{body_repr} {child_repr}")
     } else {
         let indented_child = indent_str(&child_repr, INDENT);
-        format!("{body_repr}\n{indented_child}\n")
+        format!("{body_repr}\n{indented_child}")
     }
 }
 
-pub fn block_repr(objects: &[ScadObject]) -> String {
+/// Represent a block of SCAD objects
+///
+/// # Arguments
+///
+/// * `objects` - A slice of SCAD objects to be included in the block
+///
+/// # Returns
+///
+/// A string representation of the block, with objects indented and enclosed in curly braces
+pub fn block_repr<T: ScadObjectTrait>(objects: &[T]) -> String {
     let children_repr = objects
         .iter()
         .map(ScadObjectTrait::to_code)
         .collect::<String>();
     let indented_children = indent_str(&children_repr, INDENT);
-    format!("{{\n{indented_children}\n}}\n")
+    format!("{{\n{indented_children}}}\n")
 }
 
 /// Single option with a SCAD object.
@@ -189,9 +234,88 @@ macro_rules! __impl_builder_sentence {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::Unit;
+    use crate::{common::Unit, ScadObjectDimensionType};
 
     use super::*;
+
+    #[test]
+    fn test_indent_str() {
+        assert_eq!(indent_str("hello\nworld!\n", 3), "   hello\n   world!\n");
+        assert_eq!(
+            indent_str("   hello\n  world!", 2),
+            "     hello\n    world!"
+        );
+        assert_eq!(indent_str("\n\n\n", 1), " \n \n \n");
+    }
+
+    struct ScadDisplayMock(String);
+    impl ScadDisplay for ScadDisplayMock {
+        fn repr_scad(&self) -> String {
+            self.0.clone()
+        }
+    }
+
+    #[test]
+    fn test_primitive_repr() {
+        assert_eq!(
+            primitive_repr(&ScadDisplayMock("prim()".to_string())),
+            "prim();\n"
+        );
+    }
+
+    struct ScadObjectMock(String);
+    impl ScadObjectTrait for ScadObjectMock {
+        fn to_code(&self) -> String {
+            self.0.clone()
+        }
+        fn get_type(&self) -> ScadObjectDimensionType {
+            ScadObjectDimensionType::ObjectMixed
+        }
+    }
+
+    #[test]
+    fn test_modifier_repr() {
+        assert_eq!(
+            modifier_repr(
+                &ScadDisplayMock("mod()".to_string()),
+                &ScadObjectMock("prim();\n".to_string())
+            ),
+            "mod()\n  prim();\n"
+        );
+        assert_eq!(
+            modifier_repr(
+                &ScadDisplayMock("mod()".to_string()),
+                &ScadObjectMock("mod2()\n  prim();\n".to_string())
+            ),
+            "mod()\n  mod2()\n    prim();\n"
+        );
+        assert_eq!(
+            modifier_repr(
+                &ScadDisplayMock("mod()".to_string()),
+                &ScadObjectMock("{\n  prim1();\n  prim2();\n}\n".to_string())
+            ),
+            "mod() {\n  prim1();\n  prim2();\n}\n"
+        );
+        assert_eq!(
+            modifier_repr(
+                &ScadDisplayMock("mod()".to_string()),
+                &ScadObjectMock("/* comment */\n{\n  prim1();\n  prim2();\n}\n".to_string())
+            ),
+            "mod()\n  /* comment */\n  {\n    prim1();\n    prim2();\n  }\n"
+        );
+    }
+
+    // TODO: test block_repr
+    #[test]
+    fn test_block_repr() {
+        assert_eq!(
+            block_repr(&[
+                ScadObjectMock("prim1();\n".to_string()),
+                ScadObjectMock("mod()\n  prim2();\n".to_string())
+            ]),
+            "{\n  prim1();\n  mod()\n    prim2();\n}\n"
+        );
+    }
 
     #[test]
     fn test_scad_option() {
