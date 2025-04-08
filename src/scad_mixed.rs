@@ -16,11 +16,11 @@ use crate::{
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObjectMixed {
+pub enum ScadObjectMixed<T: ScadObjectTrait> {
     /// A modifier mixed object.
-    Modifier(ScadModifierMixed<ScadObject>),
+    Modifier(ScadModifierMixed<T>),
     /// A block of mixed objects.
-    Block(ScadBlockMixed),
+    Block(ScadBlockMixed<T>),
 }
 
 /// A modifier for a mixed object in SCAD.
@@ -54,27 +54,27 @@ impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifierMixed<T> {}
 
 /// A block of mixed objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlockMixed {
+pub struct ScadBlockMixed<T: ScadObjectTrait> {
     /// The objects in the block.
-    pub objects: Vec<ScadObject>,
+    pub objects: Vec<T>,
 }
 
-impl ScadBlockMixed {
+impl<T: ScadObjectTrait> ScadBlockMixed<T> {
     /// Creats a new [`ScadBlockMixed`]
-    pub fn new(objects: &[ScadObject]) -> Self {
+    pub fn new(objects: &[T]) -> Self {
         Self {
             objects: objects.to_vec(),
         }
     }
 }
 
-impl ScadDisplay for ScadBlockMixed {
+impl<T: ScadObjectTrait> ScadDisplay for ScadBlockMixed<T> {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl ScadCommentDisplay for ScadBlockMixed {}
+impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlockMixed<T> {}
 
 /// A modifier sentences for mixed objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]

@@ -88,7 +88,7 @@ pub(crate) trait ScadCommentDisplay: ScadDisplay {
 }
 
 /// Trait for SCAD Objects
-pub trait ScadObjectTrait {
+pub trait ScadObjectTrait: Clone {
     /// Returns a string representation of the object.
     /// Return value must include trailing '\n'
     fn to_code(&self) -> String;
@@ -152,11 +152,11 @@ impl From<ScadObjectBody> for ScadObject {
 #[delegate(ScadCommentDisplay)]
 pub enum ScadObjectBody {
     /// 2D Scad Object
-    Object2D(ScadObject2D),
+    Object2D(ScadObject2D<ScadObject>),
     /// 3D Scad Object
-    Object3D(ScadObject3D),
+    Object3D(ScadObject3D<ScadObject>),
     /// Mixed Scad Object
-    ObjectMixed(ScadObjectMixed),
+    ObjectMixed(ScadObjectMixed<ScadObject>),
 }
 
 /// Enum representing the dimension type of a Scad Object.

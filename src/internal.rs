@@ -263,6 +263,7 @@ mod tests {
         );
     }
 
+    #[derive(Clone)]
     struct ScadObjectMock(String);
     impl ScadObjectTrait for ScadObjectMock {
         fn to_code(&self) -> String {

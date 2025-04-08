@@ -19,13 +19,13 @@ use crate::{
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObject2D {
+pub enum ScadObject2D<T: ScadObjectTrait> {
     /// A primitive 2D object.
     Primitive(ScadPrimitive2D),
     /// A modifier 2D object.
-    Modifier(ScadModifier2D<ScadObject>),
+    Modifier(ScadModifier2D<T>),
     /// A block of 2D objects.
-    Block(ScadBlock2D),
+    Block(ScadBlock2D<T>),
 }
 
 /// A primitive 2D object in SCAD.
@@ -96,27 +96,27 @@ impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier2D<T> {}
 
 /// A block of 2D objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlock2D {
+pub struct ScadBlock2D<T: ScadObjectTrait> {
     /// The objects in the block.
-    pub objects: Vec<ScadObject>,
+    pub objects: Vec<T>,
 }
 
-impl ScadBlock2D {
+impl<T: ScadObjectTrait> ScadBlock2D<T> {
     /// Creates a new [`ScadBlock2D`].
-    pub fn new(objects: &[ScadObject]) -> Self {
+    pub fn new(objects: &[T]) -> Self {
         Self {
             objects: objects.to_vec(),
         }
     }
 }
 
-impl ScadDisplay for ScadBlock2D {
+impl<T: ScadObjectTrait> ScadDisplay for ScadBlock2D<T> {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl ScadCommentDisplay for ScadBlock2D {}
+impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlock2D<T> {}
 
 /// A primitive sentences for 2D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
