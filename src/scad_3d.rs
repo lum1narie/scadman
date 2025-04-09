@@ -68,22 +68,7 @@ impl<T: ScadObjectTrait> ScadModifier3D<T> {
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
     pub fn try_new(body: ScadModifierBody3D, child: Rc<T>) -> Option<Self> {
-        (child.get_type() == body.get_children_type()).then(|| Self { body, child })
-    }
-
-    /// Sets the child of the modifier if the child's type matches the modifier's expected child type.
-    ///
-    /// # Returns
-    ///
-    /// `true`: If change is applied.
-    /// `false`: If type of `child` is not matched with `self.body`
-    pub fn try_set_child(&mut self, child: Rc<T>) -> bool {
-        let retv = child.get_type() == self.body.get_children_type();
-
-        if retv {
-            self.child = child;
-        }
-        retv
+        (child.get_type() == body.get_children_type()).then_some( Self { body, child })
     }
 }
 
@@ -103,11 +88,23 @@ pub struct ScadBlock3D<T: ScadObjectTrait> {
 }
 
 impl<T: ScadObjectTrait> ScadBlock3D<T> {
-    /// Creates a new [`ScadBlock3D`].
-    pub fn new(objects: &[T]) -> Self {
-        Self {
-            objects: objects.to_vec(),
-        }
+    /// Creates a new [`ScadBlock3D`] with the given objects if all objects are 3D.
+    ///
+    /// # Arguments
+    ///
+    /// * `objects` - A slice of objects to be included in the block
+    ///
+    /// # Returns
+    ///
+    /// * `Some(ScadBlock3D)` if all objects are 3D objects
+    /// * `None` if any object is not a 3D object
+    pub fn try_new(objects: &[T]) -> Option<Self> {
+        objects
+            .iter()
+            .all(|o| o.get_type() == ScadObjectDimensionType::Object3D)
+            .then_some(Self {
+                objects: objects.to_vec(),
+            })
     }
 }
 
@@ -191,10 +188,19 @@ impl ScadModifierBody3D {
     }
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_scad3d {
-    ( $type:ident ) => {
-        $crate::__impl_builder_sentence!($type);
+macro_rules! __impl_from_for_primitive3d {
+    ( $type:ty ) => {
+        impl From<$type> for ScadPrimitive3D {
+            fn from(value: $type) -> Self {
+                Self { body: value.into() }
+            }
+        }
     };
 }
+
+__impl_from_for_primitive3d!(Cube);
+__impl_from_for_primitive3d!(Cylinder);
+__impl_from_for_primitive3d!(Import3D);
+__impl_from_for_primitive3d!(Polyhedron);
+__impl_from_for_primitive3d!(Sphere);
+__impl_from_for_primitive3d!(Surface);

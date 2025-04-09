@@ -37,11 +37,6 @@ impl<T: ScadObjectTrait> ScadModifierMixed<T> {
     pub const fn new(body: ScadModifierBodyMixed, child: Rc<T>) -> Self {
         Self { body, child }
     }
-
-    /// Sets the child object of the modifier.
-    pub fn set_child(&mut self, child: Rc<T>) {
-        self.child = child;
-    }
 }
 
 impl<T: ScadObjectTrait> ScadDisplay for ScadModifierMixed<T> {
@@ -60,7 +55,7 @@ pub struct ScadBlockMixed<T: ScadObjectTrait> {
 }
 
 impl<T: ScadObjectTrait> ScadBlockMixed<T> {
-    /// Creats a new [`ScadBlockMixed`]
+    /// Creats a new [`ScadBlockMixed`].
     pub fn new(objects: &[T]) -> Self {
         Self {
             objects: objects.to_vec(),

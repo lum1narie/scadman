@@ -159,6 +159,24 @@ pub enum ScadObjectBody {
     ObjectMixed(ScadObjectMixed<ScadObject>),
 }
 
+macro_rules! __impl_from_for_scadobject {
+    ( $type:ty ) => {
+        impl From<$type> for ScadObject {
+            fn from(value: $type) -> Self {
+                Self {
+                    body: value.into(),
+                    comment: None,
+                }
+            }
+        }
+    };
+}
+
+__impl_from_for_scadobject!(ScadObject2D<ScadObject>);
+__impl_from_for_scadobject!(ScadObject3D<ScadObject>);
+__impl_from_for_scadobject!(ScadObjectMixed<ScadObject>);
+
+
 /// Enum representing the dimension type of a Scad Object.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ScadObjectDimensionType {
