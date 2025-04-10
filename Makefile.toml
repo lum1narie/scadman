@@ -1,0 +1,14 @@
+[tasks.format]
+command = "cargo"
+args = ["fmt"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--all-targets", "--no-deps", "--all-features"]
+
+[tasks.clippy-fix]
+command = "cargo"
+args = ["clippy", "--all-targets", "--no-deps", "--all-features", "--fix", "--allow-staged"]
+
+[tasks.tidy]
+dependencies = ["clippy-fix", "format"]
