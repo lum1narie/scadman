@@ -1,14 +1,20 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    ops::{Add, Mul, Sub},
+    rc::Rc,
+};
 
 use ambassador::{delegatable_trait, Delegate};
 use derive_more::derive::From;
 use nalgebra as na;
 
 use crate::{
-    scad_2d::ScadObject2D,
-    scad_3d::ScadObject3D,
+    prelude::{Difference, Intersection},
+    scad_2d::{ScadBlock2D, ScadModifier2D, ScadObject2D},
+    scad_3d::{ScadBlock3D, ScadModifier3D, ScadObject3D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_mixed::ScadObjectMixed,
+    scad_sentence::Union,
 };
 
 /// Unit of length to write in SCAD code.
@@ -118,6 +124,14 @@ impl ScadObject {
     pub fn set_comment(&mut self, comment: &str) {
         self.comment = Some(comment.to_string());
     }
+
+    /// Sets the comment of the [`ScadObject`].
+    pub fn commented(self, comment: &str) -> Self {
+        Self {
+            body: self.body,
+            comment: Some(comment.to_string()),
+        }
+    }
 }
 
 impl ScadObjectTrait for ScadObject {
@@ -176,7 +190,6 @@ __impl_from_for_scadobject!(ScadObject2D<ScadObject>);
 __impl_from_for_scadobject!(ScadObject3D<ScadObject>);
 __impl_from_for_scadobject!(ScadObjectMixed<ScadObject>);
 
-
 /// Enum representing the dimension type of a Scad Object.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ScadObjectDimensionType {
@@ -186,4 +199,106 @@ pub enum ScadObjectDimensionType {
     Object3D,
     /// Mixed Scad Object
     ObjectMixed,
+}
+
+impl Add for ScadObject {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let self_type = self.get_type();
+        let rhs_type = rhs.get_type();
+
+        if self_type != rhs_type {
+            panic!("`{:?} + {:?}` is not allowed", self_type, rhs_type)
+        }
+
+        // TODO: Optimize the pattern of Union + something
+        match self.body {
+            ScadObjectBody::Object2D(_) => {
+                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
+                let u: ScadModifier2D<ScadObject> =
+                    ScadModifier2D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject2D<ScadObject>>::into(u).into()
+            }
+            ScadObjectBody::Object3D(_) => {
+                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
+                let u: ScadModifier3D<ScadObject> =
+                    ScadModifier3D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject3D<ScadObject>>::into(u).into()
+            }
+            ScadObjectBody::ObjectMixed(_) => {
+                panic!("`+` of Mixed object is not allowed")
+            }
+        }
+    }
+}
+
+impl Sub for ScadObject {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let self_type = self.get_type();
+        let rhs_type = rhs.get_type();
+
+        if self_type != rhs_type {
+            panic!("`{:?} - {:?}` is not allowed", self_type, rhs_type)
+        }
+
+        // TODO: Optimize the pattern of Difference - something
+        match self.body {
+            ScadObjectBody::Object2D(_) => {
+                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
+                let d: ScadModifier2D<ScadObject> =
+                    ScadModifier2D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject2D<ScadObject>>::into(d).into()
+            }
+            ScadObjectBody::Object3D(_) => {
+                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
+                let d: ScadModifier3D<ScadObject> =
+                    ScadModifier3D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject3D<ScadObject>>::into(d).into()
+            }
+            ScadObjectBody::ObjectMixed(_) => {
+                panic!("`-` of Mixed object is not allowed")
+            }
+        }
+    }
+}
+
+impl Mul for ScadObject {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let self_type = self.get_type();
+        let rhs_type = rhs.get_type();
+
+        if self_type != rhs_type {
+            panic!("`{:?} * {:?}` is not allowed", self_type, rhs_type)
+        }
+
+        // TODO: Optimize the pattern of Intersection * something
+        match self.body {
+            ScadObjectBody::Object2D(_) => {
+                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
+                let i: ScadModifier2D<ScadObject> =
+                    ScadModifier2D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject2D<ScadObject>>::into(i).into()
+            }
+            ScadObjectBody::Object3D(_) => {
+                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
+                let i: ScadModifier3D<ScadObject> =
+                    ScadModifier3D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
+                Into::<ScadObject3D<ScadObject>>::into(i).into()
+            }
+            ScadObjectBody::ObjectMixed(_) => {
+                panic!("`*` of Mixed object is not allowed")
+            }
+        }
+    }
 }

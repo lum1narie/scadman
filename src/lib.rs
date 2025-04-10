@@ -31,17 +31,31 @@ pub mod scad_sentence;
 pub mod prelude {
     // TODO:
     pub use crate::{
-        scad_2d::ScadObject2D,
-        scad_3d::ScadObject3D,
+        block_2d, block_2d_commented, block_3d, block_3d_commented, block_mixed,
+        block_mixed_commented, modifier_2d, modifier_2d_commented, modifier_3d,
+        modifier_3d_commented, modifier_mixed, modifier_mixed_commented, primitive_2d,
+        primitive_2d_commented, primitive_3d, primitive_3d_commented,
+        scad_2d::{
+            ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
+            ScadPrimitiveBody2D,
+        },
+        scad_3d::{
+            ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
+            ScadPrimitiveBody3D,
+        },
+        scad_mixed::{ScadBlockMixed, ScadModifierBodyMixed, ScadModifierMixed, ScadObjectMixed},
         scad_sentence::{
             Circle, Color, Cube, Cylinder, Difference, Hull, Import2D, Import3D, Intersection,
             LinearExtrude, Minkowski, Mirror2D, Mirror3D, MultMatrix2D, MultMatrix3D, Offset,
             Polygon, Polyhedron, Resize2D, Resize3D, Rotate2D, Rotate3D, RotateExtrude, Scale2D,
             Scale3D, Sphere, Square, Surface, Text, Translate2D, Translate3D, Union,
         },
+        try_block_2d, try_block_2d_commented, try_block_3d, try_block_3d_commented,
+        try_modifier_2d, try_modifier_2d_commented, try_modifier_3d, try_modifier_3d_commented,
         value_type::{RGB, RGBA},
         AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D,
-        ScadBuildable as _, Unit,
+        ScadBuildable as _, ScadBuilder as _, ScadObject, ScadObjectBody, Unit,
+        ScadObjectTrait as _,
     };
 }
 
