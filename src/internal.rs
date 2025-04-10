@@ -304,6 +304,15 @@ mod tests {
             ),
             "mod()\n  /* comment */\n  {\n    prim1();\n    prim2();\n  }\n"
         );
+        assert_eq!(
+            modifier_repr(
+                &ScadDisplayMock("mod1()".to_string()),
+                &ScadObjectMock(
+                    "{\n  /* comment */\n  mod2(){\n    prim2();\n  }\n}\n".to_string()
+                )
+            ),
+            "mod1() {\n  /* comment */\n  mod2(){\n    prim2();\n  }\n}\n"
+        );
     }
 
     // TODO: test block_repr
