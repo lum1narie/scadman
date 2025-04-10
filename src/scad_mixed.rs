@@ -9,7 +9,7 @@ use crate::{
     internal::{block_repr, modifier_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_sentence::Color,
-    ScadCommentDisplay, ScadObject, ScadObjectDimensionType, ScadObjectTrait,
+    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
 };
 
 /// A Mixed object in SCAD.
