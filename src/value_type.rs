@@ -39,7 +39,7 @@ impl Angle {
     /// let r = Angle::Rad(std::f64::consts::PI as Unit / 2.);
     /// assert!((d.deg() - 90.0).abs() < 1e5);
     /// ```
-    pub fn deg(&self) -> Unit {
+    pub const fn deg(&self) -> Unit {
         match *self {
             Self::Deg(d) => d,
             Self::Rad(r) => r.to_degrees(),
@@ -56,7 +56,7 @@ impl ScadDisplay for Angle {
 #[derive(Clone, Debug, PartialEq, From, Delegate)]
 #[delegate(ScadDisplay)]
 /// Color type for SCAD
-pub enum Color {
+pub enum ScadColor {
     /// Color in RGB format
     RGB(RGB),
     /// Color in RGBA format
@@ -77,7 +77,7 @@ impl ScadDisplay for RGBA {
     }
 }
 
-impl Color {
+impl ScadColor {
     /// Returns the name of the key in SCAD code
     ///
     /// # Returns
