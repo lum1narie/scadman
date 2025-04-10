@@ -208,25 +208,26 @@ impl Add for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} + {:?}` is not allowed", self_type, rhs_type)
-        }
+        assert!(
+            !(self_type != rhs_type),
+            "`{self_type:?} + {rhs_type:?}` is not allowed"
+        );
 
         // TODO: Optimize the pattern of Union + something
         match self.body {
             ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let u: ScadModifier2D<ScadObject> =
+                let b: ScadBlock2D<Self> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject2D<Self>>::into(b).into();
+                let u: ScadModifier2D<Self> =
                     ScadModifier2D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(u).into()
+                Into::<ScadObject2D<Self>>::into(u).into()
             }
             ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let u: ScadModifier3D<ScadObject> =
+                let b: ScadBlock3D<Self> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject3D<Self>>::into(b).into();
+                let u: ScadModifier3D<Self> =
                     ScadModifier3D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(u).into()
+                Into::<ScadObject3D<Self>>::into(u).into()
             }
             ScadObjectBody::ObjectMixed(_) => {
                 panic!("`+` of Mixed object is not allowed")
@@ -242,25 +243,26 @@ impl Sub for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} - {:?}` is not allowed", self_type, rhs_type)
-        }
+        assert!(
+            !(self_type != rhs_type),
+            "`{self_type:?} - {rhs_type:?}` is not allowed"
+        );
 
         // TODO: Optimize the pattern of Difference - something
         match self.body {
             ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let d: ScadModifier2D<ScadObject> =
+                let b: ScadBlock2D<Self> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject2D<Self>>::into(b).into();
+                let d: ScadModifier2D<Self> =
                     ScadModifier2D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(d).into()
+                Into::<ScadObject2D<Self>>::into(d).into()
             }
             ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let d: ScadModifier3D<ScadObject> =
+                let b: ScadBlock3D<Self> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject3D<Self>>::into(b).into();
+                let d: ScadModifier3D<Self> =
                     ScadModifier3D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(d).into()
+                Into::<ScadObject3D<Self>>::into(d).into()
             }
             ScadObjectBody::ObjectMixed(_) => {
                 panic!("`-` of Mixed object is not allowed")
@@ -276,25 +278,26 @@ impl Mul for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} * {:?}` is not allowed", self_type, rhs_type)
-        }
+        assert!(
+            !(self_type != rhs_type),
+            "`{self_type:?} * {rhs_type:?}` is not allowed"
+        );
 
         // TODO: Optimize the pattern of Intersection * something
         match self.body {
             ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let i: ScadModifier2D<ScadObject> =
+                let b: ScadBlock2D<Self> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject2D<Self>>::into(b).into();
+                let i: ScadModifier2D<Self> =
                     ScadModifier2D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(i).into()
+                Into::<ScadObject2D<Self>>::into(i).into()
             }
             ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let i: ScadModifier3D<ScadObject> =
+                let b: ScadBlock3D<Self> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
+                let bo: Self = Into::<ScadObject3D<Self>>::into(b).into();
+                let i: ScadModifier3D<Self> =
                     ScadModifier3D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(i).into()
+                Into::<ScadObject3D<Self>>::into(i).into()
             }
             ScadObjectBody::ObjectMixed(_) => {
                 panic!("`*` of Mixed object is not allowed")

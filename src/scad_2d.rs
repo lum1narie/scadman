@@ -12,7 +12,7 @@ use crate::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
         Offset, Polygon, Projection, Resize2D, Rotate2D, Scale2D, Square, Text, Translate2D, Union,
     },
-    ScadCommentDisplay, ScadObject, ScadObjectDimensionType, ScadObjectTrait,
+    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
 };
 
 /// A 2D object in SCAD.

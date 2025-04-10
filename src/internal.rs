@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::{scad_display::ScadDisplay, ScadObject, ScadObjectTrait, INDENT};
+use crate::{scad_display::ScadDisplay, ScadObjectTrait, INDENT};
 
 /// Indent a string
 ///
@@ -18,7 +18,7 @@ pub fn indent_str(s: &str, indent: usize) -> String {
         .map(|line| format!("{}{}", " ".repeat(indent), line))
         .collect();
     if s.ends_with('\n') {
-        lines.push("".to_string());
+        lines.push(String::new());
     }
     lines.join("\n")
 }
