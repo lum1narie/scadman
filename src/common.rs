@@ -10,8 +10,8 @@ use nalgebra as na;
 
 use crate::{
     prelude::{Difference, Intersection},
-    scad_2d::{ScadBlock2D, ScadModifier2D, ScadObject2D},
-    scad_3d::{ScadBlock3D, ScadModifier3D, ScadObject3D},
+    scad_2d::{ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D},
+    scad_3d::{ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_mixed::ScadObjectMixed,
     scad_sentence::Union,
@@ -208,29 +208,86 @@ impl Add for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} + {:?}` is not allowed", self_type, rhs_type)
+        assert!(
+            self_type == rhs_type,
+            "`{self_type:?} + {rhs_type:?}` is not allowed"
+        );
+        assert!(
+            self_type != ScadObjectDimensionType::ObjectMixed,
+            "`+` of Mixed object is not allowed"
+        );
+
+        let mut children = Vec::new();
+
+        // Extract children from self if it's a Union
+        match &self.body {
+            ScadObjectBody::Object2D(ScadObject2D::Modifier(m))
+                if matches!(m.body, ScadModifierBody2D::Union(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object2D(ScadObject2D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            ScadObjectBody::Object3D(ScadObject3D::Modifier(m))
+                if matches!(m.body, ScadModifierBody3D::Union(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object3D(ScadObject3D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            _ => children.push(self),
         }
 
-        // TODO: Optimize the pattern of Union + something
-        match self.body {
-            ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let u: ScadModifier2D<ScadObject> =
-                    ScadModifier2D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(u).into()
+        // Extract children from rhs if it's a Union
+        match &rhs.body {
+            ScadObjectBody::Object2D(ScadObject2D::Modifier(m))
+                if matches!(m.body, ScadModifierBody2D::Union(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object2D(ScadObject2D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
             }
-            ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let u: ScadModifier3D<ScadObject> =
-                    ScadModifier3D::try_new(Union::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(u).into()
+            ScadObjectBody::Object3D(ScadObject3D::Modifier(m))
+                if matches!(m.body, ScadModifierBody3D::Union(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object3D(ScadObject3D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
             }
-            ScadObjectBody::ObjectMixed(_) => {
-                panic!("`+` of Mixed object is not allowed")
+            _ => children.push(rhs),
+        }
+
+        // Create the new Union object
+        match self_type {
+            ScadObjectDimensionType::Object2D => {
+                let block = ScadBlock2D::try_new(&children).expect("Children must be 2D");
+                let block_obj: Self = Into::<ScadObject2D<Self>>::into(block).into();
+                let union_modifier =
+                    ScadModifier2D::try_new(Union::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Union modifier");
+                Into::<ScadObject2D<Self>>::into(union_modifier).into()
             }
+            ScadObjectDimensionType::Object3D => {
+                let block = ScadBlock3D::try_new(&children).expect("Children must be 3D");
+                let block_obj: Self = Into::<ScadObject3D<Self>>::into(block).into();
+                let union_modifier =
+                    ScadModifier3D::try_new(Union::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Union modifier");
+                Into::<ScadObject3D<Self>>::into(union_modifier).into()
+            }
+            ScadObjectDimensionType::ObjectMixed => unreachable!(), // Already asserted
         }
     }
 }
@@ -242,29 +299,64 @@ impl Sub for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} - {:?}` is not allowed", self_type, rhs_type)
+        assert!(
+            self_type == rhs_type,
+            "`{self_type:?} - {rhs_type:?}` is not allowed"
+        );
+        assert!(
+            self_type != ScadObjectDimensionType::ObjectMixed,
+            "`-` of Mixed object is not allowed"
+        );
+
+        let mut children = Vec::new();
+
+        // Extract children from self if it's a Difference
+        match &self.body {
+            ScadObjectBody::Object2D(ScadObject2D::Modifier(m))
+                if matches!(m.body, ScadModifierBody2D::Difference(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object2D(ScadObject2D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            ScadObjectBody::Object3D(ScadObject3D::Modifier(m))
+                if matches!(m.body, ScadModifierBody3D::Difference(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object3D(ScadObject3D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            _ => children.push(self),
         }
 
-        // TODO: Optimize the pattern of Difference - something
-        match self.body {
-            ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let d: ScadModifier2D<ScadObject> =
-                    ScadModifier2D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(d).into()
+        // Add rhs as is (don't expand if it's a Difference)
+        children.push(rhs);
+
+        // Create the new Difference object
+        match self_type {
+            ScadObjectDimensionType::Object2D => {
+                let block = ScadBlock2D::try_new(&children).expect("Children must be 2D");
+                let block_obj: Self = Into::<ScadObject2D<Self>>::into(block).into();
+                let diff_modifier =
+                    ScadModifier2D::try_new(Difference::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Difference modifier");
+                Into::<ScadObject2D<Self>>::into(diff_modifier).into()
             }
-            ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let d: ScadModifier3D<ScadObject> =
-                    ScadModifier3D::try_new(Difference::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(d).into()
+            ScadObjectDimensionType::Object3D => {
+                let block = ScadBlock3D::try_new(&children).expect("Children must be 3D");
+                let block_obj: Self = Into::<ScadObject3D<Self>>::into(block).into();
+                let diff_modifier =
+                    ScadModifier3D::try_new(Difference::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Difference modifier");
+                Into::<ScadObject3D<Self>>::into(diff_modifier).into()
             }
-            ScadObjectBody::ObjectMixed(_) => {
-                panic!("`-` of Mixed object is not allowed")
-            }
+            ScadObjectDimensionType::ObjectMixed => unreachable!(), // Already asserted
         }
     }
 }
@@ -276,29 +368,86 @@ impl Mul for ScadObject {
         let self_type = self.get_type();
         let rhs_type = rhs.get_type();
 
-        if self_type != rhs_type {
-            panic!("`{:?} * {:?}` is not allowed", self_type, rhs_type)
+        assert!(
+            self_type == rhs_type,
+            "`{self_type:?} * {rhs_type:?}` is not allowed"
+        );
+        assert!(
+            self_type != ScadObjectDimensionType::ObjectMixed,
+            "`*` of Mixed object is not allowed"
+        );
+
+        let mut children = Vec::new();
+
+        // Extract children from self if it's an Intersection
+        match &self.body {
+            ScadObjectBody::Object2D(ScadObject2D::Modifier(m))
+                if matches!(m.body, ScadModifierBody2D::Intersection(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object2D(ScadObject2D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            ScadObjectBody::Object3D(ScadObject3D::Modifier(m))
+                if matches!(m.body, ScadModifierBody3D::Intersection(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object3D(ScadObject3D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
+            }
+            _ => children.push(self),
         }
 
-        // TODO: Optimize the pattern of Intersection * something
-        match self.body {
-            ScadObjectBody::Object2D(_) => {
-                let b: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject2D<ScadObject>>::into(b).into();
-                let i: ScadModifier2D<ScadObject> =
-                    ScadModifier2D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject2D<ScadObject>>::into(i).into()
+        // Extract children from rhs if it's an Intersection
+        match &rhs.body {
+            ScadObjectBody::Object2D(ScadObject2D::Modifier(m))
+                if matches!(m.body, ScadModifierBody2D::Intersection(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object2D(ScadObject2D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
             }
-            ScadObjectBody::Object3D(_) => {
-                let b: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(&[self, rhs]).unwrap();
-                let bo: ScadObject = Into::<ScadObject3D<ScadObject>>::into(b).into();
-                let i: ScadModifier3D<ScadObject> =
-                    ScadModifier3D::try_new(Intersection::new().into(), Rc::new(bo)).unwrap();
-                Into::<ScadObject3D<ScadObject>>::into(i).into()
+            ScadObjectBody::Object3D(ScadObject3D::Modifier(m))
+                if matches!(m.body, ScadModifierBody3D::Intersection(_)) =>
+            {
+                match &m.child.body {
+                    ScadObjectBody::Object3D(ScadObject3D::Block(b)) => {
+                        children.extend(b.objects.clone());
+                    }
+                    _ => children.push((*m.child).clone()),
+                }
             }
-            ScadObjectBody::ObjectMixed(_) => {
-                panic!("`*` of Mixed object is not allowed")
+            _ => children.push(rhs),
+        }
+
+        // Create the new Intersection object
+        match self_type {
+            ScadObjectDimensionType::Object2D => {
+                let block = ScadBlock2D::try_new(&children).expect("Children must be 2D");
+                let block_obj: Self = Into::<ScadObject2D<Self>>::into(block).into();
+                let inter_modifier =
+                    ScadModifier2D::try_new(Intersection::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Intersection modifier");
+                Into::<ScadObject2D<Self>>::into(inter_modifier).into()
             }
+            ScadObjectDimensionType::Object3D => {
+                let block = ScadBlock3D::try_new(&children).expect("Children must be 3D");
+                let block_obj: Self = Into::<ScadObject3D<Self>>::into(block).into();
+                let inter_modifier =
+                    ScadModifier3D::try_new(Intersection::new().into(), Rc::new(block_obj))
+                        .expect("Failed to create Intersection modifier");
+                Into::<ScadObject3D<Self>>::into(inter_modifier).into()
+            }
+            ScadObjectDimensionType::ObjectMixed => unreachable!(), // Already asserted
         }
     }
 }

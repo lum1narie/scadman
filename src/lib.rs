@@ -54,8 +54,8 @@ pub mod prelude {
         try_modifier_2d, try_modifier_2d_commented, try_modifier_3d, try_modifier_3d_commented,
         value_type::{RGB, RGBA},
         AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D,
-        ScadBuildable as _, ScadBuilder as _, ScadObject, ScadObjectBody, Unit,
-        ScadObjectTrait as _,
+        ScadBuildable as _, ScadBuilder as _, ScadObject, ScadObjectBody, ScadObjectTrait as _,
+        Unit,
     };
 }
 
@@ -527,7 +527,7 @@ pub fn modifier_mixed<T: Into<ScadModifierBodyMixed>>(
     child: ScadObject,
 ) -> ScadObject {
     let s: ScadModifierBodyMixed = sentence.into();
-    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s.clone(), Rc::new(child));
+    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s, Rc::new(child));
     let o: ScadObjectMixed<ScadObject> = m.into();
     o.into()
 }
@@ -553,7 +553,7 @@ pub fn modifier_mixed_commented<T: Into<ScadModifierBodyMixed>>(
     comment: &str,
 ) -> ScadObject {
     let s: ScadModifierBodyMixed = sentence.into();
-    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s.clone(), Rc::new(child));
+    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s, Rc::new(child));
     let o: ScadObjectMixed<ScadObject> = m.into();
     ScadObject {
         body: ScadObjectBody::ObjectMixed(o),

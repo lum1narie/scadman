@@ -13,7 +13,7 @@ use crate::{
         Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude, Scale3D, Sphere,
         Surface, Translate3D, Union,
     },
-    ScadCommentDisplay, ScadObject, ScadObjectDimensionType, ScadObjectTrait,
+    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
 };
 
 /// A 3D object in SCAD.
@@ -68,7 +68,7 @@ impl<T: ScadObjectTrait> ScadModifier3D<T> {
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
     pub fn try_new(body: ScadModifierBody3D, child: Rc<T>) -> Option<Self> {
-        (child.get_type() == body.get_children_type()).then_some( Self { body, child })
+        (child.get_type() == body.get_children_type()).then_some(Self { body, child })
     }
 }
 

@@ -1,11 +1,10 @@
+#![allow(unused_crate_dependencies)]
+#![allow(missing_docs)]
+
 #[cfg(test)]
 mod tests {
 
-    use std::{
-        fs::{create_dir_all, File},
-        io::Write as _,
-        iter,
-    };
+    use std::iter;
 
     use scadman::prelude::*;
 
@@ -40,7 +39,7 @@ mod tests {
     ) -> ScadObject {
         let outer = modifier_2d(
             Translate2D::build_with(|tb| {
-                tb.v(corner
+                let _ = tb.v(corner
                     - r * if pos_x_out {
                         Point2D::x()
                     } else {
@@ -53,18 +52,18 @@ mod tests {
                     });
             }),
             primitive_2d(Square::build_with(|sb| {
-                sb.size(r);
+                let _ = sb.size(r);
             })),
         );
 
         let inner = modifier_2d(
             Translate2D::build_with(|tb| {
-                tb.v(corner
+                let _ = tb.v(corner
                     + if pos_x_out { -r } else { r } * Point2D::x()
                     + if pos_y_out { -r } else { r } * Point2D::y());
             }),
             primitive_2d(Circle::build_with(|cb| {
-                cb.r(r).r#fn(r#fn);
+                let _ = cb.r(r).r#fn(r#fn);
             })),
         );
 
@@ -80,7 +79,7 @@ mod tests {
             let body_y_a0: f64 = 0.;
             let body_y_a1: f64 = CLAMP_PLATE_THICKNESS;
             let body_y_a2: f64 = CLAMP_SPAN + CLAMP_PLATE_THICKNESS;
-            let body_y_a3: f64 = CLAMP_SPAN + 2. * CLAMP_PLATE_THICKNESS;
+            let body_y_a3 = 2.0_f64.mul_add(CLAMP_PLATE_THICKNESS, CLAMP_SPAN);
             let body_points = vec![
                 [body_x_a3, body_y_a0],
                 [body_x_a3, body_y_a3],
@@ -93,7 +92,7 @@ mod tests {
             ];
             let body = primitive_2d_commented(
                 Polygon::build_with(|pb| {
-                    pb.points(body_points);
+                    let _ = pb.points(body_points);
                 }),
                 "body outer shape",
             );
@@ -138,14 +137,14 @@ mod tests {
                 [tooth_x_a0, tooth_y_a2],
             ];
             let tooth_shape = primitive_2d(Polygon::build_with(|pb| {
-                pb.points(tooth_points);
+                let _ = pb.points(tooth_points);
             }));
             let teeth = CLAMP_NAIL_POS
                 .iter()
                 .map(|x| {
                     modifier_2d(
                         Translate2D::build_with(|tb| {
-                            tb.v([body_x_a2 - x, body_y_a2]);
+                            let _ = tb.v([body_x_a2 - x, body_y_a2]);
                         }),
                         tooth_shape.clone(),
                     )
@@ -154,18 +153,14 @@ mod tests {
 
             modifier_2d_commented(
                 Union::new(),
-                block_2d(
-                    &iter::once(body_rounded)
-                        .chain(teeth.into_iter())
-                        .collect::<Vec<_>>(),
-                ),
+                block_2d(&iter::once(body_rounded).chain(teeth).collect::<Vec<_>>()),
                 "body with teeth",
             )
         };
 
         modifier_3d(
             LinearExtrude::build_with(|lb| {
-                lb.height(CLAMP_Z_SIZE);
+                let _ = lb.height(CLAMP_Z_SIZE);
             }),
             shape_2d,
         )
@@ -177,29 +172,31 @@ mod tests {
         let hook = {
             let hook_outer = (modifier_3d(
                 Translate3D::build_with(|tb| {
-                    tb.v([0., 0., -SMALL_OVERLAP]);
+                    let _ = tb.v([0., 0., -SMALL_OVERLAP]);
                 }),
                 primitive_3d(Cylinder::build_with(|cb| {
-                    cb.h(HOOK_LENGTH + 2. * SMALL_OVERLAP)
+                    let _ = cb
+                        .h(2.0_f64.mul_add(SMALL_OVERLAP, HOOK_LENGTH))
                         .r(HOOK_OUTER_R)
                         .r#fn(64_u64);
                 })),
             ) + modifier_3d(
                 Translate3D::build_with(|tb| {
-                    tb.v([0., 0., HOOK_LENGTH]);
+                    let _ = tb.v([0., 0., HOOK_LENGTH]);
                 }),
                 primitive_3d(Cylinder::build_with(|cb| {
-                    cb.h(HOOK_END_LENGTH).r(HOOK_END_R).r#fn(64_u64);
+                    let _ = cb.h(HOOK_END_LENGTH).r(HOOK_END_R).r#fn(64_u64);
                 })),
             ))
             .commented("hook outer");
 
             let hook_void = modifier_3d_commented(
                 Translate3D::build_with(|tb| {
-                    tb.v([0., 0., HOOK_INFILL_HEIGHT]);
+                    let _ = tb.v([0., 0., HOOK_INFILL_HEIGHT]);
                 }),
                 primitive_3d(Cylinder::build_with(|cb| {
-                    cb.h(HOOK_LENGTH + HOOK_END_LENGTH - HOOK_INFILL_HEIGHT + SMALL_OVERLAP)
+                    let _ = cb
+                        .h(HOOK_LENGTH + HOOK_END_LENGTH - HOOK_INFILL_HEIGHT + SMALL_OVERLAP)
                         .r(HOOK_INNER_R)
                         .r#fn(6_u64);
                 })),
@@ -212,11 +209,11 @@ mod tests {
         generate_clamp()
             + modifier_3d(
                 Translate3D::build_with(|tb| {
-                    tb.v([-SMALL_OVERLAP, hook_pos_y, CLAMP_Z_SIZE / 2.]);
+                    let _ = tb.v([-SMALL_OVERLAP, hook_pos_y, CLAMP_Z_SIZE / 2.]);
                 }),
                 modifier_3d(
                     Rotate3D::build_with(|rb| {
-                        rb.deg([0., 90., 0.]);
+                        let _ = rb.deg([0., 90., 0.]);
                     }),
                     hook,
                 ),
@@ -227,7 +224,7 @@ mod tests {
     fn test_clamp() {
         assert_eq!(
             generate_clamp().to_code(),
-            r#"linear_extrude(height = 45)
+            r"linear_extrude(height = 45)
   /* body with teeth */
   union() {
     /* body rounded */
@@ -254,15 +251,15 @@ mod tests {
     translate([-25, 24])
       polygon(points = [[-3.6, 0], [-2.7, -0.4], [-0.9, -0.4], [0, 0], [0, 0.025], [-3.6, 0.025]]);
   }
-"#
-        )
+"
+        );
     }
 
     #[test]
     fn test_body() {
         assert_eq!(
             generate_body().to_code(),
-            r#"union() {
+            r"union() {
   linear_extrude(height = 45)
     /* body with teeth */
     union() {
@@ -305,7 +302,7 @@ mod tests {
           cylinder(h = 60.025, r = 12, $fn = 6);
       }
 }
-"#
-        )
+"
+        );
     }
 }
