@@ -191,9 +191,9 @@ mod tests {
 
         // Numbers with many trailing zeros after rounding
         assert_eq!(format_float(1.23000000, 8), "1.23");
-        assert_eq!(format_float(1.0000000000000001, 8), "1"); // Very small epsilon
-        assert_eq!(format_float(1.9999999999999999, 8), "2"); // Very close to 2
-        assert_eq!(format_float(0.0000000000000001, 8), "0"); // close to 0
-        assert_eq!(format_float(-0.0000000000000001, 8), "0"); // ensure -0 becomes 0
+        assert_eq!(format_float(1.000000001, 8), "1"); // Very small epsilon
+        assert_eq!(format_float(1.999999999, 8), "2"); // Very close to 2
+        assert_eq!(format_float(0.000000001, 8), "0"); // close to 0
+        assert_eq!(format_float(-0.000000001, 8), "0"); // ensure -0 becomes 0
     }
 }
