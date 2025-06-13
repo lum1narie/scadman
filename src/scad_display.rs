@@ -145,3 +145,52 @@ impl ScadDisplay for AffineMatrix2D {
         a3d.repr_scad()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_float() {
+        // Positive numbers
+        assert_eq!(format_float(1.0, 2), "1");
+        assert_eq!(format_float(1.2, 2), "1.2");
+        assert_eq!(format_float(1.23, 2), "1.23");
+        assert_eq!(format_float(1.234, 2), "1.23"); // rounding down
+        assert_eq!(format_float(1.235, 2), "1.24"); // rounding up
+        assert_eq!(format_float(1.00, 2), "1");
+        assert_eq!(format_float(1.20, 2), "1.2");
+        assert_eq!(format_float(1.00000000, 8), "1");
+        assert_eq!(format_float(1.23456789, 8), "1.23456789");
+        assert_eq!(format_float(1.234567891, 8), "1.23456789");
+        assert_eq!(format_float(1.234567899, 8), "1.2345679");
+
+        // Negative numbers
+        assert_eq!(format_float(-1.0, 2), "-1");
+        assert_eq!(format_float(-1.2, 2), "-1.2");
+        assert_eq!(format_float(-1.23, 2), "-1.23");
+        assert_eq!(format_float(-1.234, 2), "-1.23");
+        assert_eq!(format_float(-1.235, 2), "-1.24");
+        assert_eq!(format_float(-1.00, 2), "-1");
+        assert_eq!(format_float(-1.20, 2), "-1.2");
+
+        // Zero
+        assert_eq!(format_float(0.0, 2), "0");
+        assert_eq!(format_float(-0.0, 2), "0"); // ensure -0 becomes 0
+        assert_eq!(format_float(0.000, 2), "0");
+
+        // Edge cases for precision
+        assert_eq!(format_float(123.0, 0), "123");
+        assert_eq!(format_float(123.456, 0), "123");
+        assert_eq!(format_float(123.567, 0), "124");
+        assert_eq!(format_float(0.1, 0), "0");
+        assert_eq!(format_float(0.9, 0), "1");
+
+        // Numbers with many trailing zeros after rounding
+        assert_eq!(format_float(1.23000000, 8), "1.23");
+        assert_eq!(format_float(1.0000000000000001, 8), "1"); // Very small epsilon
+        assert_eq!(format_float(1.9999999999999999, 8), "2"); // Very close to 2
+        assert_eq!(format_float(0.0000000000000001, 8), "0"); // close to 0
+        assert_eq!(format_float(-0.0000000000000001, 8), "0"); // ensure -0 becomes 0
+    }
+}
