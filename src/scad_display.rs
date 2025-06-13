@@ -46,6 +46,9 @@ fn format_float(x: f64, n: usize) -> String {
             _ = s.pop();
         }
     }
+    if s == "-0" {
+        s = "0".to_string();
+    }
     s
 }
 
