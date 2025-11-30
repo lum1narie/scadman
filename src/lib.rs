@@ -9,14 +9,16 @@ use std::rc::Rc;
 
 pub use common::*;
 use scad_2d::{
-    ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
-    ScadPrimitiveBody2D,
+    ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadPrimitive2D,
+    ScadPrimitiveBody2D, ScadObject2D,
 };
 use scad_3d::{
-    ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
-    ScadPrimitiveBody3D,
+    ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadPrimitive3D,
+    ScadPrimitiveBody3D, ScadObject3D,
 };
 use scad_mixed::{ScadBlockMixed, ScadModifierBodyMixed, ScadModifierMixed, ScadObjectMixed};
+
+use crate::scad_display::ScadDisplay;
 
 pub mod scad_display;
 pub mod value_type;
@@ -28,21 +30,30 @@ pub mod scad_mixed;
 pub mod scad_sentence;
 
 /// import `prelude::*` so you can be ready to code!
+///
+/// This prelude intentionally exports a curated subset of the public API that
+/// is stable after the runtime-refactor. It avoids exporting removed internal
+/// types (like `ScadObjectBody`) while keeping the commonly used helpers.
 pub mod prelude {
-    // TODO:
     pub use crate::{
+        // factory helpers
         block_2d, block_2d_commented, block_3d, block_3d_commented, block_mixed,
         block_mixed_commented, modifier_2d, modifier_2d_commented, modifier_3d,
         modifier_3d_commented, modifier_mixed, modifier_mixed_commented, primitive_2d,
-        primitive_2d_commented, primitive_3d, primitive_3d_commented,
-        scad_2d::{
-            ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
-            ScadPrimitiveBody2D,
-        },
-        scad_3d::{
-            ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
-            ScadPrimitiveBody3D,
-        },
+        primitive_2d_commented, primitive_3d, primitive_3d_commented, try_block_2d,
+        try_block_2d_commented, try_block_3d, try_block_3d_commented, try_modifier_2d,
+        try_modifier_2d_commented, try_modifier_3d, try_modifier_3d_commented,
+        // core object and helpers
+        ScadObject, ScadObjectGeneric, ScadObjectUntyped, ScadObjectDimensionType,
+        ScadBuildable as _, ScadBuilder as _,
+        // geometry / value types
+        value_type::{RGB, RGBA},
+        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, Unit,
+        // sentence and module types (re-export for convenience)
+        scad_2d::{ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
+                  ScadPrimitiveBody2D},
+        scad_3d::{ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
+                  ScadPrimitiveBody3D},
         scad_mixed::{ScadBlockMixed, ScadModifierBodyMixed, ScadModifierMixed, ScadObjectMixed},
         scad_sentence::{
             Circle, Color, Cube, Cylinder, Difference, Hull, Import2D, Import3D, Intersection,
@@ -50,13 +61,85 @@ pub mod prelude {
             Polygon, Polyhedron, Resize2D, Resize3D, Rotate2D, Rotate3D, RotateExtrude, Scale2D,
             Scale3D, Sphere, Square, Surface, Text, Translate2D, Translate3D, Union,
         },
-        try_block_2d, try_block_2d_commented, try_block_3d, try_block_3d_commented,
-        try_modifier_2d, try_modifier_2d_commented, try_modifier_3d, try_modifier_3d_commented,
-        value_type::{RGB, RGBA},
-        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D,
-        ScadBuildable as _, ScadBuilder as _, ScadObject, ScadObjectBody, ScadObjectTrait as _,
-        Unit,
     };
+}
+
+// Helper adapters to produce runtime ScadObjectImpl from existing concrete enums.
+// These adapter types implement the small object-safe traits defined in common.rs
+// by delegating to the existing repr_scad / to_code paths.
+use crate::common::ScadObjectImpl as ImplEnum;
+
+struct Adapter2D(ScadObject2D);
+
+impl ScadObjectRepr2D for Adapter2D {
+    fn to_code(&self) -> String {
+        // Delegate to the existing 2D enum's repr_scad implementation.
+        self.0.repr_scad()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+impl ScadObjectReprMixed for Adapter2D {
+    fn to_code(&self) -> String {
+        // existing repr_scad implementations already produce full code (including
+        // semicolons or block braces). Use them directly.
+        self.0.repr_scad()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+struct Adapter3D(ScadObject3D);
+
+impl ScadObjectRepr3D for Adapter3D {
+    fn to_code(&self) -> String {
+        // Delegate to the existing 3D enum's repr_scad implementation.
+        self.0.repr_scad()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+impl ScadObjectReprMixed for Adapter3D {
+    fn to_code(&self) -> String {
+        self.0.repr_scad()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+struct AdapterMixed(ScadObjectMixed);
+impl ScadObjectReprMixed for AdapterMixed {
+    fn to_code(&self) -> String {
+        self.0.repr_scad()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self.0
+    }
+}
+
+/// Wrap a 2D concrete enum into the runtime ScadObject (mixed untyped alias).
+fn wrap_2d(o: ScadObject2D) -> ScadObject {
+    let rc_impl = Rc::new(ImplEnum::Object2D(Rc::new(Adapter2D(o))));
+    // ScadObject is a type alias to ScadObjectGeneric<DMixed>, use the ctor present
+    ScadObject::from_impl(rc_impl)
+}
+
+/// Wrap a 3D concrete enum into the runtime ScadObject.
+fn wrap_3d(o: ScadObject3D) -> ScadObject {
+    let rc_impl = Rc::new(ImplEnum::Object3D(Rc::new(Adapter3D(o))));
+    ScadObject::from_impl(rc_impl)
+}
+
+/// Wrap a mixed concrete enum into the runtime ScadObject.
+fn wrap_mixed(o: scad_mixed::ScadObjectMixed) -> ScadObject {
+    let rc_impl = Rc::new(ImplEnum::ObjectMixed(Rc::new(AdapterMixed(o))));
+    ScadObject::from_impl(rc_impl)
 }
 
 // 2D generating functions
@@ -74,8 +157,8 @@ pub mod prelude {
 pub fn primitive_2d<T: Into<ScadPrimitiveBody2D>>(sentence: T) -> ScadObject {
     let s: ScadPrimitiveBody2D = sentence.into();
     let p: ScadPrimitive2D = s.into();
-    let o: ScadObject2D<ScadObject> = p.into();
-    o.into()
+    let o = ScadObject2D::Primitive(p);
+    wrap_2d(o)
 }
 
 /// Creates a 2D primitive [`ScadObject`] with a comment.
@@ -94,11 +177,10 @@ pub fn primitive_2d_commented<T: Into<ScadPrimitiveBody2D>>(
 ) -> ScadObject {
     let s: ScadPrimitiveBody2D = sentence.into();
     let p: ScadPrimitive2D = s.into();
-    let o: ScadObject2D<ScadObject> = p.into();
-    ScadObject {
-        body: ScadObjectBody::Object2D(o),
-        comment: Some(comment.to_string()),
-    }
+    let o = ScadObject2D::Primitive(p);
+    let mut obj = wrap_2d(o);
+    obj = obj.commented(comment);
+    obj
 }
 
 /// Attempts to create a 2D modifier [`ScadObject`] with a child object.
@@ -116,9 +198,11 @@ pub fn try_modifier_2d<T: Into<ScadModifierBody2D>>(
     child: ScadObject,
 ) -> Option<ScadObject> {
     let s: ScadModifierBody2D = sentence.into();
-    let m: ScadModifier2D<ScadObject> = ScadModifier2D::try_new(s, Rc::new(child))?;
-    let o: ScadObject2D<ScadObject> = m.into();
-    Some(o.into())
+    // child.inner is Rc<ScadObjectImpl>; pass a clone of that Rc to the modifier
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_2d::ScadModifier2D::try_new(s, child_impl_rc)?;
+    let o = scad_2d::ScadObject2D::Modifier(m);
+    Some(wrap_2d(o))
 }
 
 /// Creates a 2D modifier [`ScadObject`] with a child object.
@@ -137,13 +221,11 @@ pub fn try_modifier_2d<T: Into<ScadModifierBody2D>>(
 /// A [`ScadObject`] representing the 2D modifier
 pub fn modifier_2d<T: Into<ScadModifierBody2D>>(sentence: T, child: ScadObject) -> ScadObject {
     let s: ScadModifierBody2D = sentence.into();
-    let Some(m): Option<ScadModifier2D<ScadObject>> =
-        ScadModifier2D::try_new(s.clone(), Rc::new(child))
-    else {
-        panic!("Modifier {:?} requires: {:?}", s, s.get_children_type())
-    };
-    let o: ScadObject2D<ScadObject> = m.into();
-    o.into()
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_2d::ScadModifier2D::try_new(s.clone(), child_impl_rc)
+        .unwrap_or_else(|| panic!("Modifier {:?} requires: {:?}", s, s.get_children_type()));
+    let o = scad_2d::ScadObject2D::Modifier(m);
+    wrap_2d(o)
 }
 
 /// Attempts to create a 2D modifier [`ScadObject`] with a child object and a comment.
@@ -163,12 +245,12 @@ pub fn try_modifier_2d_commented<T: Into<ScadModifierBody2D>>(
     comment: &str,
 ) -> Option<ScadObject> {
     let s: ScadModifierBody2D = sentence.into();
-    let m: ScadModifier2D<ScadObject> = ScadModifier2D::try_new(s, Rc::new(child))?;
-    let o: ScadObject2D<ScadObject> = m.into();
-    Some(ScadObject {
-        body: ScadObjectBody::Object2D(o),
-        comment: Some(comment.to_string()),
-    })
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_2d::ScadModifier2D::try_new(s, child_impl_rc)?;
+    let o = scad_2d::ScadObject2D::Modifier(m);
+    let mut obj = wrap_2d(o);
+    obj = obj.commented(comment);
+    Some(obj)
 }
 
 /// Creates a 2D modifier [`ScadObject`] with a child object and a comment.
@@ -191,17 +273,9 @@ pub fn modifier_2d_commented<T: Into<ScadModifierBody2D>>(
     child: ScadObject,
     comment: &str,
 ) -> ScadObject {
-    let s: ScadModifierBody2D = sentence.into();
-    let Some(m): Option<ScadModifier2D<ScadObject>> =
-        ScadModifier2D::try_new(s.clone(), Rc::new(child))
-    else {
-        panic!("Modifier {:?} requires: {:?}", s, s.get_children_type())
-    };
-    let o: ScadObject2D<ScadObject> = m.into();
-    ScadObject {
-        body: ScadObjectBody::Object2D(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = modifier_2d(sentence, child);
+    obj = obj.commented(comment);
+    obj
 }
 
 /// Attempts to create a 2D block [`ScadObject`] from a slice of [`ScadObject`]s.
@@ -214,9 +288,12 @@ pub fn modifier_2d_commented<T: Into<ScadModifierBody2D>>(
 ///
 /// An optional [`ScadObject`] representing the 2D block, or [`None`] if creation fails
 pub fn try_block_2d(objects: &[ScadObject]) -> Option<ScadObject> {
-    let c: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(objects)?;
-    let o: ScadObject2D<ScadObject> = c.into();
-    Some(o.into())
+    // convert to owned ScadObjectImpl vector for scad_2d::ScadBlock2D::try_new
+    let impls: Vec<crate::common::ScadObjectImpl> =
+        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c = scad_2d::ScadBlock2D::try_new(&impls)?;
+    let o = scad_2d::ScadObject2D::Block(c);
+    Some(wrap_2d(o))
 }
 
 /// Creates a 2D block [`ScadObject`] from a slice of [`ScadObject`]s.
@@ -233,10 +310,12 @@ pub fn try_block_2d(objects: &[ScadObject]) -> Option<ScadObject> {
 ///
 /// A [`ScadObject`] representing the 2D block
 pub fn block_2d(objects: &[ScadObject]) -> ScadObject {
-    let c: ScadBlock2D<ScadObject> =
-        ScadBlock2D::try_new(objects).expect("Objects in blocks needs to be ScadObject2D");
-    let o: ScadObject2D<ScadObject> = c.into();
-    o.into()
+    let impls: Vec<crate::common::ScadObjectImpl> =
+        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c = scad_2d::ScadBlock2D::try_new(&impls)
+        .expect("Objects in blocks needs to be ScadObject2D");
+    let o = scad_2d::ScadObject2D::Block(c);
+    wrap_2d(o)
 }
 
 /// Attempts to create a 2D block [`ScadObject`] from a slice of [`ScadObject`]s with a comment.
@@ -250,12 +329,9 @@ pub fn block_2d(objects: &[ScadObject]) -> ScadObject {
 ///
 /// An optional [`ScadObject`] representing the 2D block with an attached comment, or [`None`] if creation fails
 pub fn try_block_2d_commented(objects: &[ScadObject], comment: &str) -> Option<ScadObject> {
-    let c: ScadBlock2D<ScadObject> = ScadBlock2D::try_new(objects)?;
-    let o: ScadObject2D<ScadObject> = c.into();
-    Some(ScadObject {
-        body: ScadObjectBody::Object2D(o),
-        comment: Some(comment.to_string()),
-    })
+    let mut obj = try_block_2d(objects)?;
+    obj = obj.commented(comment);
+    Some(obj)
 }
 
 /// Creates a 2D block [`ScadObject`] from a slice of [`ScadObject`]s with a comment.
@@ -273,13 +349,9 @@ pub fn try_block_2d_commented(objects: &[ScadObject], comment: &str) -> Option<S
 ///
 /// A [`ScadObject`] representing the 2D block with an attached comment
 pub fn block_2d_commented(objects: &[ScadObject], comment: &str) -> ScadObject {
-    let c: ScadBlock2D<ScadObject> =
-        ScadBlock2D::try_new(objects).expect("Objects in blocks needs to be ScadObject2D");
-    let o: ScadObject2D<ScadObject> = c.into();
-    ScadObject {
-        body: ScadObjectBody::Object2D(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = block_2d(objects);
+    obj = obj.commented(comment);
+    obj
 }
 
 // 3D generating functions
@@ -297,8 +369,8 @@ pub fn block_2d_commented(objects: &[ScadObject], comment: &str) -> ScadObject {
 pub fn primitive_3d<T: Into<ScadPrimitiveBody3D>>(sentence: T) -> ScadObject {
     let s: ScadPrimitiveBody3D = sentence.into();
     let p: ScadPrimitive3D = s.into();
-    let o: ScadObject3D<ScadObject> = p.into();
-    o.into()
+    let o = scad_3d::ScadObject3D::Primitive(p);
+    wrap_3d(o)
 }
 
 /// Creates a 3D primitive [`ScadObject`] with a comment.
@@ -315,13 +387,9 @@ pub fn primitive_3d_commented<T: Into<ScadPrimitiveBody3D>>(
     sentence: T,
     comment: &str,
 ) -> ScadObject {
-    let s: ScadPrimitiveBody3D = sentence.into();
-    let p: ScadPrimitive3D = s.into();
-    let o: ScadObject3D<ScadObject> = p.into();
-    ScadObject {
-        body: ScadObjectBody::Object3D(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = primitive_3d(sentence);
+    obj = obj.commented(comment);
+    obj
 }
 
 /// Attempts to create a 3D modifier [`ScadObject`] with a child object.
@@ -339,9 +407,10 @@ pub fn try_modifier_3d<T: Into<ScadModifierBody3D>>(
     child: ScadObject,
 ) -> Option<ScadObject> {
     let s: ScadModifierBody3D = sentence.into();
-    let m: ScadModifier3D<ScadObject> = ScadModifier3D::try_new(s, Rc::new(child))?;
-    let o: ScadObject3D<ScadObject> = m.into();
-    Some(o.into())
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_3d::ScadModifier3D::try_new(s, child_impl_rc)?;
+    let o = scad_3d::ScadObject3D::Modifier(m);
+    Some(wrap_3d(o))
 }
 
 /// Creates a 3D modifier [`ScadObject`] with a child object.
@@ -360,13 +429,11 @@ pub fn try_modifier_3d<T: Into<ScadModifierBody3D>>(
 /// A [`ScadObject`] representing the 3D modifier
 pub fn modifier_3d<T: Into<ScadModifierBody3D>>(sentence: T, child: ScadObject) -> ScadObject {
     let s: ScadModifierBody3D = sentence.into();
-    let Some(m): Option<ScadModifier3D<ScadObject>> =
-        ScadModifier3D::try_new(s.clone(), Rc::new(child))
-    else {
-        panic!("Modifier {:?} requires: {:?}", s, s.get_children_type())
-    };
-    let o: ScadObject3D<ScadObject> = m.into();
-    o.into()
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_3d::ScadModifier3D::try_new(s.clone(), child_impl_rc)
+        .unwrap_or_else(|| panic!("Modifier {:?} requires: {:?}", s, s.get_children_type()));
+    let o = scad_3d::ScadObject3D::Modifier(m);
+    wrap_3d(o)
 }
 
 /// Attempts to create a 3D modifier [`ScadObject`] with a child object and a comment.
@@ -385,13 +452,9 @@ pub fn try_modifier_3d_commented<T: Into<ScadModifierBody3D>>(
     child: ScadObject,
     comment: &str,
 ) -> Option<ScadObject> {
-    let s: ScadModifierBody3D = sentence.into();
-    let m: ScadModifier3D<ScadObject> = ScadModifier3D::try_new(s, Rc::new(child))?;
-    let o: ScadObject3D<ScadObject> = m.into();
-    Some(ScadObject {
-        body: ScadObjectBody::Object3D(o),
-        comment: Some(comment.to_string()),
-    })
+    let mut obj = try_modifier_3d(sentence, child)?;
+    obj = obj.commented(comment);
+    Some(obj)
 }
 
 /// Creates a 3D modifier [`ScadObject`] with a child object and a comment.
@@ -414,17 +477,9 @@ pub fn modifier_3d_commented<T: Into<ScadModifierBody3D>>(
     child: ScadObject,
     comment: &str,
 ) -> ScadObject {
-    let s: ScadModifierBody3D = sentence.into();
-    let Some(m): Option<ScadModifier3D<ScadObject>> =
-        ScadModifier3D::try_new(s.clone(), Rc::new(child))
-    else {
-        panic!("Modifier {:?} requires: {:?}", s, s.get_children_type())
-    };
-    let o: ScadObject3D<ScadObject> = m.into();
-    ScadObject {
-        body: ScadObjectBody::Object3D(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = modifier_3d(sentence, child);
+    obj = obj.commented(comment);
+    obj
 }
 
 /// Attempts to create a 3D block [`ScadObject`] from a slice of [`ScadObject`]s.
@@ -437,9 +492,11 @@ pub fn modifier_3d_commented<T: Into<ScadModifierBody3D>>(
 ///
 /// An optional [`ScadObject`] representing the 3D block, or [`None`] if creation fails
 pub fn try_block_3d(objects: &[ScadObject]) -> Option<ScadObject> {
-    let c: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(objects)?;
-    let o: ScadObject3D<ScadObject> = c.into();
-    Some(o.into())
+    let impls: Vec<crate::common::ScadObjectImpl> =
+        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c = scad_3d::ScadBlock3D::try_new(&impls)?;
+    let o = scad_3d::ScadObject3D::Block(c);
+    Some(wrap_3d(o))
 }
 
 /// Creates a 3D block [`ScadObject`] from a slice of [`ScadObject`]s.
@@ -456,10 +513,12 @@ pub fn try_block_3d(objects: &[ScadObject]) -> Option<ScadObject> {
 ///
 /// A [`ScadObject`] representing the 3D block
 pub fn block_3d(objects: &[ScadObject]) -> ScadObject {
-    let c: ScadBlock3D<ScadObject> =
-        ScadBlock3D::try_new(objects).expect("Objects in blocks needs to be ScadObject3D");
-    let o: ScadObject3D<ScadObject> = c.into();
-    o.into()
+    let impls: Vec<crate::common::ScadObjectImpl> =
+        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c = scad_3d::ScadBlock3D::try_new(&impls)
+        .expect("Objects in blocks needs to be ScadObject3D");
+    let o = scad_3d::ScadObject3D::Block(c);
+    wrap_3d(o)
 }
 
 /// Attempts to create a 3D block [`ScadObject`] from a slice of [`ScadObject`]s with a comment.
@@ -473,12 +532,9 @@ pub fn block_3d(objects: &[ScadObject]) -> ScadObject {
 ///
 /// An optional [`ScadObject`] representing the 3D block with an attached comment, or [`None`] if creation fails
 pub fn try_block_3d_commented(objects: &[ScadObject], comment: &str) -> Option<ScadObject> {
-    let c: ScadBlock3D<ScadObject> = ScadBlock3D::try_new(objects)?;
-    let o: ScadObject3D<ScadObject> = c.into();
-    Some(ScadObject {
-        body: ScadObjectBody::Object3D(o),
-        comment: Some(comment.to_string()),
-    })
+    let mut obj = try_block_3d(objects)?;
+    obj = obj.commented(comment);
+    Some(obj)
 }
 
 /// Creates a 3D block [`ScadObject`] from a slice of [`ScadObject`]s with a comment.
@@ -496,13 +552,9 @@ pub fn try_block_3d_commented(objects: &[ScadObject], comment: &str) -> Option<S
 ///
 /// A [`ScadObject`] representing the 3D block with an attached comment
 pub fn block_3d_commented(objects: &[ScadObject], comment: &str) -> ScadObject {
-    let c: ScadBlock3D<ScadObject> =
-        ScadBlock3D::try_new(objects).expect("Objects in blocks needs to be ScadObject3D");
-    let o: ScadObject3D<ScadObject> = c.into();
-    ScadObject {
-        body: ScadObjectBody::Object3D(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = block_3d(objects);
+    obj = obj.commented(comment);
+    obj
 }
 
 // mixed object generating functions
@@ -527,9 +579,10 @@ pub fn modifier_mixed<T: Into<ScadModifierBodyMixed>>(
     child: ScadObject,
 ) -> ScadObject {
     let s: ScadModifierBodyMixed = sentence.into();
-    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s, Rc::new(child));
-    let o: ScadObjectMixed<ScadObject> = m.into();
-    o.into()
+    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let m = scad_mixed::ScadModifierMixed::new(s, child_impl_rc);
+    let o = scad_mixed::ScadObjectMixed::Modifier(m);
+    wrap_mixed(o)
 }
 
 /// Creates a Mixed modifier [`ScadObject`] with a child object and a comment.
@@ -552,13 +605,9 @@ pub fn modifier_mixed_commented<T: Into<ScadModifierBodyMixed>>(
     child: ScadObject,
     comment: &str,
 ) -> ScadObject {
-    let s: ScadModifierBodyMixed = sentence.into();
-    let m: ScadModifierMixed<ScadObject> = ScadModifierMixed::new(s, Rc::new(child));
-    let o: ScadObjectMixed<ScadObject> = m.into();
-    ScadObject {
-        body: ScadObjectBody::ObjectMixed(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = modifier_mixed(sentence, child);
+    obj = obj.commented(comment);
+    obj
 }
 
 /// Creates a Mixed block [`ScadObject`] from a slice of [`ScadObject`]s.
@@ -575,9 +624,11 @@ pub fn modifier_mixed_commented<T: Into<ScadModifierBodyMixed>>(
 ///
 /// A [`ScadObject`] representing the Mixed block
 pub fn block_mixed(objects: &[ScadObject]) -> ScadObject {
-    let c: ScadBlockMixed<ScadObject> = ScadBlockMixed::new(objects);
-    let o: ScadObjectMixed<ScadObject> = c.into();
-    o.into()
+    let impls: Vec<crate::common::ScadObjectImpl> =
+        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c = scad_mixed::ScadBlockMixed::new(&impls);
+    let o = scad_mixed::ScadObjectMixed::Block(c);
+    wrap_mixed(o)
 }
 
 /// Creates a Mixed block [`ScadObject`] from a slice of [`ScadObject`]s with a comment.
@@ -595,10 +646,7 @@ pub fn block_mixed(objects: &[ScadObject]) -> ScadObject {
 ///
 /// A [`ScadObject`] representing the Mixed block with an attached comment
 pub fn block_mixed_commented(objects: &[ScadObject], comment: &str) -> ScadObject {
-    let c: ScadBlockMixed<ScadObject> = ScadBlockMixed::new(objects);
-    let o: ScadObjectMixed<ScadObject> = c.into();
-    ScadObject {
-        body: ScadObjectBody::ObjectMixed(o),
-        comment: Some(comment.to_string()),
-    }
+    let mut obj = block_mixed(objects);
+    obj = obj.commented(comment);
+    obj
 }

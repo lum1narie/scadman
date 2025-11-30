@@ -13,7 +13,7 @@ use crate::{
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone, Copy)]
+#[derive(Builder, Debug, Clone)]
 pub struct Translate3D {
     /// Translation vector.
     /// `v` option in SCAD.
@@ -25,12 +25,7 @@ __impl_builder_sentence!(Translate3D);
 
 impl ScadDisplay for Translate3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "translate",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("translate", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -114,8 +109,7 @@ impl ScadDisplay for Rotate3D {
         generate_sentence_repr(
             "rotate",
             __generate_scad_options!(
-                ("a", self.a);
-                ("v", self.v);
+                ("a", self.a); opt:(("v", self.v);)
             ),
         )
     }
@@ -135,12 +129,7 @@ __impl_builder_sentence!(Scale3D);
 
 impl ScadDisplay for Scale3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "scale",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("scale", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -178,8 +167,7 @@ impl ScadDisplay for Resize3D {
         generate_sentence_repr(
             "resize",
             __generate_scad_options!(
-                ("", self.size);
-                ("auto", self.auto);
+                ("", self.size); opt:(("auto", self.auto);)
             ),
         )
     }
@@ -198,12 +186,7 @@ __impl_builder_sentence!(Mirror3D);
 
 impl ScadDisplay for Mirror3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "mirror",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("mirror", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -220,12 +203,7 @@ __impl_builder_sentence!(MultMatrix3D);
 
 impl ScadDisplay for MultMatrix3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "multmatrix",
-            __generate_scad_options!(
-                ("m", self.m);;
-            ),
-        )
+        generate_sentence_repr("multmatrix", __generate_scad_options!(("m", self.m);))
     }
 }
 
@@ -275,13 +253,15 @@ impl ScadDisplay for LinearExtrude {
             "linear_extrude",
             __generate_scad_options!(
                 ("height", self.height);
-                ("v", self.v),
-                ("center", self.center),
-                ("twist", self.twist),
-                ("convexity", self.convexity),
-                ("slices", self.slices),
-                ("scale", self.scale),
-                ("$fn", self.r#fn);
+                opt: (
+                    ("v", self.v);
+                    ("center", self.center);
+                    ("twist", self.twist);
+                    ("convexity", self.convexity);
+                    ("slices", self.slices);
+                    ("scale", self.scale);
+                    ("$fn", self.r#fn);
+                )
             ),
         )
     }
@@ -325,13 +305,14 @@ impl ScadDisplay for RotateExtrude {
         generate_sentence_repr(
             "rotate_extrude",
             __generate_scad_options!(
-                ;
-                ("angle", self.angle),
-                ("start", self.start),
-                ("convexity", self.convexity),
-                ("$fa", self.fa),
-                ("$fn", self.r#fn),
+                opt: (
+                ("angle", self.angle);
+                ("start", self.start);
+                ("convexity", self.convexity);
+                ("$fa", self.fa);
+                ("$fn", self.r#fn);
                 ("$fs", self.fs);
+                )
             ),
         )
     }

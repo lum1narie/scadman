@@ -12,20 +12,20 @@ use crate::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
         Offset, Polygon, Projection, Resize2D, Rotate2D, Scale2D, Square, Text, Translate2D, Union,
     },
-    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
+    ScadCommentDisplay, ScadObjectDimensionType, common::ScadObjectImpl,
 };
 
 /// A 2D object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObject2D<T: ScadObjectTrait> {
+pub enum ScadObject2D {
     /// A primitive 2D object.
     Primitive(ScadPrimitive2D),
     /// A modifier 2D object.
-    Modifier(ScadModifier2D<T>),
+    Modifier(ScadModifier2D),
     /// A block of 2D objects.
-    Block(ScadBlock2D<T>),
+    Block(ScadBlock2D),
 }
 
 /// A primitive 2D object in SCAD.
@@ -52,41 +52,41 @@ impl ScadCommentDisplay for ScadPrimitive2D {}
 
 /// A modifier for a 2D object in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadModifier2D<T: ScadObjectTrait> {
+pub struct ScadModifier2D {
     /// The body of the modifier.
     pub body: ScadModifierBody2D,
     /// The child object to be modified.
-    pub child: Rc<T>,
+    pub child: Rc<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadModifier2D<T> {
+impl ScadModifier2D {
     /// Creates a new [`ScadModifier2D`] if the child's type matches the modifier's expected child type.
     ///
     /// # Returns
     ///
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
-    pub fn try_new(body: ScadModifierBody2D, child: Rc<T>) -> Option<Self> {
+    pub fn try_new(body: ScadModifierBody2D, child: Rc<crate::common::ScadObjectImpl>) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then_some(Self { body, child })
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadModifier2D<T> {
+impl ScadDisplay for ScadModifier2D {
     fn repr_scad(&self) -> String {
         modifier_repr(&self.body, &*self.child)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier2D<T> {}
+impl ScadCommentDisplay for ScadModifier2D {}
 
 /// A block of 2D objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlock2D<T: ScadObjectTrait> {
+pub struct ScadBlock2D {
     /// The objects in the block.
-    pub objects: Vec<T>,
+    pub objects: Vec<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadBlock2D<T> {
+impl ScadBlock2D {
     /// Creates a new [`ScadBlock2D`] with the given objects if all objects are 2D.
     ///
     /// # Arguments
@@ -97,7 +97,7 @@ impl<T: ScadObjectTrait> ScadBlock2D<T> {
     ///
     /// * `Some(ScadBlock2D)` if all objects are 2D objects
     /// * `None` if any object is not a 2D object
-    pub fn try_new(objects: &[T]) -> Option<Self> {
+    pub fn try_new(objects: &[crate::common::ScadObjectImpl]) -> Option<Self> {
         objects
             .iter()
             .all(|o| o.get_type() == ScadObjectDimensionType::Object2D)
@@ -107,13 +107,13 @@ impl<T: ScadObjectTrait> ScadBlock2D<T> {
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadBlock2D<T> {
+impl ScadDisplay for ScadBlock2D {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlock2D<T> {}
+impl ScadCommentDisplay for ScadBlock2D {}
 
 /// A primitive sentences for 2D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]

@@ -6,70 +6,74 @@ use derive_more::derive::From;
 
 use crate::{
     ambassador_impl_ScadCommentDisplay,
+    common::ScadObjectImpl,
     internal::{block_repr, modifier_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    scad_sentence::Color,
-    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
+    scad_sentence::{Color, Difference, Hull, Intersection, Minkowski, Union},
+    ScadCommentDisplay, ScadObjectDimensionType,
 };
 
 /// A Mixed object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObjectMixed<T: ScadObjectTrait> {
+pub enum ScadObjectMixed {
     /// A modifier mixed object.
-    Modifier(ScadModifierMixed<T>),
+    Modifier(ScadModifierMixed),
     /// A block of mixed objects.
-    Block(ScadBlockMixed<T>),
+    Block(ScadBlockMixed),
 }
 
 /// A modifier for a mixed object in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadModifierMixed<T: ScadObjectTrait> {
+pub struct ScadModifierMixed {
     /// The body of the modifier.
     pub body: ScadModifierBodyMixed,
     /// The child object to be modified.
-    pub child: Rc<T>,
+    pub child: Rc<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadModifierMixed<T> {
+impl ScadModifierMixed {
     /// Creates a new [`ScadModifierMixed`].
-    pub const fn new(body: ScadModifierBodyMixed, child: Rc<T>) -> Self {
+    pub const fn new(
+        body: ScadModifierBodyMixed,
+        child: Rc<crate::common::ScadObjectImpl>,
+    ) -> Self {
         Self { body, child }
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadModifierMixed<T> {
+impl ScadDisplay for ScadModifierMixed {
     fn repr_scad(&self) -> String {
         modifier_repr(&self.body, &*self.child)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifierMixed<T> {}
+impl ScadCommentDisplay for ScadModifierMixed {}
 
 /// A block of mixed objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlockMixed<T: ScadObjectTrait> {
+pub struct ScadBlockMixed {
     /// The objects in the block.
-    pub objects: Vec<T>,
+    pub objects: Vec<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadBlockMixed<T> {
+impl ScadBlockMixed {
     /// Creats a new [`ScadBlockMixed`].
-    pub fn new(objects: &[T]) -> Self {
+    pub fn new(objects: &[crate::common::ScadObjectImpl]) -> Self {
         Self {
             objects: objects.to_vec(),
         }
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadBlockMixed<T> {
+impl ScadDisplay for ScadBlockMixed {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlockMixed<T> {}
+impl ScadCommentDisplay for ScadBlockMixed {}
 
 /// A modifier sentences for mixed objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
@@ -77,6 +81,11 @@ impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlockMixed<T> {}
 pub enum ScadModifierBodyMixed {
     /// `color()` in SCAD.
     Color(Color),
+    Hull(Hull),
+    Minkowski(Minkowski),
+    Union(Union),
+    Difference(Difference),
+    Intersection(Intersection),
 }
 
 impl ScadModifierBodyMixed {

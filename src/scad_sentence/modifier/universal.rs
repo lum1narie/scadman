@@ -62,8 +62,7 @@ impl ScadDisplay for Color {
         generate_sentence_repr(
             "color",
             __generate_scad_options!(
-                (self.c.name(), self.c.clone());
-                ("a", self.a);
+                (self.c.name(), self.c.clone()); opt: (("a", self.a);)
             ),
         )
     }

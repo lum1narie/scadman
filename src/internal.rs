@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::{scad_display::ScadDisplay, ScadObjectTrait, INDENT};
+use crate::{scad_display::ScadDisplay, common::ScadObjectImpl, INDENT};
 
 /// Indent a string
 ///
@@ -49,7 +49,7 @@ pub fn primitive_repr<T: ScadDisplay>(body: &T) -> String {
 /// # Returns
 ///
 /// A string representation of the modifier and its child
-pub fn modifier_repr<T: ScadDisplay, U: ScadObjectTrait>(body: &T, child: &U) -> String {
+pub fn modifier_repr<T: ScadDisplay>(body: &T, child: &ScadObjectImpl) -> String {
     let body_repr = body.repr_scad();
     let child_repr = child.to_code();
     if child_repr.chars().next().unwrap_or_default() == '{' {
@@ -69,10 +69,10 @@ pub fn modifier_repr<T: ScadDisplay, U: ScadObjectTrait>(body: &T, child: &U) ->
 /// # Returns
 ///
 /// A string representation of the block, with objects indented and enclosed in curly braces
-pub fn block_repr<T: ScadObjectTrait>(objects: &[T]) -> String {
+pub fn block_repr(objects: &[ScadObjectImpl]) -> String {
     let children_repr = objects
         .iter()
-        .map(ScadObjectTrait::to_code)
+        .map(ScadObjectImpl::to_code)
         .collect::<String>();
     let indented_children = indent_str(&children_repr, INDENT);
     format!("{{\n{indented_children}}}\n")
@@ -156,29 +156,48 @@ impl ScadOption {
     }
 }
 
-/// Create a [`Vec<ScadOption>`] from key-value pairs with arbitrarily [`impl ScadDisplay`] value.
+/// Create a [`Vec<ScadOption>`] from key-value pairs with arbitrarily
+/// [`impl ScadDisplay`] value.
+///
+/// This macro accepts the common calling forms used across the codebase:
+/// - `__generate_scad_options!( (name, value) );`
+/// - `__generate_scad_options!( (req1, v1); (req2, v2); );`
+/// - `__generate_scad_options!( (req...), ; (opt1, v1); (opt2, v2); );`
+/// - It also tolerates `;;` (empty optional list) and trailing semicolons.
+///
+/// To avoid parsing ambiguity between overlapping matcher arms, the macro
+/// matches the key/name positions as `expr` and provides only a single
+/// semicolon-separated pattern. This form matches callers such as:
+///   ("size", self.size) ; ("center", self.center);
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __generate_scad_options {
-    ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(;)? ) => {
+    // Semicolon-separated form only: required ; optional
+    // Use `expr` for key positions to allow literals, method calls and
+    // identifiers uniformly. Optional pairs are placed into an explicit
+    // `opt: ( ... )` group to avoid parsing ambiguity between the
+    // required and optional sequences.
+    ( $( ($name:expr, $value:expr) );* $(;)? $( opt: ( $( ($oname:expr, $ovalue:expr) );* $(;)? ) )? ) => {
         {
-            vec![
-                $($crate::internal::ScadOption::from_key_value($name_req, $value_req),)*
-            ]
+            let mut opts: Vec<$crate::internal::ScadOption> = Vec::new();
+            $(
+                opts.push($crate::internal::ScadOption::from_key_value(&$name, $value));
+            )*
+            $(
+                $(
+                    if let Some(opt) = $crate::internal::ScadOption::from_key_value_option(&$oname, $ovalue) {
+                        opts.push(opt);
+                    }
+                )*
+            )?
+            opts
         }
     };
-    ( $(($name_req:expr_2021, $value_req:expr_2021)),*; $(($name_opt:expr_2021, $value_opt:expr_2021)),+; ) => {
+
+    // Fallback: no options
+    () => {
         {
-            let mut opts: Vec<$crate::internal::ScadOption> = vec![
-                $($crate::internal::ScadOption::from_key_value($name_req, $value_req),)*
-            ];
-            $(
-                let maybe_opt = $crate::internal::ScadOption::from_key_value_option($name_opt, $value_opt);
-                if let Some(opt) = maybe_opt {
-                    opts.push(opt);
-                }
-            )+
-                opts
+            Vec::<$crate::internal::ScadOption>::new()
         }
     };
 }
@@ -234,7 +253,9 @@ macro_rules! __impl_builder_sentence {
 
 #[cfg(test)]
 mod tests {
-    use crate::{common::Unit, ScadObjectDimensionType};
+    use std::rc::Rc;
+
+    use crate::{common::Unit, common::ScadObjectImpl, ScadObjectDimensionType};
 
     use super::*;
 
@@ -265,12 +286,18 @@ mod tests {
 
     #[derive(Clone)]
     struct ScadObjectMock(String);
-    impl ScadObjectTrait for ScadObjectMock {
-        fn to_code(&self) -> String {
-            self.0.clone()
-        }
-        fn get_type(&self) -> ScadObjectDimensionType {
-            ScadObjectDimensionType::ObjectMixed
+    impl ScadObjectMock {
+        fn inner(self) -> ScadObjectImpl {
+            struct Inner(String);
+            impl crate::common::ScadObjectReprMixed for Inner {
+                fn to_code(&self) -> String {
+                    self.0.clone()
+                }
+                fn as_any(&self) -> &dyn std::any::Any {
+                    &self.0
+                }
+            }
+            ScadObjectImpl::ObjectMixed(Rc::new(Inner(self.0)))
         }
     }
 
@@ -279,28 +306,28 @@ mod tests {
         assert_eq!(
             modifier_repr(
                 &ScadDisplayMock("mod()".to_string()),
-                &ScadObjectMock("prim();\n".to_string())
+                &ScadObjectMock("prim();\n".to_string()).inner()
             ),
             "mod()\n  prim();\n"
         );
         assert_eq!(
             modifier_repr(
                 &ScadDisplayMock("mod()".to_string()),
-                &ScadObjectMock("mod2()\n  prim();\n".to_string())
+                &ScadObjectMock("mod2()\n  prim();\n".to_string()).inner()
             ),
             "mod()\n  mod2()\n    prim();\n"
         );
         assert_eq!(
             modifier_repr(
                 &ScadDisplayMock("mod()".to_string()),
-                &ScadObjectMock("{\n  prim1();\n  prim2();\n}\n".to_string())
+                &ScadObjectMock("{\n  prim1();\n  prim2();\n}\n".to_string()).inner()
             ),
             "mod() {\n  prim1();\n  prim2();\n}\n"
         );
         assert_eq!(
             modifier_repr(
                 &ScadDisplayMock("mod()".to_string()),
-                &ScadObjectMock("/* comment */\n{\n  prim1();\n  prim2();\n}\n".to_string())
+                &ScadObjectMock("/* comment */\n{\n  prim1();\n  prim2();\n}\n".to_string()).inner()
             ),
             "mod()\n  /* comment */\n  {\n    prim1();\n    prim2();\n  }\n"
         );
@@ -310,6 +337,7 @@ mod tests {
                 &ScadObjectMock(
                     "{\n  /* comment */\n  mod2(){\n    prim2();\n  }\n}\n".to_string()
                 )
+                .inner()
             ),
             "mod1() {\n  /* comment */\n  mod2(){\n    prim2();\n  }\n}\n"
         );
@@ -320,8 +348,8 @@ mod tests {
     fn test_block_repr() {
         assert_eq!(
             block_repr(&[
-                ScadObjectMock("prim1();\n".to_string()),
-                ScadObjectMock("mod()\n  prim2();\n".to_string())
+                ScadObjectMock("prim1();\n".to_string()).inner(),
+                ScadObjectMock("mod()\n  prim2();\n".to_string()).inner()
             ]),
             "{\n  prim1();\n  mod()\n    prim2();\n}\n"
         );

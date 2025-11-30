@@ -13,20 +13,20 @@ use crate::{
         Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude, Scale3D, Sphere,
         Surface, Translate3D, Union,
     },
-    ScadCommentDisplay, ScadObjectDimensionType, ScadObjectTrait,
+    ScadCommentDisplay, ScadObjectDimensionType, common::ScadObjectImpl,
 };
 
 /// A 3D object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
 #[delegate(ScadCommentDisplay)]
-pub enum ScadObject3D<T: ScadObjectTrait> {
+pub enum ScadObject3D {
     /// A primitive 3D object.
     Primitive(ScadPrimitive3D),
     /// A modifier 3D object.
-    Modifier(ScadModifier3D<T>),
+    Modifier(ScadModifier3D),
     /// A block of 3D objects.
-    Block(ScadBlock3D<T>),
+    Block(ScadBlock3D),
 }
 
 /// A primitive 3D object in SCAD.
@@ -53,41 +53,41 @@ impl ScadCommentDisplay for ScadPrimitive3D {}
 
 /// A modifier for a 3D object in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadModifier3D<T: ScadObjectTrait> {
+pub struct ScadModifier3D {
     /// The body of the modifier.
     pub body: ScadModifierBody3D,
     /// The child object to be modified.
-    pub child: Rc<T>,
+    pub child: Rc<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadModifier3D<T> {
+impl ScadModifier3D {
     /// Creates a new [`ScadModifier3D`] if the child's type matches the modifier's expected child type.
     ///
     /// # Returns
     ///
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
-    pub fn try_new(body: ScadModifierBody3D, child: Rc<T>) -> Option<Self> {
+    pub fn try_new(body: ScadModifierBody3D, child: Rc<crate::common::ScadObjectImpl>) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then_some(Self { body, child })
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadModifier3D<T> {
+impl ScadDisplay for ScadModifier3D {
     fn repr_scad(&self) -> String {
         modifier_repr(&self.body, &*self.child)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadModifier3D<T> {}
+impl ScadCommentDisplay for ScadModifier3D {}
 
 /// A block of 3D objects in SCAD.
 #[derive(Debug, Clone, From)]
-pub struct ScadBlock3D<T: ScadObjectTrait> {
+pub struct ScadBlock3D {
     /// The objects in the block.
-    pub objects: Vec<T>,
+    pub objects: Vec<crate::common::ScadObjectImpl>,
 }
 
-impl<T: ScadObjectTrait> ScadBlock3D<T> {
+impl ScadBlock3D {
     /// Creates a new [`ScadBlock3D`] with the given objects if all objects are 3D.
     ///
     /// # Arguments
@@ -98,7 +98,7 @@ impl<T: ScadObjectTrait> ScadBlock3D<T> {
     ///
     /// * `Some(ScadBlock3D)` if all objects are 3D objects
     /// * `None` if any object is not a 3D object
-    pub fn try_new(objects: &[T]) -> Option<Self> {
+    pub fn try_new(objects: &[crate::common::ScadObjectImpl]) -> Option<Self> {
         objects
             .iter()
             .all(|o| o.get_type() == ScadObjectDimensionType::Object3D)
@@ -108,13 +108,13 @@ impl<T: ScadObjectTrait> ScadBlock3D<T> {
     }
 }
 
-impl<T: ScadObjectTrait> ScadDisplay for ScadBlock3D<T> {
+impl ScadDisplay for ScadBlock3D {
     fn repr_scad(&self) -> String {
         block_repr(&self.objects)
     }
 }
 
-impl<T: ScadObjectTrait> ScadCommentDisplay for ScadBlock3D<T> {}
+impl ScadCommentDisplay for ScadBlock3D {}
 
 /// A primitive sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]

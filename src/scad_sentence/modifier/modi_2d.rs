@@ -23,12 +23,7 @@ __impl_builder_sentence!(Translate2D);
 
 impl ScadDisplay for Translate2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "translate",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("translate", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -71,12 +66,7 @@ impl Rotate2DBuilder {
 
 impl ScadDisplay for Rotate2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "rotate",
-            __generate_scad_options!(
-                ("", self.a);;
-            ),
-        )
+        generate_sentence_repr("rotate", __generate_scad_options!(("", self.a);))
     }
 }
 
@@ -94,12 +84,7 @@ __impl_builder_sentence!(Scale2D);
 
 impl ScadDisplay for Scale2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "scale",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("scale", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -137,8 +122,7 @@ impl ScadDisplay for Resize2D {
         generate_sentence_repr(
             "resize",
             __generate_scad_options!(
-                ("", self.size);
-                ("auto", self.auto);
+                ("", self.size); opt: (("auto", self.auto);)
             ),
         )
     }
@@ -157,12 +141,7 @@ __impl_builder_sentence!(Mirror2D);
 
 impl ScadDisplay for Mirror2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "mirror",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("mirror", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -179,12 +158,7 @@ __impl_builder_sentence!(MultMatrix2D);
 
 impl ScadDisplay for MultMatrix2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "multmatrix",
-            __generate_scad_options!(
-                ("m", self.m);;
-            ),
-        )
+        generate_sentence_repr("multmatrix", __generate_scad_options!(("m", self.m);))
     }
 }
 
@@ -269,10 +243,12 @@ impl ScadDisplay for Offset {
             "offset",
             __generate_scad_options!(
                 (self.size.name(), self.size);
-                ("chamfer", self.chamfer),
-                ("$fa", self.fa),
-                ("$fn", self.r#fn),
-                ("$fs", self.fs);
+                opt: (
+                    ("chamfer", self.chamfer);
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -296,9 +272,7 @@ impl ScadDisplay for Projection {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
             "projection",
-            __generate_scad_options!(
-                ;("cut", self.cut);
-            ),
+            __generate_scad_options!(opt: (("cut", self.cut);)),
         )
     }
 }

@@ -65,8 +65,7 @@ impl ScadDisplay for Square {
         generate_sentence_repr(
             "square",
             __generate_scad_options!(
-                ("size", self.size);
-                ("center", self.center);
+                ("size", self.size); opt:(("center", self.center);)
             ),
         )
     }
@@ -124,7 +123,11 @@ impl ScadDisplay for Circle {
             "circle",
             __generate_scad_options!(
                 (self.size.name(), self.size);
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -212,7 +215,10 @@ impl ScadDisplay for Polygon {
             "polygon",
             __generate_scad_options!(
                 ("points", self.points.clone());
-                ("paths", self.paths.clone()), ("convexity", self.convexity);
+                opt: (
+                    ("paths", self.paths.clone());
+                    ("convexity", self.convexity);
+                )
             ),
         )
     }
@@ -272,15 +278,17 @@ impl ScadDisplay for Text {
             "text",
             __generate_scad_options!(
                 ("", self.text.clone());
-                ("font", self.font.clone()),
-                ("size", self.size),
-                ("halign", self.halign.clone()),
-                ("valign", self.valign.clone()),
-                ("spacing", self.spacing.clone()),
-                ("direction", self.direction.clone()),
-                ("language", self.language.clone()),
-                ("script", self.script.clone()),
-                ("$fn", self.r#fn);
+                opt: (
+                    ("font", self.font.clone());
+                    ("size", self.size);
+                    ("halign", self.halign.clone());
+                    ("valign", self.valign.clone());
+                    ("spacing", self.spacing.clone());
+                    ("direction", self.direction.clone());
+                    ("language", self.language.clone());
+                    ("script", self.script.clone());
+                    ("$fn", self.r#fn);
+                )
             ),
         )
     }
@@ -326,9 +334,14 @@ impl ScadDisplay for Import2D {
             "import",
             __generate_scad_options!(
                 ("", self.file.clone());
-                ("convexity", self.convexity), ("id", self.id),
-                ("layer", self.layer),
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("convexity", self.convexity);
+                    ("id", self.id);
+                    ("layer", self.layer);
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }

@@ -61,7 +61,11 @@ impl ScadDisplay for Sphere {
             "sphere",
             __generate_scad_options!(
                 (self.size.name(), self.size);
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -123,8 +127,7 @@ impl ScadDisplay for Cube {
         generate_sentence_repr(
             "cube",
             __generate_scad_options!(
-                ("size", self.size);
-                ("center", self.center);
+                ("size", self.size); opt: (("center", self.center);)
             ),
         )
     }
@@ -236,10 +239,14 @@ impl ScadDisplay for Cylinder {
             ),
         };
         let opts = __generate_scad_options!(
-            ("h", self.h),
-            ("", Identifier(size_str));
-            ("center", self.center),
-            ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+            ("h", self.h);
+            ("" , Identifier(size_str));
+            opt: (
+                ("center", self.center);
+                ("$fa", self.fa);
+                ("$fn", self.r#fn);
+                ("$fs", self.fs);
+            )
         );
         format!(
             "cylinder({})",
@@ -340,7 +347,10 @@ impl ScadDisplay for Polyhedron {
             "polyhedron",
             __generate_scad_options!(
                 ("points", self.points.clone());
-                ("faces", self.faces.clone()), ("convexity", self.convexity);
+                opt: (
+                  ("faces", self.faces.clone());
+                  ("convexity", self.convexity);
+                )
             ),
         )
     }
@@ -376,8 +386,12 @@ impl ScadDisplay for Import3D {
             "import",
             __generate_scad_options!(
                 ("", self.file.clone());
-                ("convexity", self.convexity),
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("convexity", self.convexity);
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -414,9 +428,11 @@ impl ScadDisplay for Surface {
             "surface",
             __generate_scad_options!(
                 ("file", self.file.clone());
-                ("center", self.center),
-                ("invert", self.invert),
-                ("convexity", self.convexity);
+                opt: (
+                    ("center", self.center);
+                    ("invert", self.invert);
+                    ("convexity", self.convexity);
+                )
             ),
         )
     }
