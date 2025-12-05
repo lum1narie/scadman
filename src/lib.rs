@@ -1,4 +1,20 @@
-//! A library for generating OpenSCAD code.
+//! `scadman` is a Rust library designed for programmatically generating OpenSCAD code.
+//!
+//! It offers a type-safe and structured approach to defining 2D and 3D geometric
+//! objects, applying transformations, and performing operations, ultimately outputting
+//! valid OpenSCAD code.
+//!
+//! ## Key Features:
+//! - **Generic Type System**: Leverages `ScadObjectGeneric<D>` to provide compile-time
+//!   dimensional safety (2D, 3D, Mixed) while maintaining runtime flexibility.
+//! - **Comprehensive API**: Supports a wide range of OpenSCAD primitives, modifiers,
+//!   and block operations.
+//! - **Builder Pattern**: Simplifies configuration of complex SCAD sentences.
+//! - **Operator Overloading**: Enables intuitive use of `+`, `-`, `*` for boolean
+//!   operations with runtime dimension checks.
+//!
+//! For detailed usage, examples, and an in-depth understanding of the type system,
+//! please refer to the [README.md](https://github.com/lum1narie/scadman/blob/main/README.md).
 
 pub(crate) mod internal;
 mod macros;
