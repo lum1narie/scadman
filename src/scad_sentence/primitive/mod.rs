@@ -1,7 +1,7 @@
 #[allow(clippy::redundant_pub_crate)]
-mod prim_2d;
-pub use prim_2d::*;
+mod primitive_2d;
+pub use primitive_2d::*;
 
 #[allow(clippy::redundant_pub_crate)]
-mod prim_3d;
-pub use prim_3d::*;
+mod primitive_3d;
+pub use primitive_3d::*;

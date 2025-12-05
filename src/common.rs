@@ -59,7 +59,6 @@ pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
 
 /// Trait for object that can be shown with comment.
 
-
 /// Marker types to represent object dimensions at the type level.
 ///
 /// These are zero-sized types used as generic parameters for `ScadObject`<D>.
@@ -197,8 +196,8 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
     }
 
     /// TODO: doc
-    pub fn into_wrapper(self) -> ScadObjectWrapper {
-        ScadObjectWrapper {
+    pub fn into_wrapper(self) -> ScadObjectWrapperToDeprecated {
+        ScadObjectWrapperToDeprecated {
             inner: Rc::downgrade(&self.inner),
             comment: self.comment,
         }
@@ -211,13 +210,13 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
 /// a single `ScadObject` value. This keeps a weak reference to the real inner
 /// Rc to avoid ownership changes when bridging typed -> untyped worlds.
 #[derive(Clone, Debug)]
-pub struct ScadObjectWrapper {
+pub struct ScadObjectWrapperToDeprecated {
     pub(crate) inner: std::rc::Weak<ScadObjectImpl>,
     pub comment: Option<String>,
 }
 
 /// TODO: doc
-impl ScadObjectWrapper {
+impl ScadObjectWrapperToDeprecated {
     pub fn to_code(&self) -> String {
         match self.inner.upgrade() {
             Some(rc) => match &self.comment {
@@ -564,11 +563,6 @@ impl ScadDisplay for ScadObjectMixed {
 /// Implement conversion helpers and basic operators for untyped compatibility.
 /// Note: heavy use of boxed trait objects simplifies the transition but can be
 /// optimized later.
-
-
-
-
-
 
 // Operators for the generic untyped ScadObject (ScadObjectGeneric<DMixed>)
 // Provide Add/Sub/Mul so existing code using ScadObject values can use + - *

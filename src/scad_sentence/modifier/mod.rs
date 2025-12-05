@@ -1,11 +1,11 @@
 #[allow(clippy::redundant_pub_crate)]
-mod modi_2d;
-pub use modi_2d::*;
+mod modifier_2d;
+pub use modifier_2d::*;
 
 #[allow(clippy::redundant_pub_crate)]
-mod modi_3d;
-pub use modi_3d::*;
+mod modifier_3d;
+pub use modifier_3d::*;
 
 #[allow(clippy::redundant_pub_crate)]
-mod universal;
-pub use universal::*;
+mod universal_modifier;
+pub use universal_modifier::*;
