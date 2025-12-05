@@ -1,4 +1,5 @@
 use std::{
+    any::Any,
     fmt::Debug,
     ops::{Add, Mul, Sub},
     rc::Rc,
@@ -95,33 +96,64 @@ impl DimensionType for DMixed {
 /// Trait for SCAD Objects. Kept for compatibility with modules that
 /// used `ScadObjectTrait` before the refactor.
 ///
-/// TODO: doc
+/// This trait provides a common interface for SCAD objects, allowing them to
+/// return a string representation of their SCAD code and their runtime
+/// dimension marker. It is primarily used to bridge older code with the
+/// newer `ScadObjectGeneric` API.
 pub trait ScadObjectTrait {
     /// Returns a string representation of the object (including trailing newline).
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the object.
     fn to_code(&self) -> String;
     /// Returns the runtime dimension marker.
+    ///
+    /// # Returns
+    /// A `DimensionMarker` indicating whether the object is 2D, 3D, or Mixed.
     fn get_type(&self) -> DimensionMarker;
 }
 
 /// Generic `ScadObject` parameterized by a dimension marker D.
 ///
-/// NOTE: for a smoother, faster migration we provide both:
-/// - `ScadObject`<D> generic (new preferred API)
-/// - a type alias `ScadObject` (old untyped name) which maps to `ScadObject`<DMixed>
+/// This struct represents a generic OpenSCAD object, allowing for type-level
+/// distinction between 2D, 3D, and mixed-dimension objects using the `D`
+/// type parameter, which must implement `DimensionType`.
 ///
-/// /// TODO: doc
+/// For backwards compatibility, a type alias `ScadObject` is provided, which
+/// maps to `ScadObjectGeneric<DMixed>`, allowing existing code to continue
+/// compiling while encouraging new code to use the more type-safe generic
+/// versions (`ScadObjectGeneric<D2>` or `ScadObjectGeneric<D3>`).
 #[derive(Clone, Debug)]
 pub struct ScadObjectGeneric<D: DimensionType> {
-    /// internal implementation uses a small enum wrapper (object-safe) instead
+    /// Internal implementation uses a small enum wrapper (object-safe) instead
     /// of trying to make the original `ScadObjectTrait` dyn object-safe.
+    /// This allows for shared ownership and polymorphic behavior at runtime.
     pub(crate) inner: Rc<ScadObjectImpl>,
+    /// A `std::marker::PhantomData<D>` to associate the dimension
+    /// marker `D` with this struct without actually storing a value of type `D`.
     pub(crate) phantom: std::marker::PhantomData<D>,
-    /// Optional comment attached by users.
+    /// An `Option<String>` to store an optional comment that will
+    /// be prepended to the generated SCAD code when `to_code()` is called.
     pub comment: Option<String>,
 }
 
 impl<D: DimensionType> ScadObjectGeneric<D> {
-    /// TODO: doc
+    /// Creates a new `ScadObjectGeneric<D>` from an `Rc` reference to a
+    /// `ScadObjectImpl`.
+    ///
+    /// This is an internal constructor used to wrap the concrete, runtime
+    /// implementation of a SCAD object with the type-level dimension marker `D`.
+    ///
+    /// A `debug_assert!` is used to verify that the `DimensionMarker` of the
+    /// provided `inner` implementation matches the generic type parameter `D`.
+    /// For `DMixed` (untyped) generics, any `DimensionMarker` from the inner
+    /// implementation is accepted, allowing for flexible runtime typing.
+    ///
+    /// # Arguments
+    /// * `inner` - An `Rc<ScadObjectImpl>` representing the concrete SCAD object.
+    ///
+    /// # Returns
+    /// A new `ScadObjectGeneric<D>` instance.
     pub fn from_impl(inner: Rc<ScadObjectImpl>) -> Self {
         // runtime assert that implementation marker matches generic marker.
         // For the untyped/mixed generic (DMixed) accept any inner marker: the
@@ -142,12 +174,27 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
         }
     }
 
-    /// TODO: doc
+    /// Attaches a comment to the SCAD object.
+    ///
+    /// This method allows users to add a descriptive comment that will be
+    /// prepended to the generated OpenSCAD code for this object. The comment
+    /// is stored internally and rendered when `to_code()` is called.
+    ///
+    /// To ensure comments are preserved across object manipulations (e.g.,
+    /// during union or difference operations), the internal `ScadObjectImpl`
+    /// is wrapped with a `ScadObjectImplWithComment` adapter. This adapter
+    /// overrides the `to_code()` behavior to include the comment.
+    /// Double-wrapping is prevented by checking if the inner implementation
+    /// is already a `ScadObjectImplWithComment`.
+    ///
+    /// # Arguments
+    /// * `comment` - A string slice containing the comment to attach.
+    ///
+    /// # Returns
+    /// The `ScadObjectGeneric<D>` instance with the comment attached.
     pub fn commented(mut self, comment: &str) -> Self {
         // keep backwards-compatible comment field
         self.comment = Some(comment.to_string());
-
-        use std::rc::Rc;
 
         // Avoid double-wrapping: if inner already is our adapter, do not wrap again.
         let already_wrapped = match &*self.inner {
@@ -187,7 +234,15 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
         self
     }
 
-    /// TODO: doc
+    /// Generates the OpenSCAD code representation of this object.
+    ///
+    /// If a comment has been attached using the `commented()` method, it will
+    /// be prepended to the generated code. Otherwise, it directly calls the
+    /// `to_code()` method of the internal `ScadObjectImpl`.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the object, potentially
+    /// including a comment.
     pub fn to_code(&self) -> String {
         match &self.comment {
             Some(c) => format!("/* {} */\n{}", c, self.inner.to_code()),
@@ -195,7 +250,15 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
         }
     }
 
-    /// TODO: doc
+    /// Converts this `ScadObjectGeneric<D>` into a `ScadObjectWrapperToDeprecated`.
+    ///
+    /// This method is primarily for interoperability with older parts of the
+    /// codebase that still expect the `ScadObjectWrapperToDeprecated` type.
+    /// It creates a `Weak` reference to the internal `ScadObjectImpl` to
+    /// avoid ownership issues during the transition to the typed API.
+    ///
+    /// # Returns
+    /// A `ScadObjectWrapperToDeprecated` instance.
     pub fn into_wrapper(self) -> ScadObjectWrapperToDeprecated {
         ScadObjectWrapperToDeprecated {
             inner: Rc::downgrade(&self.inner),
@@ -209,14 +272,30 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
 /// A thin runtime wrapper for interoperability with existing code that expected
 /// a single `ScadObject` value. This keeps a weak reference to the real inner
 /// Rc to avoid ownership changes when bridging typed -> untyped worlds.
+///
+/// This struct is part of the compatibility layer, allowing older code that
+/// relied on a less-typed `ScadObject` to still function with the refactored
+/// internal representation. It holds a `Weak` reference to the actual
+/// `ScadObjectImpl` to prevent circular dependencies and manage lifetimes
+/// gracefully.
 #[derive(Clone, Debug)]
 pub struct ScadObjectWrapperToDeprecated {
     pub(crate) inner: std::rc::Weak<ScadObjectImpl>,
     pub comment: Option<String>,
 }
 
-/// TODO: doc
 impl ScadObjectWrapperToDeprecated {
+    /// Generates the OpenSCAD code for the wrapped object.
+    ///
+    /// This method attempts to upgrade the weak reference to the inner
+    /// `ScadObjectImpl`. If successful, it generates the SCAD code,
+    /// prepending any attached comment. If the weak reference cannot be
+    /// upgraded (meaning the underlying `ScadObjectImpl` has been dropped),
+    /// it returns an empty string.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code, or an empty string if the
+    /// wrapped object is no longer valid.
     pub fn to_code(&self) -> String {
         match self.inner.upgrade() {
             Some(rc) => match &self.comment {
@@ -227,6 +306,16 @@ impl ScadObjectWrapperToDeprecated {
         }
     }
 
+    /// Returns the runtime dimension marker of the wrapped object.
+    ///
+    /// This method attempts to upgrade the weak reference to the inner
+    /// `ScadObjectImpl`. If successful, it returns the `DimensionMarker`
+    /// of the wrapped object. If the weak reference cannot be upgraded,
+    /// it defaults to `DimensionMarker::ObjectMixed`.
+    ///
+    /// # Returns
+    /// A `DimensionMarker` indicating the object's dimension, or
+    /// `DimensionMarker::ObjectMixed` if the wrapped object is no longer valid.
     pub fn get_type(&self) -> DimensionMarker {
         match self.inner.upgrade() {
             Some(rc) => rc.get_type(),
@@ -250,6 +339,13 @@ pub enum ScadObjectImpl {
 }
 
 impl ScadObjectImpl {
+    /// Generates the OpenSCAD code representation for the encapsulated object.
+    ///
+    /// This method acts as a dispatcher, forwarding the `to_code` call to the
+    /// specific implementation (2D, 3D, or Mixed) held within the enum.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the object.
     pub fn to_code(&self) -> String {
         match self {
             Self::Object2D(v) => v.as_ref().to_code(),
@@ -257,6 +353,15 @@ impl ScadObjectImpl {
             Self::ObjectMixed(v) => v.as_ref().to_code(),
         }
     }
+
+    /// Returns the `DimensionMarker` that identifies the type of the
+    /// encapsulated SCAD object.
+    ///
+    /// This method provides a runtime way to determine if the object is
+    /// a 2D, 3D, or Mixed dimension object.
+    ///
+    /// # Returns
+    /// A `DimensionMarker` value (`Object2D`, `Object3D`, or `ObjectMixed`).
     pub const fn get_type(&self) -> DimensionMarker {
         match self {
             Self::Object2D(_) => DimensionMarker::Object2D,
@@ -286,22 +391,52 @@ impl Debug for ScadObjectImpl {
     }
 }
 
-/// Small object-safe helper traits implemented by the concrete sentence enums
-/// to allow `ScadObjectImpl` to call into existing repr code.
-use std::any::Any;
+// Small object-safe helper traits implemented by the concrete sentence enums
+// to allow `ScadObjectImpl` to call into existing repr code.
 
+/// Object-safe trait for 2D SCAD object representations.
+///
+/// This trait provides an object-safe way to handle different concrete
+/// 2D SCAD objects (primitives, modifiers, blocks) polymorphically
+/// under an `Rc<dyn ScadObjectRepr2D>`.
 pub trait ScadObjectRepr2D: Any {
+    /// Generates the OpenSCAD code for the 2D object.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the 2D object.
     fn to_code(&self) -> String;
     /// Allow downcasting to concrete types implementing this trait.
     /// Implemented by concrete enum types (see impls below).
     fn as_any(&self) -> &dyn Any;
 }
+/// Object-safe trait for 3D SCAD object representations.
+///
+/// This trait provides an object-safe way to handle different concrete
+/// 3D SCAD objects (primitives, modifiers, blocks) polymorphically
+/// under an `Rc<dyn ScadObjectRepr3D>`.
 pub trait ScadObjectRepr3D: Any {
+    /// Generates the OpenSCAD code for the 3D object.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the 3D object.
     fn to_code(&self) -> String;
+    /// Allow downcasting to concrete types implementing this trait.
+    /// Implemented by concrete enum types (see impls below).
     fn as_any(&self) -> &dyn Any;
 }
+/// Object-safe trait for mixed-dimension SCAD object representations.
+///
+/// This trait provides an object-safe way to handle different concrete
+/// mixed-dimension SCAD objects (primitives, modifiers, blocks) polymorphically
+/// under an `Rc<dyn ScadObjectReprMixed>`.
 pub trait ScadObjectReprMixed: Any {
+    /// Generates the OpenSCAD code for the mixed-dimension object.
+    ///
+    /// # Returns
+    /// A `String` containing the OpenSCAD code for the mixed-dimension object.
     fn to_code(&self) -> String;
+    /// Allow downcasting to concrete types implementing this trait.
+    /// Implemented by concrete enum types (see impls below).
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -318,10 +453,29 @@ pub struct ScadObjectImplWithComment {
 }
 
 impl ScadObjectImplWithComment {
+    /// Creates a new `ScadObjectImplWithComment` adapter.
+    ///
+    /// This constructor takes an `Rc` reference to the child `ScadObjectImpl`
+    /// (the object to which the comment will be attached) and the comment
+    /// string itself.
+    ///
+    /// # Arguments
+    /// * `child` - An `Rc<ScadObjectImpl>` representing the object being commented.
+    /// * `comment` - A `String` containing the comment text.
+    ///
+    /// # Returns
+    /// A new `ScadObjectImplWithComment` instance.
     pub const fn new(child: Rc<ScadObjectImpl>, comment: String) -> Self {
         Self { child, comment }
     }
 
+    /// Generates the OpenSCAD code with the comment prepended.
+    ///
+    /// This private helper formats the output by placing the stored comment
+    /// before the SCAD code generated by the child object.
+    ///
+    /// # Returns
+    /// A `String` containing the formatted OpenSCAD code with the comment.
     fn prefixed_code(&self) -> String {
         format!("/* {} */\n{}", self.comment, self.child.to_code())
     }
@@ -357,6 +511,7 @@ impl ScadObjectReprMixed for ScadObjectImplWithComment {
 // Implement the small object-safe repr traits for the concrete enum types
 // defined in their modules. This avoids creating ad-hoc "Simple*" wrapper
 // structs elsewhere and lets the real sentence/objects produce canonical code.
+
 impl ScadObjectRepr2D for crate::scad_2d::ScadObject2D {
     fn to_code(&self) -> String {
         self.repr_scad()
@@ -389,6 +544,7 @@ pub type ScadObjectUntyped = ScadObjectGeneric<DMixed>;
 /// Provide a convenient short name `ScadObject` that maps to the untyped/mixed
 /// variant for backwards compatibility.
 pub type ScadObject = ScadObjectUntyped;
+
 /// Backwards-compatible alias for the earlier runtime enum type.
 // Backwards-compat alias removed: use `DimensionMarker` directly.
 
@@ -434,6 +590,16 @@ impl ScadDisplay for ScadObject2D {
     }
 }
 
+/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
+/// These provide a typed, ergonomic API surface while reusing the existing
+/// runtime implementation under the hood.
+///
+/// Note: kept intentionally lightweight to remain non-breaking.
+///
+/// Public-facing wrapper types presented to library users. These are thin
+/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
+/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
+/// remain in their modules and are referenced via fully-qualified paths.
 #[derive(Clone, Debug)]
 pub struct ScadObject3D(pub(crate) ScadObjectGeneric<D3>);
 
@@ -507,6 +673,16 @@ impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D3> {
     }
 }
 
+/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
+/// These provide a typed, ergonomic API surface while reusing the existing
+/// runtime implementation under the hood.
+///
+/// Note: kept intentionally lightweight to remain non-breaking.
+///
+/// Public-facing wrapper types presented to library users. These are thin
+/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
+/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
+/// remain in their modules and are referenced via fully-qualified paths.
 #[derive(Clone, Debug)]
 pub struct ScadObjectMixed(pub(crate) ScadObjectGeneric<DMixed>);
 
@@ -560,9 +736,9 @@ impl ScadDisplay for ScadObjectMixed {
     }
 }
 
-/// Implement conversion helpers and basic operators for untyped compatibility.
-/// Note: heavy use of boxed trait objects simplifies the transition but can be
-/// optimized later.
+// Implement conversion helpers and basic operators for untyped compatibility.
+// Note: heavy use of boxed trait objects simplifies the transition but can be
+// optimized later.
 
 // Operators for the generic untyped ScadObject (ScadObjectGeneric<DMixed>)
 // Provide Add/Sub/Mul so existing code using ScadObject values can use + - *
