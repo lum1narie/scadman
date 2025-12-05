@@ -1,10 +1,12 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
+use std::rc::Rc;
 
 use crate::{
     __generate_scad_options, __impl_builder_sentence,
-    common::{Point2D, Unit},
+    common::{Point2D, IntoScad, ScadObjectGeneric, ScadObjectImpl, Unit},
     internal::generate_sentence_repr,
+    scad_2d::{ScadObject2D, ScadPrimitive2D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::RoundSize,
 };
@@ -60,6 +62,15 @@ pub struct Square {
 
 __impl_builder_sentence!(Square);
 
+impl IntoScad<crate::common::D2> for Square {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        let prim = ScadPrimitive2D::new(self.into());
+        let o = ScadObject2D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl ScadDisplay for Square {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -93,13 +104,22 @@ pub struct Circle {
 
 __impl_builder_sentence!(Circle);
 
+impl IntoScad<crate::common::D2> for Circle {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        let prim = ScadPrimitive2D::new(self.into());
+        let o = ScadObject2D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl CircleBuilder {
     /// Set `r` option in SCAD.
     ///
     /// # Arguments
     ///
     /// + `value` - `r` option in SCAD. This is the radius of circle.
-    pub fn r(&mut self, value: Unit) -> &mut Self {
+    pub const fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Radius(value));
         new
@@ -110,7 +130,7 @@ impl CircleBuilder {
     /// # Arguments
     ///
     /// + `value` - `d` option in SCAD. This is the diameter of circle.
-    pub fn d(&mut self, value: Unit) -> &mut Self {
+    pub const fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Diameter(value));
         new
@@ -175,6 +195,15 @@ pub struct Polygon {
 }
 
 __impl_builder_sentence!(Polygon);
+
+impl IntoScad<crate::common::D2> for Polygon {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        let prim = ScadPrimitive2D::new(self.into());
+        let o = ScadObject2D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
 
 impl PolygonBuilder {
     /// Check if `paths` is in the range of `points`'s indicies.
@@ -272,6 +301,15 @@ pub struct Text {
 
 __impl_builder_sentence!(Text);
 
+impl IntoScad<crate::common::D2> for Text {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        let prim = ScadPrimitive2D::new(self.into());
+        let o = ScadObject2D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl ScadDisplay for Text {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -327,6 +365,15 @@ pub struct Import2D {
 }
 
 __impl_builder_sentence!(Import2D);
+
+impl IntoScad<crate::common::D2> for Import2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        let prim = ScadPrimitive2D::new(self.into());
+        let o = ScadObject2D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
 
 impl ScadDisplay for Import2D {
     fn repr_scad(&self) -> String {

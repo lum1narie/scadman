@@ -19,6 +19,7 @@ Document how to work in this repository: commands, structure, conventions, and g
 - Formatting + linting combined via `cargo make tidy` (runs `clippy-fix` and `format` from `Makefile.toml`)
 
 ## Code Organization
+
 - `src/lib.rs` exports principal helpers (`primitive_*`, `modifier_*`, `block_*`) and re-exports modules (`scad_display`, `scad_sentence`, `value_type`, etc.).
 - `src/common.rs` defines core types (`ScadObject`, `ScadObjectBody`, `ScadObjectTrait`, helper aliases like `Point2D/3D`, builder traits, operators `Add/Sub/Mul`).
 - `src/scad_2d.rs`, `src/scad_3d.rs`, `src/scad_mixed.rs` contain dimension-specific logic (primitives, modifiers, blocks). 
@@ -26,6 +27,9 @@ Document how to work in this repository: commands, structure, conventions, and g
 - `src/scad_display.rs` provides `ScadDisplay` implementations for values and objects.
 - `src/value_type.rs` defines OpenSCAD-specific scalar/vector helpers.
 - `src/internal.rs`, `src/macros.rs` – likely shared infra/utilities referenced from other modules.
+  - macros is must be in either of these files.
+    - internal includes macros for implementation.
+    - macros includes macros for library users.
 - `tests/` includes integration-style assertions comparing `to_code()` outputs (e.g., `desk_clamp.rs` shows builder usage pattern).
 
 ## Naming and Style
@@ -97,9 +101,10 @@ Document how to work in this repository: commands, structure, conventions, and g
   - If you make changes that affect users, **update `README.md`**.
   - If you define new types or functions, write documentation.
 - Git
-  - Never try to run the `git` command unless the user directly,
+  - **Never try to run the `git` command** unless the user directly,
     or nix flake requests the execution of a git command in the prompt.
     (Some commands of it will not work in dirty status.)
+    - **You will be fined if you use git without user's demand.**
   - You are not required to generate a commit message unless the
     user directly requests it.
   - When requested to think about git commit messages, if the

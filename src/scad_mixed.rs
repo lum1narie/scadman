@@ -6,11 +6,10 @@ use derive_more::derive::From;
 
 use crate::{
     ambassador_impl_ScadCommentDisplay,
-    common::ScadObjectImpl,
     internal::{block_repr, modifier_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_sentence::{Color, Difference, Hull, Intersection, Minkowski, Union},
-    ScadCommentDisplay, ScadObjectDimensionType,
+    DimensionMarker, ScadCommentDisplay,
 };
 
 /// A Mixed object in SCAD.
@@ -41,11 +40,21 @@ impl ScadModifierMixed {
     ) -> Self {
         Self { body, child }
     }
+
+    /// Creates a new [`ScadModifierMixed`] if the child's type matches the modifier's
+    /// expected child type. Returns `Some(Self)` when the types match, otherwise
+    /// `None`.
+    pub fn try_new(
+        body: ScadModifierBodyMixed,
+        child: Rc<crate::common::ScadObjectImpl>,
+    ) -> Option<Self> {
+        (child.get_type() == body.get_children_type()).then_some(Self { body, child })
+    }
 }
 
 impl ScadDisplay for ScadModifierMixed {
     fn repr_scad(&self) -> String {
-        modifier_repr(&self.body, &*self.child)
+        modifier_repr(&self.body, &self.child)
     }
 }
 
@@ -89,8 +98,8 @@ pub enum ScadModifierBodyMixed {
 }
 
 impl ScadModifierBodyMixed {
-    pub(crate) const fn get_children_type(&self) -> ScadObjectDimensionType {
-        ScadObjectDimensionType::ObjectMixed
+    pub(crate) const fn get_children_type(&self) -> DimensionMarker {
+        DimensionMarker::ObjectMixed
     }
 }
 

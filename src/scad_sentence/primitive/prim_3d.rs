@@ -1,11 +1,13 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
+use std::rc::Rc;
 
 use crate::{
     __generate_scad_options, __impl_builder_sentence,
-    common::{Point3D, Unit},
+    common::{Point3D, IntoScad, ScadObjectGeneric, ScadObjectImpl, Unit},
     internal::generate_sentence_repr,
+    scad_3d::{ScadObject3D, ScadPrimitive3D},
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
     value_type::RoundSize,
 };
@@ -32,13 +34,22 @@ pub struct Sphere {
 
 __impl_builder_sentence!(Sphere);
 
+impl IntoScad<crate::common::D3> for Sphere {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl SphereBuilder {
     /// Set `r` option in SCAD.
     ///
     /// # Arguments
     ///
     /// + `value` - `r` option in SCAD. This is the radius of circle.
-    pub fn r(&mut self, value: Unit) -> &mut Self {
+    pub const fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Radius(value));
         new
@@ -48,7 +59,7 @@ impl SphereBuilder {
     /// # Arguments
     ///
     /// + `value` - `d` option in SCAD. This is the diameter of circle.
-    pub fn d(&mut self, value: Unit) -> &mut Self {
+    pub const fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Diameter(value));
         new
@@ -121,6 +132,15 @@ pub struct Cube {
 }
 
 __impl_builder_sentence!(Cube);
+
+impl IntoScad<crate::common::D3> for Cube {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
 
 impl ScadDisplay for Cube {
     fn repr_scad(&self) -> String {
@@ -226,6 +246,15 @@ impl CylinderBuilder {
 
 __impl_builder_sentence!(Cylinder);
 
+impl IntoScad<crate::common::D3> for Cylinder {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl ScadDisplay for Cylinder {
     fn repr_scad(&self) -> String {
         let size_str = match self.size {
@@ -308,6 +337,15 @@ pub struct Polyhedron {
 
 __impl_builder_sentence!(Polyhedron);
 
+impl IntoScad<crate::common::D3> for Polyhedron {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl PolyhedronBuilder {
     /// Check if `faces` is in the range of `points`'s indicies.
     fn validate(&self) -> Result<(), String> {
@@ -380,6 +418,15 @@ pub struct Import3D {
 
 __impl_builder_sentence!(Import3D);
 
+impl IntoScad<crate::common::D3> for Import3D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
+
 impl ScadDisplay for Import3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -421,6 +468,15 @@ pub struct Surface {
 }
 
 __impl_builder_sentence!(Surface);
+
+impl IntoScad<crate::common::D3> for Surface {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
+        let prim = ScadPrimitive3D::new(self.into());
+        let o = ScadObject3D::Primitive(prim);
+        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+        ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
 
 impl ScadDisplay for Surface {
     fn repr_scad(&self) -> String {

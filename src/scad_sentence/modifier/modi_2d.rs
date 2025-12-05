@@ -1,13 +1,49 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
+use std::rc::Rc;
 
 use crate::{
-    AffineMatrix2D, Point2D, Unit, __generate_scad_options, __impl_builder_sentence,
+    AffineMatrix2D, Point2D, Unit, __generate_scad_options, __impl_apply_to_modifier,
+    __impl_builder_sentence, __impl_modifier_chaining,
+    common::{DimensionType as _, IntoScad, ScadObjectGeneric, ScadObjectImpl},
     internal::generate_sentence_repr,
+    scad_2d::{ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::Angle,
 };
+
+macro_rules! __impl_apply_2d {
+    ($mod_ty:ident) => {
+        __impl_apply_to_modifier!(
+            apply_to,
+            $mod_ty,
+            $crate::scad_2d::ScadModifierBody2D,
+            $crate::common::ScadObject2D,
+            $crate::scad_2d::ScadModifier2D,
+            $crate::scad_2d::ScadObject2D,
+            $crate::common::ScadObjectImpl::Object2D,
+            $crate::common::D2, // output_marker
+            $crate::common::D2  // child_marker
+        );
+    };
+}
+
+macro_rules! __impl_apply_3d {
+    ($mod_ty:ident) => {
+        __impl_apply_to_modifier!(
+            apply_to,
+            $mod_ty,
+            $crate::scad_2d::ScadModifierBody2D, // Modifier body will be ScadModifierBody2D::Projection
+            $crate::common::ScadObject2D,        // Typed output object
+            $crate::scad_2d::ScadModifier2D,     // Concrete ScadModifier type
+            $crate::scad_2d::ScadObject2D,       // Concrete ScadObject enum type
+            $crate::common::ScadObjectImpl::Object2D, // ScadObjectImpl variant
+            $crate::common::D2,                  // Output dimension marker (Projection outputs 2D)
+            $crate::common::D3 // Child dimension marker (Projection takes 3D child)
+        );
+    };
+}
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 2D object and only applys to 2D objects.
@@ -20,6 +56,14 @@ pub struct Translate2D {
 }
 
 __impl_builder_sentence!(Translate2D);
+__impl_modifier_chaining!(Translate2D);
+__impl_apply_2d!(Translate2D);
+
+impl IntoScad<crate::common::D2> for Translate2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for Translate2D {
     fn repr_scad(&self) -> String {
@@ -40,6 +84,14 @@ pub struct Rotate2D {
 }
 
 __impl_builder_sentence!(Rotate2D);
+__impl_modifier_chaining!(Rotate2D);
+__impl_apply_2d!(Rotate2D);
+
+impl IntoScad<crate::common::D2> for Rotate2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl Rotate2DBuilder {
     /// Set rotation angle in degrees.
@@ -47,7 +99,7 @@ impl Rotate2DBuilder {
     /// # Arguments
     ///
     /// + `value` - The rotation angle in degrees.
-    pub fn deg(&mut self, value: Unit) -> &mut Self {
+    pub const fn deg(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.a = Some(Angle::Deg(value));
         new
@@ -57,7 +109,7 @@ impl Rotate2DBuilder {
     /// # Arguments
     ///
     /// + `value` - The rotation angle in radians.
-    pub fn rad(&mut self, value: Unit) -> &mut Self {
+    pub const fn rad(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.a = Some(Angle::Rad(value));
         new
@@ -66,7 +118,7 @@ impl Rotate2DBuilder {
 
 impl ScadDisplay for Rotate2D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr("rotate", __generate_scad_options!(("", self.a);))
+        generate_sentence_repr("rotate", __generate_scad_options!(("a", self.a);))
     }
 }
 
@@ -81,6 +133,14 @@ pub struct Scale2D {
 }
 
 __impl_builder_sentence!(Scale2D);
+__impl_modifier_chaining!(Scale2D);
+__impl_apply_2d!(Scale2D);
+
+impl IntoScad<crate::common::D2> for Scale2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for Scale2D {
     fn repr_scad(&self) -> String {
@@ -116,6 +176,14 @@ pub struct Resize2D {
 }
 
 __impl_builder_sentence!(Resize2D);
+__impl_modifier_chaining!(Resize2D);
+__impl_apply_2d!(Resize2D);
+
+impl IntoScad<crate::common::D2> for Resize2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for Resize2D {
     fn repr_scad(&self) -> String {
@@ -138,6 +206,14 @@ pub struct Mirror2D {
 }
 
 __impl_builder_sentence!(Mirror2D);
+__impl_modifier_chaining!(Mirror2D);
+__impl_apply_2d!(Mirror2D);
+
+impl IntoScad<crate::common::D2> for Mirror2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for Mirror2D {
     fn repr_scad(&self) -> String {
@@ -155,6 +231,14 @@ pub struct MultMatrix2D {
 }
 
 __impl_builder_sentence!(MultMatrix2D);
+__impl_modifier_chaining!(MultMatrix2D);
+__impl_apply_2d!(MultMatrix2D);
+
+impl IntoScad<crate::common::D2> for MultMatrix2D {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for MultMatrix2D {
     fn repr_scad(&self) -> String {
@@ -213,6 +297,14 @@ pub struct Offset {
 }
 
 __impl_builder_sentence!(Offset);
+__impl_modifier_chaining!(Offset);
+__impl_apply_2d!(Offset);
+
+impl IntoScad<crate::common::D2> for Offset {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl OffsetBuilder {
     /// Set `r` option in SCAD.
@@ -220,7 +312,7 @@ impl OffsetBuilder {
     /// # Arguments
     ///
     /// + `value` - `r` option in SCAD. This is the radial offset.
-    pub fn r(&mut self, value: Unit) -> &mut Self {
+    pub const fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(OffsetSize::R(value));
         new
@@ -230,7 +322,7 @@ impl OffsetBuilder {
     /// # Arguments
     ///
     /// + `value` - `delta` option in SCAD. This is the delta offset.
-    pub fn delta(&mut self, value: Unit) -> &mut Self {
+    pub const fn delta(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(OffsetSize::Delta(value));
         new
@@ -267,6 +359,14 @@ pub struct Projection {
 }
 
 __impl_builder_sentence!(Projection);
+__impl_modifier_chaining!(Projection);
+__impl_apply_3d!(Projection);
+
+impl IntoScad<crate::common::D2> for Projection {
+    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
+        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
+    }
+}
 
 impl ScadDisplay for Projection {
     fn repr_scad(&self) -> String {
@@ -303,14 +403,14 @@ mod tests {
                 let _ = rb.deg(45.);
             })
             .repr_scad(),
-            "rotate(45)"
+            "rotate(a = 45)"
         );
         assert_eq!(
             Rotate2D::build_with(|rb| {
                 let _ = rb.rad(PI / 4.);
             })
             .repr_scad(),
-            "rotate(45)"
+            "rotate(a = 45)"
         );
     }
 

@@ -13,7 +13,7 @@ use crate::{
         Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude, Scale3D, Sphere,
         Surface, Translate3D, Union,
     },
-    ScadCommentDisplay, ScadObjectDimensionType, common::ScadObjectImpl,
+    DimensionMarker, ScadCommentDisplay,
 };
 
 /// A 3D object in SCAD.
@@ -67,14 +67,17 @@ impl ScadModifier3D {
     ///
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
-    pub fn try_new(body: ScadModifierBody3D, child: Rc<crate::common::ScadObjectImpl>) -> Option<Self> {
+    pub fn try_new(
+        body: ScadModifierBody3D,
+        child: Rc<crate::common::ScadObjectImpl>,
+    ) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then_some(Self { body, child })
     }
 }
 
 impl ScadDisplay for ScadModifier3D {
     fn repr_scad(&self) -> String {
-        modifier_repr(&self.body, &*self.child)
+        modifier_repr(&self.body, &self.child)
     }
 }
 
@@ -101,7 +104,7 @@ impl ScadBlock3D {
     pub fn try_new(objects: &[crate::common::ScadObjectImpl]) -> Option<Self> {
         objects
             .iter()
-            .all(|o| o.get_type() == ScadObjectDimensionType::Object3D)
+            .all(|o| o.get_type() == DimensionMarker::Object3D)
             .then_some(Self {
                 objects: objects.to_vec(),
             })
@@ -169,7 +172,7 @@ pub enum ScadModifierBody3D {
 }
 
 impl ScadModifierBody3D {
-    pub(crate) const fn get_children_type(&self) -> ScadObjectDimensionType {
+    pub(crate) const fn get_children_type(&self) -> DimensionMarker {
         match self {
             Self::Color(_)
             | Self::Difference(_)
@@ -182,8 +185,8 @@ impl ScadModifierBody3D {
             | Self::Rotate(_)
             | Self::Scale(_)
             | Self::Translate(_)
-            | Self::Union(_) => ScadObjectDimensionType::Object3D,
-            Self::LinearExtrude(_) | Self::RotateExtrude(_) => ScadObjectDimensionType::Object2D,
+            | Self::Union(_) => DimensionMarker::Object3D,
+            Self::LinearExtrude(_) | Self::RotateExtrude(_) => DimensionMarker::Object2D,
         }
     }
 }

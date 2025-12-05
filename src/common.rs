@@ -4,11 +4,10 @@ use std::{
     rc::Rc,
 };
 
-use ambassador::{delegatable_trait, Delegate};
-use derive_more::derive::From;
+use ambassador::delegatable_trait;
 use nalgebra as na;
 
-use crate::scad_display::{ambassador_impl_ScadDisplay, ScadDisplay};
+use crate::scad_display::ScadDisplay;
 
 /// Unit of length to write in SCAD code.
 pub type Unit = f64;
@@ -50,6 +49,11 @@ pub trait ScadBuildable: Sized {
     }
 }
 
+/// Trait for types that can be directly converted into a `ScadObjectGeneric`<D>.
+pub trait IntoScad<D: DimensionType> {
+    fn scad(self) -> ScadObjectGeneric<D>;
+}
+
 /// Trait for Scad sentence types (primitives/modifiers).
 pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
 
@@ -64,7 +68,7 @@ pub(crate) trait ScadCommentDisplay: ScadDisplay {
 
 /// Marker types to represent object dimensions at the type level.
 ///
-/// These are zero-sized types used as generic parameters for ScadObject<D>.
+/// These are zero-sized types used as generic parameters for `ScadObject`<D>.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum DimensionMarker {
     Object2D,
@@ -96,7 +100,7 @@ impl DimensionType for DMixed {
 }
 
 /// Trait for SCAD Objects. Kept for compatibility with modules that
-/// used ScadObjectTrait before the refactor.
+/// used `ScadObjectTrait` before the refactor.
 ///
 /// TODO: doc
 pub trait ScadObjectTrait {
@@ -106,17 +110,17 @@ pub trait ScadObjectTrait {
     fn get_type(&self) -> DimensionMarker;
 }
 
-/// Generic ScadObject parameterized by a dimension marker D.
+/// Generic `ScadObject` parameterized by a dimension marker D.
 ///
 /// NOTE: for a smoother, faster migration we provide both:
-/// - ScadObject<D> generic (new preferred API)
-/// - a type alias ScadObject (old untyped name) which maps to ScadObject<DMixed>
+/// - `ScadObject`<D> generic (new preferred API)
+/// - a type alias `ScadObject` (old untyped name) which maps to `ScadObject`<DMixed>
 ///
 /// /// TODO: doc
 #[derive(Clone, Debug)]
 pub struct ScadObjectGeneric<D: DimensionType> {
     /// internal implementation uses a small enum wrapper (object-safe) instead
-    /// of trying to make the original ScadObjectTrait dyn object-safe.
+    /// of trying to make the original `ScadObjectTrait` dyn object-safe.
     pub(crate) inner: Rc<ScadObjectImpl>,
     pub(crate) phantom: std::marker::PhantomData<D>,
     /// Optional comment attached by users.
@@ -125,7 +129,7 @@ pub struct ScadObjectGeneric<D: DimensionType> {
 
 impl<D: DimensionType> ScadObjectGeneric<D> {
     /// TODO: doc
-    pub(crate) fn from_impl(inner: Rc<ScadObjectImpl>) -> Self {
+    pub fn from_impl(inner: Rc<ScadObjectImpl>) -> Self {
         // runtime assert that implementation marker matches generic marker.
         // For the untyped/mixed generic (DMixed) accept any inner marker: the
         // runtime object can carry Object2D/Object3D/ObjectMixed and still be
@@ -154,15 +158,18 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
 
         // Avoid double-wrapping: if inner already is our adapter, do not wrap again.
         let already_wrapped = match &*self.inner {
-            ScadObjectImpl::Object2D(rc) => {
-                rc.as_any().downcast_ref::<ScadObjectImplWithComment>().is_some()
-            }
-            ScadObjectImpl::Object3D(rc) => {
-                rc.as_any().downcast_ref::<ScadObjectImplWithComment>().is_some()
-            }
-            ScadObjectImpl::ObjectMixed(rc) => {
-                rc.as_any().downcast_ref::<ScadObjectImplWithComment>().is_some()
-            }
+            ScadObjectImpl::Object2D(rc) => rc
+                .as_any()
+                .downcast_ref::<ScadObjectImplWithComment>()
+                .is_some(),
+            ScadObjectImpl::Object3D(rc) => rc
+                .as_any()
+                .downcast_ref::<ScadObjectImplWithComment>()
+                .is_some(),
+            ScadObjectImpl::ObjectMixed(rc) => rc
+                .as_any()
+                .downcast_ref::<ScadObjectImplWithComment>()
+                .is_some(),
         };
 
         if !already_wrapped {
@@ -171,24 +178,15 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
             // that inspect the discriminant (e.g. block_2d) still see the same
             // runtime type.
             let new_impl = match old_inner.get_type() {
-                DimensionMarker::Object2D => {
-                    ScadObjectImpl::Object2D(Rc::new(ScadObjectImplWithComment::new(
-                        old_inner,
-                        comment.to_string(),
-                    )))
-                }
-                DimensionMarker::Object3D => {
-                    ScadObjectImpl::Object3D(Rc::new(ScadObjectImplWithComment::new(
-                        old_inner,
-                        comment.to_string(),
-                    )))
-                }
-                DimensionMarker::ObjectMixed => {
-                    ScadObjectImpl::ObjectMixed(Rc::new(ScadObjectImplWithComment::new(
-                        old_inner,
-                        comment.to_string(),
-                    )))
-                }
+                DimensionMarker::Object2D => ScadObjectImpl::Object2D(Rc::new(
+                    ScadObjectImplWithComment::new(old_inner, comment.to_string()),
+                )),
+                DimensionMarker::Object3D => ScadObjectImpl::Object3D(Rc::new(
+                    ScadObjectImplWithComment::new(old_inner, comment.to_string()),
+                )),
+                DimensionMarker::ObjectMixed => ScadObjectImpl::ObjectMixed(Rc::new(
+                    ScadObjectImplWithComment::new(old_inner, comment.to_string()),
+                )),
             };
             self.inner = Rc::new(new_impl);
         }
@@ -213,8 +211,10 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
     }
 }
 
+// End of common.rs — ensure file ends with a newline to satisfy the parser.
+
 /// A thin runtime wrapper for interoperability with existing code that expected
-/// a single ScadObject value. This keeps a weak reference to the real inner
+/// a single `ScadObject` value. This keeps a weak reference to the real inner
 /// Rc to avoid ownership changes when bridging typed -> untyped worlds.
 #[derive(Clone, Debug)]
 pub struct ScadObjectWrapper {
@@ -225,28 +225,26 @@ pub struct ScadObjectWrapper {
 /// TODO: doc
 impl ScadObjectWrapper {
     pub fn to_code(&self) -> String {
-        if let Some(rc) = self.inner.upgrade() {
-            match &self.comment {
+        match self.inner.upgrade() {
+            Some(rc) => match &self.comment {
                 Some(c) => format!("/* {} */\n{}", c, rc.to_code()),
                 None => rc.to_code(),
-            }
-        } else {
-            String::new()
+            },
+            _ => String::new(),
         }
     }
 
     pub fn get_type(&self) -> DimensionMarker {
-        if let Some(rc) = self.inner.upgrade() {
-            rc.get_type()
-        } else {
-            DimensionMarker::ObjectMixed
+        match self.inner.upgrade() {
+            Some(rc) => rc.get_type(),
+            _ => DimensionMarker::ObjectMixed,
         }
     }
 }
 
 /// Runtime concrete implementation enum for object content.
 ///
-/// We purposely implement a single concrete enum (ScadObjectImpl) that is
+/// We purposely implement a single concrete enum (`ScadObjectImpl`) that is
 /// object-safe and carries the representation behavior. This is much easier to
 /// use behind Rc/Weak than attempting to make the original trait dyn-safe.
 pub enum ScadObjectImpl {
@@ -266,7 +264,7 @@ impl ScadObjectImpl {
             Self::ObjectMixed(v) => v.as_ref().to_code(),
         }
     }
-    pub fn get_type(&self) -> DimensionMarker {
+    pub const fn get_type(&self) -> DimensionMarker {
         match self {
             Self::Object2D(_) => DimensionMarker::Object2D,
             Self::Object3D(_) => DimensionMarker::Object3D,
@@ -285,7 +283,7 @@ impl Clone for ScadObjectImpl {
     }
 }
 
-impl std::fmt::Debug for ScadObjectImpl {
+impl Debug for ScadObjectImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Object2D(_) => f.debug_tuple("ScadObjectImpl::Object2D").finish(),
@@ -296,7 +294,7 @@ impl std::fmt::Debug for ScadObjectImpl {
 }
 
 /// Small object-safe helper traits implemented by the concrete sentence enums
-/// to allow ScadObjectImpl to call into existing repr code.
+/// to allow `ScadObjectImpl` to call into existing repr code.
 use std::any::Any;
 
 pub trait ScadObjectRepr2D: Any {
@@ -314,20 +312,20 @@ pub trait ScadObjectReprMixed: Any {
     fn as_any(&self) -> &dyn Any;
 }
 
-/// Adapter that wraps an existing ScadObjectImpl and emits a leading comment
-/// when to_code() is called. This preserves comment information when the
+/// Adapter that wraps an existing `ScadObjectImpl` and emits a leading comment
+/// when `to_code()` is called. This preserves comment information when the
 /// runtime inner implementations are cloned and embedded into blocks/modify
 /// constructs.
 ///
 /// Implement all 2D/3D/Mixed repr traits so the adapter can be used in place
 /// of the original concrete variant without changing the variant discriminant.
 pub struct ScadObjectImplWithComment {
-    pub child: std::rc::Rc<ScadObjectImpl>,
+    pub child: Rc<ScadObjectImpl>,
     pub comment: String,
 }
 
 impl ScadObjectImplWithComment {
-    pub fn new(child: std::rc::Rc<ScadObjectImpl>, comment: String) -> Self {
+    pub const fn new(child: Rc<ScadObjectImpl>, comment: String) -> Self {
         Self { child, comment }
     }
 
@@ -391,7 +389,7 @@ impl ScadObjectReprMixed for crate::scad_mixed::ScadObjectMixed {
     }
 }
 
-/// Backwards-compatible alias: plain ScadObject refers to the mixed/runtime
+/// Backwards-compatible alias: plain `ScadObject` refers to the mixed/runtime
 /// variant. Existing call sites that used `ScadObject` (non-generic) will now
 /// keep compiling but the new, preferred API is `ScadObjectGeneric<D2>` / `ScadObjectGeneric<D3>`.
 pub type ScadObjectUntyped = ScadObjectGeneric<DMixed>;
@@ -399,7 +397,175 @@ pub type ScadObjectUntyped = ScadObjectGeneric<DMixed>;
 /// variant for backwards compatibility.
 pub type ScadObject = ScadObjectUntyped;
 /// Backwards-compatible alias for the earlier runtime enum type.
-pub type ScadObjectDimensionType = DimensionMarker;
+// Backwards-compat alias removed: use `DimensionMarker` directly.
+
+///
+// Backwards-compat alias removed: use `DimensionMarker` directly.
+
+/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
+/// These provide a typed, ergonomic API surface while reusing the existing
+/// runtime implementation under the hood.
+///
+/// Note: kept intentionally lightweight to remain non-breaking.
+///
+/// Public-facing wrapper types presented to library users. These are thin
+/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
+/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
+/// remain in their modules and are referenced via fully-qualified paths.
+#[derive(Clone, Debug)]
+pub struct ScadObject2D(pub(crate) ScadObjectGeneric<D2>);
+
+impl ScadObject2D {
+    /// Generate SCAD code for the object.
+    pub fn to_code(&self) -> String {
+        self.0.to_code()
+    }
+
+    /// Convert into the backwards-compatible untyped `ScadObject`.
+    pub fn into_untyped(self) -> ScadObject {
+        ScadObjectGeneric::from_impl(self.0.inner)
+    }
+}
+
+impl From<ScadObject2D> for ScadObject {
+    fn from(v: ScadObject2D) -> Self {
+        v.into_untyped()
+    }
+}
+
+impl ScadDisplay for ScadObject2D {
+    fn repr_scad(&self) -> String {
+        // Use the typed wrapper's to_code to produce the canonical SCAD
+        // representation (including any comment).
+        self.to_code()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ScadObject3D(pub(crate) ScadObjectGeneric<D3>);
+
+impl ScadObject3D {
+    /// Generate SCAD code for the object.
+    pub fn to_code(&self) -> String {
+        self.0.to_code()
+    }
+
+    /// Convert into the backwards-compatible untyped `ScadObject`.
+    pub fn into_untyped(self) -> ScadObject {
+        ScadObjectGeneric::from_impl(self.0.inner)
+    }
+}
+
+impl From<ScadObject3D> for ScadObject {
+    fn from(v: ScadObject3D) -> Self {
+        v.into_untyped()
+    }
+}
+
+impl ScadDisplay for ScadObject3D {
+    fn repr_scad(&self) -> String {
+        self.to_code()
+    }
+}
+
+// Allow converting an untyped runtime ScadObject (ScadObjectGeneric<DMixed>) into
+// a typed ScadObject3D by runtime-checking the inner variant. This enables ergonomic
+// calls like Translate3D::build_with(...).apply_to(untyped_scad_object).
+impl From<ScadObjectGeneric<DMixed>> for ScadObject3D {
+    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            v.inner.get_type() == DimensionMarker::Object3D,
+            "Modifier requires: Object3D"
+        );
+        Self(ScadObjectGeneric::<D3>::from_impl(v.inner))
+    }
+}
+
+impl From<ScadObjectGeneric<DMixed>> for ScadObject2D {
+    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            v.inner.get_type() == DimensionMarker::Object2D,
+            "Modifier requires: Object2D"
+        );
+        Self(ScadObjectGeneric::<D2>::from_impl(v.inner))
+    }
+}
+
+// Added From implementations for ScadObjectGeneric<D>
+impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D2> {
+    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            v.inner.get_type() == DimensionMarker::Object2D,
+            "Dimension mismatch: expected Object2D, got {:?}",
+            v.inner.get_type()
+        );
+        Self::from_impl(v.inner)
+    }
+}
+
+impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D3> {
+    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            v.inner.get_type() == DimensionMarker::Object3D,
+            "Dimension mismatch: expected Object3D, got {:?}",
+            v.inner.get_type()
+        );
+        Self::from_impl(v.inner)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ScadObjectMixed(pub(crate) ScadObjectGeneric<DMixed>);
+
+impl ScadObjectMixed {
+    /// Generate SCAD code for the object.
+    pub fn to_code(&self) -> String {
+        self.0.to_code()
+    }
+
+    /// Convert into the backwards-compatible untyped `ScadObject`.
+    pub fn into_untyped(self) -> ScadObject {
+        ScadObjectGeneric::from_impl(self.0.inner)
+    }
+}
+
+impl From<ScadObjectMixed> for ScadObject {
+    fn from(v: ScadObjectMixed) -> Self {
+        v.into_untyped()
+    }
+}
+
+// Added From implementations for concrete ScadObject2D and ScadObject3D to ScadObjectGeneric<D>
+impl From<ScadObject2D> for ScadObjectGeneric<D2> {
+    fn from(v: ScadObject2D) -> Self {
+        v.0
+    }
+}
+
+impl From<ScadObject3D> for ScadObjectGeneric<D3> {
+    fn from(v: ScadObject3D) -> Self {
+        v.0
+    }
+}
+
+// Added From implementations for typed ScadObjectGeneric to untyped ScadObjectGeneric<DMixed>
+impl From<ScadObjectGeneric<D2>> for ScadObjectGeneric<DMixed> {
+    fn from(v: ScadObjectGeneric<D2>) -> Self {
+        Self::from_impl(v.inner)
+    }
+}
+
+impl From<ScadObjectGeneric<D3>> for ScadObjectGeneric<DMixed> {
+    fn from(v: ScadObjectGeneric<D3>) -> Self {
+        Self::from_impl(v.inner)
+    }
+}
+
+impl ScadDisplay for ScadObjectMixed {
+    fn repr_scad(&self) -> String {
+        self.to_code()
+    }
+}
 
 /// Implement conversion helpers and basic operators for untyped compatibility.
 /// Note: heavy use of boxed trait objects simplifies the transition but can be
@@ -415,20 +581,19 @@ impl Add for ScadObjectWrapper {
         // perform flattening of left-side unions for same-dimension cases.
         if let (Some(lrc), Some(rrc)) = (l_up.as_ref(), r_up.as_ref()) {
             // If types mismatch, panic with the same messages the generic impl uses.
-            if lrc.get_type() != rrc.get_type() {
-                panic!(
-                    "`{}` is not allowed",
-                    match (lrc.get_type(), rrc.get_type()) {
-                        (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                            "Object2D + Object3D"
-                        }
-                        (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                            "Object3D + Object2D"
-                        }
-                        _ => "Mismatched dimensions",
+            assert!(
+                lrc.get_type() == rrc.get_type(),
+                "`{}` is not allowed",
+                match (lrc.get_type(), rrc.get_type()) {
+                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                        "Object2D + Object3D"
                     }
-                );
-            }
+                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                        "Object3D + Object2D"
+                    }
+                    _ => "Mismatched dimensions",
+                }
+            );
 
             match (&**lrc, &**rrc) {
                 (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
@@ -436,13 +601,13 @@ impl Add for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
                             {
                                 match concrete {
                                     crate::scad_2d::ScadObject2D::Modifier(m) => {
-                                        if let crate::scad_2d::ScadModifierBody2D::Union(_) =
-                                            m.body
+                                        if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body
                                         {
                                             if let ScadObjectImpl::Object2D(child_enum_rc) =
                                                 &*m.child
@@ -483,11 +648,12 @@ impl Add for ScadObjectWrapper {
                     let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
                     let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
                     let body = crate::scad_sentence::Union::new();
-                    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl))
-                        .expect("Union modifier requires: Object2D");
+                    let m =
+                        crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl))
+                            .expect("Union modifier requires: Object2D");
                     let o = crate::scad_2d::ScadObject2D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -497,13 +663,13 @@ impl Add for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
                             {
                                 match concrete {
                                     crate::scad_3d::ScadObject3D::Modifier(m) => {
-                                        if let crate::scad_3d::ScadModifierBody3D::Union(_) =
-                                            m.body
+                                        if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body
                                         {
                                             if let ScadObjectImpl::Object3D(child_enum_rc) =
                                                 &*m.child
@@ -544,11 +710,12 @@ impl Add for ScadObjectWrapper {
                     let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
                     let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
                     let body = crate::scad_sentence::Union::new();
-                    let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl))
-                        .expect("Union modifier requires: Object3D");
+                    let m =
+                        crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl))
+                            .expect("Union modifier requires: Object3D");
                     let o = crate::scad_3d::ScadObject3D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -573,7 +740,7 @@ impl Add for ScadObjectWrapper {
         let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
         let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
         let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-        ScadObjectWrapper {
+        Self {
             inner: Rc::downgrade(&rc_impl),
             comment: None,
         }
@@ -588,20 +755,19 @@ impl Sub for ScadObjectWrapper {
         let right_up = rhs.inner.upgrade();
 
         if let (Some(lrc), Some(rrc)) = (left_up.as_ref(), right_up.as_ref()) {
-            if lrc.get_type() != rrc.get_type() {
-                panic!(
-                    "`{}` is not allowed",
-                    match (lrc.get_type(), rrc.get_type()) {
-                        (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                            "Object2D - Object3D"
-                        }
-                        (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                            "Object3D - Object2D"
-                        }
-                        _ => "Mismatched dimensions",
+            assert!(
+                lrc.get_type() == rrc.get_type(),
+                "`{}` is not allowed",
+                match (lrc.get_type(), rrc.get_type()) {
+                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                        "Object2D - Object3D"
                     }
-                );
-            }
+                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                        "Object3D - Object2D"
+                    }
+                    _ => "Mismatched dimensions",
+                }
+            );
 
             match (&**lrc, &**rrc) {
                 (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
@@ -609,8 +775,9 @@ impl Sub for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
                             {
                                 match concrete {
                                     crate::scad_2d::ScadObject2D::Modifier(m) => {
@@ -656,11 +823,12 @@ impl Sub for ScadObjectWrapper {
                     let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
                     let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
                     let body = crate::scad_sentence::Difference::new();
-                    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
-                        .expect("Difference modifier requires: Object2D");
+                    let m =
+                        crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
+                            .expect("Difference modifier requires: Object2D");
                     let o = crate::scad_2d::ScadObject2D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -670,8 +838,9 @@ impl Sub for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
                             {
                                 match concrete {
                                     crate::scad_3d::ScadObject3D::Modifier(m) => {
@@ -722,7 +891,7 @@ impl Sub for ScadObjectWrapper {
                             .expect("Difference modifier requires: Object3D");
                     let o = crate::scad_3d::ScadObject3D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -731,7 +900,7 @@ impl Sub for ScadObjectWrapper {
             }
         }
 
-        let mut parts: Vec<crate::common::ScadObjectImpl> = Vec::new();
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
         if let Some(lrc) = left_up {
             parts.push((*lrc).clone());
         }
@@ -745,7 +914,7 @@ impl Sub for ScadObjectWrapper {
         let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
         let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
         let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-        ScadObjectWrapper {
+        Self {
             inner: Rc::downgrade(&rc_impl),
             comment: None,
         }
@@ -760,20 +929,19 @@ impl Mul for ScadObjectWrapper {
         let right_rc_opt = rhs.inner.upgrade();
 
         if let (Some(lrc), Some(rrc)) = (left_rc_opt.as_ref(), right_rc_opt.as_ref()) {
-            if lrc.get_type() != rrc.get_type() {
-                panic!(
-                    "`{}` is not allowed",
-                    match (lrc.get_type(), rrc.get_type()) {
-                        (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                            "Object2D * Object3D"
-                        }
-                        (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                            "Object3D * Object2D"
-                        }
-                        _ => "Mismatched dimensions",
+            assert!(
+                lrc.get_type() == rrc.get_type(),
+                "`{}` is not allowed",
+                match (lrc.get_type(), rrc.get_type()) {
+                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                        "Object2D * Object3D"
                     }
-                );
-            }
+                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                        "Object3D * Object2D"
+                    }
+                    _ => "Mismatched dimensions",
+                }
+            );
 
             match (&**lrc, &**rrc) {
                 (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
@@ -781,8 +949,9 @@ impl Mul for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
                             {
                                 match concrete {
                                     crate::scad_2d::ScadObject2D::Modifier(m) => {
@@ -828,11 +997,12 @@ impl Mul for ScadObjectWrapper {
                     let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
                     let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
                     let body = crate::scad_sentence::Intersection::new();
-                    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
-                        .expect("Intersection modifier requires: Object2D");
+                    let m =
+                        crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
+                            .expect("Intersection modifier requires: Object2D");
                     let o = crate::scad_2d::ScadObject2D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -842,8 +1012,9 @@ impl Mul for ScadObjectWrapper {
 
                     let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                         if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                            if let Some(concrete) =
-                                inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                            if let Some(concrete) = inner_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
                             {
                                 match concrete {
                                     crate::scad_3d::ScadObject3D::Modifier(m) => {
@@ -894,7 +1065,7 @@ impl Mul for ScadObjectWrapper {
                             .expect("Intersection modifier requires: Object3D");
                     let o = crate::scad_3d::ScadObject3D::Modifier(m);
                     let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                    return ScadObjectWrapper {
+                    return Self {
                         inner: Rc::downgrade(&rc_impl),
                         comment: None,
                     };
@@ -903,7 +1074,7 @@ impl Mul for ScadObjectWrapper {
             }
         }
 
-        let mut parts: Vec<crate::common::ScadObjectImpl> = Vec::new();
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
         if let Some(lrc) = left_rc_opt {
             parts.push((*lrc).clone());
         }
@@ -917,7 +1088,7 @@ impl Mul for ScadObjectWrapper {
         let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
         let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
         let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-        ScadObjectWrapper {
+        Self {
             inner: Rc::downgrade(&rc_impl),
             comment: None,
         }
@@ -934,20 +1105,19 @@ impl Add for ScadObjectGeneric<DMixed> {
         let right_rc = rhs.inner;
 
         // If runtime dimension mismatch -> panic with message tests expect.
-        if left_rc.get_type() != right_rc.get_type() {
-            panic!(
-                "`{}` is not allowed",
-                match (left_rc.get_type(), right_rc.get_type()) {
-                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                        "Object2D + Object3D"
-                    }
-                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                        "Object3D + Object2D"
-                    }
-                    _ => "Mismatched dimensions",
+        assert!(
+            left_rc.get_type() == right_rc.get_type(),
+            "`{}` is not allowed",
+            match (left_rc.get_type(), right_rc.get_type()) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                    "Object2D + Object3D"
                 }
-            );
-        }
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                    "Object3D + Object2D"
+                }
+                _ => "Mismatched dimensions",
+            }
+        );
 
         match (&*left_rc, &*right_rc) {
             // Same-dimension 2D: flatten left-side unions/blocks when possible.
@@ -956,20 +1126,18 @@ impl Add for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
                         {
                             match concrete {
                                 crate::scad_2d::ScadObject2D::Modifier(m) => {
-                                    if let crate::scad_2d::ScadModifierBody2D::Union(_) =
-                                        m.body
-                                    {
-                                        if let ScadObjectImpl::Object2D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                                    if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body {
+                                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_2d::ScadObject2D>()
                                             {
                                                 if let crate::scad_2d::ScadObject2D::Block(b) =
                                                     child_concrete
@@ -1003,11 +1171,12 @@ impl Add for ScadObjectGeneric<DMixed> {
                 let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
                 let rc_impl_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
                 let body = crate::scad_sentence::Union::new();
-                let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl_child))
-                    .expect("Union modifier requires: Object2D");
+                let m =
+                    crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl_child))
+                        .expect("Union modifier requires: Object2D");
                 let o = crate::scad_2d::ScadObject2D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             // Same-dimension 3D: flatten left-side unions/blocks when possible.
@@ -1016,20 +1185,18 @@ impl Add for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
                         {
                             match concrete {
                                 crate::scad_3d::ScadObject3D::Modifier(m) => {
-                                    if let crate::scad_3d::ScadModifierBody3D::Union(_) =
-                                        m.body
-                                    {
-                                        if let ScadObjectImpl::Object3D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                                    if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body {
+                                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_3d::ScadObject3D>()
                                             {
                                                 if let crate::scad_3d::ScadObject3D::Block(b) =
                                                     child_concrete
@@ -1068,7 +1235,7 @@ impl Add for ScadObjectGeneric<DMixed> {
                         .expect("Union modifier requires: Object3D");
                 let o = crate::scad_3d::ScadObject3D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             // Mixed or cross-dimension handled as mixed union (shouldn't happen due to earlier panic)
@@ -1083,7 +1250,7 @@ impl Add for ScadObjectGeneric<DMixed> {
                 let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
                 let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
                 let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
         }
     }
@@ -1097,20 +1264,19 @@ impl Sub for ScadObjectGeneric<DMixed> {
         let right_rc = rhs.inner;
 
         // dimension mismatch -> panic with expected message
-        if left_rc.get_type() != right_rc.get_type() {
-            panic!(
-                "`{}` is not allowed",
-                match (left_rc.get_type(), right_rc.get_type()) {
-                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                        "Object2D - Object3D"
-                    }
-                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                        "Object3D - Object2D"
-                    }
-                    _ => "Mismatched dimensions",
+        assert!(
+            left_rc.get_type() == right_rc.get_type(),
+            "`{}` is not allowed",
+            match (left_rc.get_type(), right_rc.get_type()) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                    "Object2D - Object3D"
                 }
-            );
-        }
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                    "Object3D - Object2D"
+                }
+                _ => "Mismatched dimensions",
+            }
+        );
 
         match (&*left_rc, &*right_rc) {
             (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
@@ -1120,20 +1286,20 @@ impl Sub for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
                         {
                             match concrete {
                                 crate::scad_2d::ScadObject2D::Modifier(m) => {
                                     if let crate::scad_2d::ScadModifierBody2D::Difference(_) =
                                         m.body
                                     {
-                                        if let ScadObjectImpl::Object2D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_2d::ScadObject2D>()
                                             {
                                                 if let crate::scad_2d::ScadObject2D::Block(b) =
                                                     child_concrete
@@ -1171,7 +1337,7 @@ impl Sub for ScadObjectGeneric<DMixed> {
                     .expect("Difference modifier requires: Object2D");
                 let o = crate::scad_2d::ScadObject2D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             (ScadObjectImpl::Object3D(_), ScadObjectImpl::Object3D(_)) => {
@@ -1179,20 +1345,20 @@ impl Sub for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
                         {
                             match concrete {
                                 crate::scad_3d::ScadObject3D::Modifier(m) => {
                                     if let crate::scad_3d::ScadModifierBody3D::Difference(_) =
                                         m.body
                                     {
-                                        if let ScadObjectImpl::Object3D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_3d::ScadObject3D>()
                                             {
                                                 if let crate::scad_3d::ScadObject3D::Block(b) =
                                                     child_concrete
@@ -1226,12 +1392,11 @@ impl Sub for ScadObjectGeneric<DMixed> {
                 let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
                 let rc_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
                 let body = crate::scad_sentence::Difference::new();
-                let m =
-                    crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
-                        .expect("Difference modifier requires: Object3D");
+                let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
+                    .expect("Difference modifier requires: Object3D");
                 let o = crate::scad_3d::ScadObject3D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             _ => {
@@ -1245,7 +1410,7 @@ impl Sub for ScadObjectGeneric<DMixed> {
                 let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
                 let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
                 let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
         }
     }
@@ -1259,20 +1424,19 @@ impl Mul for ScadObjectGeneric<DMixed> {
         let right_rc = rhs.inner;
 
         // dimension mismatch -> panic with expected message
-        if left_rc.get_type() != right_rc.get_type() {
-            panic!(
-                "`{}` is not allowed",
-                match (left_rc.get_type(), right_rc.get_type()) {
-                    (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                        "Object2D * Object3D"
-                    }
-                    (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                        "Object3D * Object2D"
-                    }
-                    _ => "Mismatched dimensions",
+        assert!(
+            left_rc.get_type() == right_rc.get_type(),
+            "`{}` is not allowed",
+            match (left_rc.get_type(), right_rc.get_type()) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
+                    "Object2D * Object3D"
                 }
-            );
-        }
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
+                    "Object3D * Object2D"
+                }
+                _ => "Mismatched dimensions",
+            }
+        );
 
         match (&*left_rc, &*right_rc) {
             (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
@@ -1280,20 +1444,20 @@ impl Mul for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
                         {
                             match concrete {
                                 crate::scad_2d::ScadObject2D::Modifier(m) => {
                                     if let crate::scad_2d::ScadModifierBody2D::Intersection(_) =
                                         m.body
                                     {
-                                        if let ScadObjectImpl::Object2D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_2d::ScadObject2D>()
                                             {
                                                 if let crate::scad_2d::ScadObject2D::Block(b) =
                                                     child_concrete
@@ -1331,7 +1495,7 @@ impl Mul for ScadObjectGeneric<DMixed> {
                     .expect("Intersection modifier requires: Object2D");
                 let o = crate::scad_2d::ScadObject2D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             (ScadObjectImpl::Object3D(_), ScadObjectImpl::Object3D(_)) => {
@@ -1339,20 +1503,20 @@ impl Mul for ScadObjectGeneric<DMixed> {
 
                 let mut extend_from = |rc: &Rc<ScadObjectImpl>| {
                     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-                        if let Some(concrete) =
-                            inner_enum_rc.as_any().downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        if let Some(concrete) = inner_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
                         {
                             match concrete {
                                 crate::scad_3d::ScadObject3D::Modifier(m) => {
                                     if let crate::scad_3d::ScadModifierBody3D::Intersection(_) =
                                         m.body
                                     {
-                                        if let ScadObjectImpl::Object3D(child_enum_rc) =
-                                            &*m.child
-                                        {
-                                            if let Some(child_concrete) = child_enum_rc
-                                                .as_any()
-                                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                                            if let Some(child_concrete) =
+                                                child_enum_rc
+                                                    .as_any()
+                                                    .downcast_ref::<crate::scad_3d::ScadObject3D>()
                                             {
                                                 if let crate::scad_3d::ScadObject3D::Block(b) =
                                                     child_concrete
@@ -1386,12 +1550,11 @@ impl Mul for ScadObjectGeneric<DMixed> {
                 let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
                 let rc_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
                 let body = crate::scad_sentence::Intersection::new();
-                let m =
-                    crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
-                        .expect("Intersection modifier requires: Object3D");
+                let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
+                    .expect("Intersection modifier requires: Object3D");
                 let o = crate::scad_3d::ScadObject3D::Modifier(m);
                 let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
 
             _ => {
@@ -1405,7 +1568,7 @@ impl Mul for ScadObjectGeneric<DMixed> {
                 let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
                 let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
                 let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                ScadObjectGeneric::from_impl(rc_impl)
+                Self::from_impl(rc_impl)
             }
         }
     }

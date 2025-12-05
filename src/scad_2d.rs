@@ -12,7 +12,7 @@ use crate::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
         Offset, Polygon, Projection, Resize2D, Rotate2D, Scale2D, Square, Text, Translate2D, Union,
     },
-    ScadCommentDisplay, ScadObjectDimensionType, common::ScadObjectImpl,
+    DimensionMarker, ScadCommentDisplay,
 };
 
 /// A 2D object in SCAD.
@@ -66,14 +66,17 @@ impl ScadModifier2D {
     ///
     /// + `Some(Self)`: The new object generated.
     /// + `None`: If type of `child`is not matched with `body`
-    pub fn try_new(body: ScadModifierBody2D, child: Rc<crate::common::ScadObjectImpl>) -> Option<Self> {
+    pub fn try_new(
+        body: ScadModifierBody2D,
+        child: Rc<crate::common::ScadObjectImpl>,
+    ) -> Option<Self> {
         (child.get_type() == body.get_children_type()).then_some(Self { body, child })
     }
 }
 
 impl ScadDisplay for ScadModifier2D {
     fn repr_scad(&self) -> String {
-        modifier_repr(&self.body, &*self.child)
+        modifier_repr(&self.body, &self.child)
     }
 }
 
@@ -100,7 +103,7 @@ impl ScadBlock2D {
     pub fn try_new(objects: &[crate::common::ScadObjectImpl]) -> Option<Self> {
         objects
             .iter()
-            .all(|o| o.get_type() == ScadObjectDimensionType::Object2D)
+            .all(|o| o.get_type() == DimensionMarker::Object2D)
             .then_some(Self {
                 objects: objects.to_vec(),
             })
@@ -167,7 +170,7 @@ pub enum ScadModifierBody2D {
 
 impl ScadModifierBody2D {
     /// Gets the expected child type for this modifier.
-    pub(crate) const fn get_children_type(&self) -> ScadObjectDimensionType {
+    pub(crate) const fn get_children_type(&self) -> DimensionMarker {
         match self {
             Self::Color(_)
             | Self::Difference(_)
@@ -181,8 +184,8 @@ impl ScadModifierBody2D {
             | Self::Rotate(_)
             | Self::Scale(_)
             | Self::Translate(_)
-            | Self::Union(_) => ScadObjectDimensionType::Object2D,
-            Self::Projection(_) => ScadObjectDimensionType::Object3D,
+            | Self::Union(_) => DimensionMarker::Object2D,
+            Self::Projection(_) => DimensionMarker::Object3D,
         }
     }
 }

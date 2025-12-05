@@ -4,21 +4,15 @@ pub(crate) mod internal;
 mod macros;
 
 #[allow(clippy::redundant_pub_crate)]
-mod common;
+pub mod common;
 use std::rc::Rc;
 
 pub use common::*;
-use scad_2d::{
-    ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadPrimitive2D,
-    ScadPrimitiveBody2D, ScadObject2D,
-};
-use scad_3d::{
-    ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadPrimitive3D,
-    ScadPrimitiveBody3D, ScadObject3D,
-};
-use scad_mixed::{ScadBlockMixed, ScadModifierBodyMixed, ScadModifierMixed, ScadObjectMixed};
+use scad_2d::{ScadModifierBody2D, ScadObject2D, ScadPrimitive2D, ScadPrimitiveBody2D};
+use scad_3d::{ScadModifierBody3D, ScadObject3D, ScadPrimitive3D, ScadPrimitiveBody3D};
+use scad_mixed::{ScadModifierBodyMixed, ScadObjectMixed};
 
-use crate::scad_display::ScadDisplay;
+use crate::scad_display::ScadDisplay as _;
 
 pub mod scad_display;
 pub mod value_type;
@@ -37,23 +31,31 @@ pub mod scad_sentence;
 pub mod prelude {
     pub use crate::{
         // factory helpers
-        block_2d, block_2d_commented, block_3d, block_3d_commented, block_mixed,
-        block_mixed_commented, modifier_2d, modifier_2d_commented, modifier_3d,
-        modifier_3d_commented, modifier_mixed, modifier_mixed_commented, primitive_2d,
-        primitive_2d_commented, primitive_3d, primitive_3d_commented, try_block_2d,
-        try_block_2d_commented, try_block_3d, try_block_3d_commented, try_modifier_2d,
-        try_modifier_2d_commented, try_modifier_3d, try_modifier_3d_commented,
-        // core object and helpers
-        ScadObject, ScadObjectGeneric, ScadObjectUntyped, ScadObjectDimensionType,
-        ScadBuildable as _, ScadBuilder as _,
-        // geometry / value types
-        value_type::{RGB, RGBA},
-        AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Point2D, Point3D, Unit,
+        block_2d,
+        block_2d_commented,
+        block_3d,
+        block_3d_commented,
+        block_mixed,
+        block_mixed_commented,
+        modifier_2d,
+        modifier_2d_commented,
+        modifier_3d,
+        modifier_3d_commented,
+        modifier_mixed,
+        modifier_mixed_commented,
+        primitive_2d,
+        primitive_2d_commented,
+        primitive_3d,
+        primitive_3d_commented,
         // sentence and module types (re-export for convenience)
-        scad_2d::{ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
-                  ScadPrimitiveBody2D},
-        scad_3d::{ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
-                  ScadPrimitiveBody3D},
+        scad_2d::{
+            ScadBlock2D, ScadModifier2D, ScadModifierBody2D, ScadObject2D, ScadPrimitive2D,
+            ScadPrimitiveBody2D,
+        },
+        scad_3d::{
+            ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D, ScadPrimitive3D,
+            ScadPrimitiveBody3D,
+        },
         scad_mixed::{ScadBlockMixed, ScadModifierBodyMixed, ScadModifierMixed, ScadObjectMixed},
         scad_sentence::{
             Circle, Color, Cube, Cylinder, Difference, Hull, Import2D, Import3D, Intersection,
@@ -61,6 +63,30 @@ pub mod prelude {
             Polygon, Polyhedron, Resize2D, Resize3D, Rotate2D, Rotate3D, RotateExtrude, Scale2D,
             Scale3D, Sphere, Square, Surface, Text, Translate2D, Translate3D, Union,
         },
+        try_block_2d,
+        try_block_2d_commented,
+        try_block_3d,
+        try_block_3d_commented,
+        try_modifier_2d,
+        try_modifier_2d_commented,
+        try_modifier_3d,
+        try_modifier_3d_commented,
+        // geometry / value types
+        value_type::{RGB, RGBA},
+        AffineMatrix2D,
+        AffineMatrix3D,
+        Container2D,
+        Container3D,
+        DimensionMarker,
+        Point2D,
+        Point3D,
+        ScadBuildable as _,
+        ScadBuilder as _,
+        // core object and helpers
+        ScadObject,
+        ScadObjectGeneric,
+        ScadObjectUntyped,
+        Unit,
     };
 }
 
@@ -123,21 +149,21 @@ impl ScadObjectReprMixed for AdapterMixed {
     }
 }
 
-/// Wrap a 2D concrete enum into the runtime ScadObject (mixed untyped alias).
+/// Wrap a 2D concrete enum into the runtime `ScadObject` (mixed untyped alias).
 fn wrap_2d(o: ScadObject2D) -> ScadObject {
     let rc_impl = Rc::new(ImplEnum::Object2D(Rc::new(Adapter2D(o))));
     // ScadObject is a type alias to ScadObjectGeneric<DMixed>, use the ctor present
     ScadObject::from_impl(rc_impl)
 }
 
-/// Wrap a 3D concrete enum into the runtime ScadObject.
+/// Wrap a 3D concrete enum into the runtime `ScadObject`.
 fn wrap_3d(o: ScadObject3D) -> ScadObject {
     let rc_impl = Rc::new(ImplEnum::Object3D(Rc::new(Adapter3D(o))));
     ScadObject::from_impl(rc_impl)
 }
 
-/// Wrap a mixed concrete enum into the runtime ScadObject.
-fn wrap_mixed(o: scad_mixed::ScadObjectMixed) -> ScadObject {
+/// Wrap a mixed concrete enum into the runtime `ScadObject`.
+fn wrap_mixed(o: ScadObjectMixed) -> ScadObject {
     let rc_impl = Rc::new(ImplEnum::ObjectMixed(Rc::new(AdapterMixed(o))));
     ScadObject::from_impl(rc_impl)
 }
@@ -199,9 +225,9 @@ pub fn try_modifier_2d<T: Into<ScadModifierBody2D>>(
 ) -> Option<ScadObject> {
     let s: ScadModifierBody2D = sentence.into();
     // child.inner is Rc<ScadObjectImpl>; pass a clone of that Rc to the modifier
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_2d::ScadModifier2D::try_new(s, child_impl_rc)?;
-    let o = scad_2d::ScadObject2D::Modifier(m);
+    let o = ScadObject2D::Modifier(m);
     Some(wrap_2d(o))
 }
 
@@ -221,10 +247,10 @@ pub fn try_modifier_2d<T: Into<ScadModifierBody2D>>(
 /// A [`ScadObject`] representing the 2D modifier
 pub fn modifier_2d<T: Into<ScadModifierBody2D>>(sentence: T, child: ScadObject) -> ScadObject {
     let s: ScadModifierBody2D = sentence.into();
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_2d::ScadModifier2D::try_new(s.clone(), child_impl_rc)
         .unwrap_or_else(|| panic!("Modifier {:?} requires: {:?}", s, s.get_children_type()));
-    let o = scad_2d::ScadObject2D::Modifier(m);
+    let o = ScadObject2D::Modifier(m);
     wrap_2d(o)
 }
 
@@ -245,9 +271,9 @@ pub fn try_modifier_2d_commented<T: Into<ScadModifierBody2D>>(
     comment: &str,
 ) -> Option<ScadObject> {
     let s: ScadModifierBody2D = sentence.into();
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_2d::ScadModifier2D::try_new(s, child_impl_rc)?;
-    let o = scad_2d::ScadObject2D::Modifier(m);
+    let o = ScadObject2D::Modifier(m);
     let mut obj = wrap_2d(o);
     obj = obj.commented(comment);
     Some(obj)
@@ -289,10 +315,9 @@ pub fn modifier_2d_commented<T: Into<ScadModifierBody2D>>(
 /// An optional [`ScadObject`] representing the 2D block, or [`None`] if creation fails
 pub fn try_block_2d(objects: &[ScadObject]) -> Option<ScadObject> {
     // convert to owned ScadObjectImpl vector for scad_2d::ScadBlock2D::try_new
-    let impls: Vec<crate::common::ScadObjectImpl> =
-        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let impls: Vec<ScadObjectImpl> = objects.iter().map(|o| o.inner.as_ref().clone()).collect();
     let c = scad_2d::ScadBlock2D::try_new(&impls)?;
-    let o = scad_2d::ScadObject2D::Block(c);
+    let o = ScadObject2D::Block(c);
     Some(wrap_2d(o))
 }
 
@@ -310,11 +335,10 @@ pub fn try_block_2d(objects: &[ScadObject]) -> Option<ScadObject> {
 ///
 /// A [`ScadObject`] representing the 2D block
 pub fn block_2d(objects: &[ScadObject]) -> ScadObject {
-    let impls: Vec<crate::common::ScadObjectImpl> =
-        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
-    let c = scad_2d::ScadBlock2D::try_new(&impls)
-        .expect("Objects in blocks needs to be ScadObject2D");
-    let o = scad_2d::ScadObject2D::Block(c);
+    let impls: Vec<ScadObjectImpl> = objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c =
+        scad_2d::ScadBlock2D::try_new(&impls).expect("Objects in blocks needs to be ScadObject2D");
+    let o = ScadObject2D::Block(c);
     wrap_2d(o)
 }
 
@@ -369,7 +393,7 @@ pub fn block_2d_commented(objects: &[ScadObject], comment: &str) -> ScadObject {
 pub fn primitive_3d<T: Into<ScadPrimitiveBody3D>>(sentence: T) -> ScadObject {
     let s: ScadPrimitiveBody3D = sentence.into();
     let p: ScadPrimitive3D = s.into();
-    let o = scad_3d::ScadObject3D::Primitive(p);
+    let o = ScadObject3D::Primitive(p);
     wrap_3d(o)
 }
 
@@ -407,9 +431,9 @@ pub fn try_modifier_3d<T: Into<ScadModifierBody3D>>(
     child: ScadObject,
 ) -> Option<ScadObject> {
     let s: ScadModifierBody3D = sentence.into();
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_3d::ScadModifier3D::try_new(s, child_impl_rc)?;
-    let o = scad_3d::ScadObject3D::Modifier(m);
+    let o = ScadObject3D::Modifier(m);
     Some(wrap_3d(o))
 }
 
@@ -429,10 +453,10 @@ pub fn try_modifier_3d<T: Into<ScadModifierBody3D>>(
 /// A [`ScadObject`] representing the 3D modifier
 pub fn modifier_3d<T: Into<ScadModifierBody3D>>(sentence: T, child: ScadObject) -> ScadObject {
     let s: ScadModifierBody3D = sentence.into();
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_3d::ScadModifier3D::try_new(s.clone(), child_impl_rc)
         .unwrap_or_else(|| panic!("Modifier {:?} requires: {:?}", s, s.get_children_type()));
-    let o = scad_3d::ScadObject3D::Modifier(m);
+    let o = ScadObject3D::Modifier(m);
     wrap_3d(o)
 }
 
@@ -492,10 +516,9 @@ pub fn modifier_3d_commented<T: Into<ScadModifierBody3D>>(
 ///
 /// An optional [`ScadObject`] representing the 3D block, or [`None`] if creation fails
 pub fn try_block_3d(objects: &[ScadObject]) -> Option<ScadObject> {
-    let impls: Vec<crate::common::ScadObjectImpl> =
-        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let impls: Vec<ScadObjectImpl> = objects.iter().map(|o| o.inner.as_ref().clone()).collect();
     let c = scad_3d::ScadBlock3D::try_new(&impls)?;
-    let o = scad_3d::ScadObject3D::Block(c);
+    let o = ScadObject3D::Block(c);
     Some(wrap_3d(o))
 }
 
@@ -513,11 +536,10 @@ pub fn try_block_3d(objects: &[ScadObject]) -> Option<ScadObject> {
 ///
 /// A [`ScadObject`] representing the 3D block
 pub fn block_3d(objects: &[ScadObject]) -> ScadObject {
-    let impls: Vec<crate::common::ScadObjectImpl> =
-        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
-    let c = scad_3d::ScadBlock3D::try_new(&impls)
-        .expect("Objects in blocks needs to be ScadObject3D");
-    let o = scad_3d::ScadObject3D::Block(c);
+    let impls: Vec<ScadObjectImpl> = objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let c =
+        scad_3d::ScadBlock3D::try_new(&impls).expect("Objects in blocks needs to be ScadObject3D");
+    let o = ScadObject3D::Block(c);
     wrap_3d(o)
 }
 
@@ -579,9 +601,9 @@ pub fn modifier_mixed<T: Into<ScadModifierBodyMixed>>(
     child: ScadObject,
 ) -> ScadObject {
     let s: ScadModifierBodyMixed = sentence.into();
-    let child_impl_rc: Rc<crate::common::ScadObjectImpl> = Rc::clone(&child.inner);
+    let child_impl_rc: Rc<ScadObjectImpl> = Rc::clone(&child.inner);
     let m = scad_mixed::ScadModifierMixed::new(s, child_impl_rc);
-    let o = scad_mixed::ScadObjectMixed::Modifier(m);
+    let o = ScadObjectMixed::Modifier(m);
     wrap_mixed(o)
 }
 
@@ -624,10 +646,9 @@ pub fn modifier_mixed_commented<T: Into<ScadModifierBodyMixed>>(
 ///
 /// A [`ScadObject`] representing the Mixed block
 pub fn block_mixed(objects: &[ScadObject]) -> ScadObject {
-    let impls: Vec<crate::common::ScadObjectImpl> =
-        objects.iter().map(|o| o.inner.as_ref().clone()).collect();
+    let impls: Vec<ScadObjectImpl> = objects.iter().map(|o| o.inner.as_ref().clone()).collect();
     let c = scad_mixed::ScadBlockMixed::new(&impls);
-    let o = scad_mixed::ScadObjectMixed::Block(c);
+    let o = ScadObjectMixed::Block(c);
     wrap_mixed(o)
 }
 
