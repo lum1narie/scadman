@@ -5,20 +5,18 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    ambassador_impl_ScadCommentDisplay,
     internal::{block_repr, modifier_repr, primitive_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_sentence::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
         Offset, Polygon, Projection, Resize2D, Rotate2D, Scale2D, Square, Text, Translate2D, Union,
     },
-    DimensionMarker, ScadCommentDisplay,
+    DimensionMarker,
 };
 
 /// A 2D object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
-#[delegate(ScadCommentDisplay)]
 pub enum ScadObject2D {
     /// A primitive 2D object.
     Primitive(ScadPrimitive2D),
@@ -48,7 +46,7 @@ impl ScadDisplay for ScadPrimitive2D {
     }
 }
 
-impl ScadCommentDisplay for ScadPrimitive2D {}
+
 
 /// A modifier for a 2D object in SCAD.
 #[derive(Debug, Clone, From)]
@@ -80,7 +78,7 @@ impl ScadDisplay for ScadModifier2D {
     }
 }
 
-impl ScadCommentDisplay for ScadModifier2D {}
+
 
 /// A block of 2D objects in SCAD.
 #[derive(Debug, Clone, From)]
@@ -116,7 +114,7 @@ impl ScadDisplay for ScadBlock2D {
     }
 }
 
-impl ScadCommentDisplay for ScadBlock2D {}
+
 
 /// A primitive sentences for 2D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]

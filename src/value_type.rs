@@ -53,8 +53,8 @@ impl ScadDisplay for Angle {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, From, Delegate)]
-#[delegate(ScadDisplay)]
+#[derive(Clone, Debug, PartialEq, From)]
+
 /// Color type for SCAD
 pub enum ScadColor {
     /// Color in RGB format
@@ -91,8 +91,8 @@ impl ScadColor {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Delegate)]
-#[delegate(ScadDisplay)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+
 /// Size of rounded shape type for SCAD
 pub enum RoundSize {
     /// Radius of rounded shape
@@ -114,3 +114,24 @@ impl RoundSize {
         }
     }
 }
+
+impl ScadDisplay for RoundSize {
+    fn repr_scad(&self) -> String {
+        match self {
+            RoundSize::Radius(r) => r.repr_scad(),
+            RoundSize::Diameter(d) => d.repr_scad(),
+        }
+    }
+}
+
+impl ScadDisplay for ScadColor {
+    fn repr_scad(&self) -> String {
+        match self {
+            ScadColor::RGB(rgb) => rgb.repr_scad(),
+            ScadColor::RGBA(rgba) => rgba.repr_scad(),
+            ScadColor::Name(name) => format!("\"{}\"", name), // Named colors are strings in OpenSCAD
+        }
+    }
+}
+
+

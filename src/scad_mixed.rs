@@ -5,17 +5,15 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    ambassador_impl_ScadCommentDisplay,
     internal::{block_repr, modifier_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_sentence::{Color, Difference, Hull, Intersection, Minkowski, Union},
-    DimensionMarker, ScadCommentDisplay,
+    DimensionMarker,
 };
 
 /// A Mixed object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
-#[delegate(ScadCommentDisplay)]
 pub enum ScadObjectMixed {
     /// A modifier mixed object.
     Modifier(ScadModifierMixed),
@@ -58,7 +56,7 @@ impl ScadDisplay for ScadModifierMixed {
     }
 }
 
-impl ScadCommentDisplay for ScadModifierMixed {}
+
 
 /// A block of mixed objects in SCAD.
 #[derive(Debug, Clone, From)]
@@ -82,7 +80,7 @@ impl ScadDisplay for ScadBlockMixed {
     }
 }
 
-impl ScadCommentDisplay for ScadBlockMixed {}
+
 
 /// A modifier sentences for mixed objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]

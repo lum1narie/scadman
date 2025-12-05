@@ -5,7 +5,6 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    ambassador_impl_ScadCommentDisplay,
     internal::{block_repr, modifier_repr, primitive_repr},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     scad_sentence::{
@@ -13,13 +12,12 @@ use crate::{
         Mirror3D, MultMatrix3D, Polyhedron, Resize3D, Rotate3D, RotateExtrude, Scale3D, Sphere,
         Surface, Translate3D, Union,
     },
-    DimensionMarker, ScadCommentDisplay,
+    DimensionMarker,
 };
 
 /// A 3D object in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
-#[delegate(ScadCommentDisplay)]
 pub enum ScadObject3D {
     /// A primitive 3D object.
     Primitive(ScadPrimitive3D),
@@ -49,7 +47,7 @@ impl ScadDisplay for ScadPrimitive3D {
     }
 }
 
-impl ScadCommentDisplay for ScadPrimitive3D {}
+
 
 /// A modifier for a 3D object in SCAD.
 #[derive(Debug, Clone, From)]
@@ -81,7 +79,7 @@ impl ScadDisplay for ScadModifier3D {
     }
 }
 
-impl ScadCommentDisplay for ScadModifier3D {}
+
 
 /// A block of 3D objects in SCAD.
 #[derive(Debug, Clone, From)]
@@ -117,7 +115,7 @@ impl ScadDisplay for ScadBlock3D {
     }
 }
 
-impl ScadCommentDisplay for ScadBlock3D {}
+
 
 /// A primitive sentences for 3D objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
