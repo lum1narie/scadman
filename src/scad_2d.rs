@@ -5,18 +5,17 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
+    common::{DimensionMarker, D2},
     internal::{block_repr, modifier_repr, primitive_repr},
-    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    scad_sentence::{
+    prelude::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
         Offset, Polygon, Projection, Resize2D, Rotate2D, Scale2D, Square, Text, Translate2D, Union,
     },
-    DimensionMarker,
+    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
 };
 
 /// A 2D object in SCAD.
-#[derive(Debug, Clone, Delegate, From)]
-#[delegate(ScadDisplay)]
+#[derive(Debug, Clone, From)]
 pub enum ScadObject2D {
     /// A primitive 2D object.
     Primitive(ScadPrimitive2D),
@@ -24,6 +23,16 @@ pub enum ScadObject2D {
     Modifier(ScadModifier2D),
     /// A block of 2D objects.
     Block(ScadBlock2D),
+}
+
+impl ScadDisplay for ScadObject2D {
+    fn repr_scad(&self) -> String {
+        match self {
+            ScadObject2D::Primitive(p) => p.repr_scad(),
+            ScadObject2D::Modifier(m) => m.repr_scad(),
+            ScadObject2D::Block(b) => b.repr_scad(),
+        }
+    }
 }
 
 /// A primitive 2D object in SCAD.
@@ -46,7 +55,14 @@ impl ScadDisplay for ScadPrimitive2D {
     }
 }
 
-
+impl From<ScadPrimitive2D> for crate::common::ScadObjectGeneric<crate::common::D2> {
+    fn from(val: ScadPrimitive2D) -> crate::common::ScadObjectGeneric<crate::common::D2> {
+        let o = ScadObject2D::Primitive(val);
+        let rc_o = Rc::new(o);
+        let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object2D(rc_o));
+        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+    }
+}
 
 /// A modifier for a 2D object in SCAD.
 #[derive(Debug, Clone, From)]
@@ -78,13 +94,17 @@ impl ScadDisplay for ScadModifier2D {
     }
 }
 
-
-
 /// A block of 2D objects in SCAD.
 #[derive(Debug, Clone, From)]
 pub struct ScadBlock2D {
     /// The objects in the block.
     pub objects: Vec<crate::common::ScadObjectImpl>,
+}
+
+impl ScadDisplay for ScadBlock2D {
+    fn repr_scad(&self) -> String {
+        block_repr(&self.objects)
+    }
 }
 
 impl ScadBlock2D {
@@ -108,16 +128,24 @@ impl ScadBlock2D {
     }
 }
 
-impl ScadDisplay for ScadBlock2D {
-    fn repr_scad(&self) -> String {
-        block_repr(&self.objects)
+__impl_into_scad_for_collection_with_try_new!(
+    crate::common::D2,
+    ScadBlock2D,
+    ScadObject2D,
+    crate::common::ScadObjectImpl::Object2D,
+    "Internal error: Vec<T> or &[T] for D2 should always produce a valid ScadBlock2D"
+);
+
+impl From<ScadObject2D> for crate::common::ScadObjectGeneric<crate::common::D2> {
+    fn from(val: ScadObject2D) -> crate::common::ScadObjectGeneric<crate::common::D2> {
+        let rc_o = Rc::new(val);
+        let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object2D(rc_o));
+        crate::common::ScadObjectGeneric::from_impl(rc_impl)
     }
 }
 
-
-
 /// A primitive sentences for 2D objects in SCAD.
-#[derive(Debug, Clone, Delegate, From)]
+#[derive(Debug, Clone, Delegate)] // Removed From
 #[delegate(ScadDisplay)]
 pub enum ScadPrimitiveBody2D {
     /// `circle()` in SCAD.
@@ -130,6 +158,37 @@ pub enum ScadPrimitiveBody2D {
     Square(Square),
     /// `text()` in SCAD.
     Text(Text),
+}
+
+// Manual From implementations
+impl From<Circle> for ScadPrimitiveBody2D {
+    fn from(val: Circle) -> Self {
+        ScadPrimitiveBody2D::Circle(val)
+    }
+}
+
+impl From<Import2D> for ScadPrimitiveBody2D {
+    fn from(val: Import2D) -> Self {
+        ScadPrimitiveBody2D::Import(val)
+    }
+}
+
+impl From<Polygon> for ScadPrimitiveBody2D {
+    fn from(val: Polygon) -> Self {
+        ScadPrimitiveBody2D::Polygon(val)
+    }
+}
+
+impl From<Square> for ScadPrimitiveBody2D {
+    fn from(val: Square) -> Self {
+        ScadPrimitiveBody2D::Square(val)
+    }
+}
+
+impl From<Text> for ScadPrimitiveBody2D {
+    fn from(val: Text) -> Self {
+        ScadPrimitiveBody2D::Text(val)
+    }
 }
 
 /// A modifier sentences for 2D objects in SCAD.
@@ -187,18 +246,3 @@ impl ScadModifierBody2D {
         }
     }
 }
-
-macro_rules! __impl_from_for_primitive2d {
-    ( $type:ty ) => {
-        impl From<$type> for ScadPrimitive2D {
-            fn from(value: $type) -> Self {
-                Self { body: value.into() }
-            }
-        }
-    };
-}
-__impl_from_for_primitive2d!(Circle);
-__impl_from_for_primitive2d!(Import2D);
-__impl_from_for_primitive2d!(Polygon);
-__impl_from_for_primitive2d!(Square);
-__impl_from_for_primitive2d!(Text);

@@ -5,7 +5,6 @@ use std::{
     rc::Rc,
 };
 
-use ambassador::delegatable_trait;
 use nalgebra as na;
 
 use crate::scad_display::ScadDisplay;
@@ -26,12 +25,15 @@ pub type AffineMatrix2D = na::Matrix2x3<Unit>;
 pub type AffineMatrix3D = na::Matrix3x4<Unit>;
 
 /// The number of spaces for indent in generated SCAD.
+
 pub const INDENT: usize = 2;
 
 /// Trait for builders that can build a Scad object.
+
 pub trait ScadBuilder: Default {
     /// Type of the object that this builder constructs.
-    type Target: ScadBuildable;
+    type Target;
+
     /// Type of error that can be returned when building.
     type Error: Debug;
 
@@ -40,22 +42,26 @@ pub trait ScadBuilder: Default {
 }
 
 /// Trait for objects that can be built via a builder.
-pub trait ScadBuildable: Sized {
-    type Builder: ScadBuilder<Target = Self>;
 
-    fn build_with<T: FnOnce(&mut Self::Builder)>(builder_config: T) -> Self {
+pub trait ScadBuildable: Sized {
+    type Builder: ScadBuilder;
+
+    fn build_with<T: FnOnce(&mut Self::Builder)>(
+        builder_config: T,
+    ) -> <Self::Builder as ScadBuilder>::Target {
         let mut builder = Self::Builder::default();
+
         builder_config(&mut builder);
+
         builder.build_scad().expect("required fields are not set")
     }
 }
 
 /// Trait for types that can be directly converted into a `ScadObjectGeneric`<D>.
-pub trait IntoScad<D: DimensionType> {
-    fn scad(self) -> ScadObjectGeneric<D>;
-}
+/// Replaced by standard `Into` trait.
 
 /// Trait for Scad sentence types (primitives/modifiers).
+
 pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
 
 /// Trait for object that can be shown with comment.
@@ -122,7 +128,7 @@ pub trait ScadObjectTrait {
 /// For backwards compatibility, a type alias `ScadObject` is provided, which
 /// maps to `ScadObjectGeneric<DMixed>`, allowing existing code to continue
 /// compiling while encouraging new code to use the more type-safe generic
-/// versions (`ScadObjectGeneric<D2>` or `ScadObjectGeneric<D3>`).
+/// versions (`ScadObjectGeneric<D2>` or `ScadObjectGeneric<D3>`)
 #[derive(Clone, Debug)]
 pub struct ScadObjectGeneric<D: DimensionType> {
     /// Internal implementation uses a small enum wrapper (object-safe) instead
@@ -544,6 +550,8 @@ pub type ScadObjectUntyped = ScadObjectGeneric<DMixed>;
 /// Provide a convenient short name `ScadObject` that maps to the untyped/mixed
 /// variant for backwards compatibility.
 pub type ScadObject = ScadObjectUntyped;
+pub type ScadObject2D = ScadObjectGeneric<D2>;
+pub type ScadObject3D = ScadObjectGeneric<D3>;
 
 /// Backwards-compatible alias for the earlier runtime enum type.
 // Backwards-compat alias removed: use `DimensionMarker` directly.
@@ -551,674 +559,629 @@ pub type ScadObject = ScadObjectUntyped;
 ///
 // Backwards-compat alias removed: use `DimensionMarker` directly.
 
-/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
-/// These provide a typed, ergonomic API surface while reusing the existing
-/// runtime implementation under the hood.
-///
-/// Note: kept intentionally lightweight to remain non-breaking.
-///
-/// Public-facing wrapper types presented to library users. These are thin
-/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
-/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
-/// remain in their modules and are referenced via fully-qualified paths.
-#[derive(Clone, Debug)]
-pub struct ScadObject2D(pub(crate) ScadObjectGeneric<D2>);
-
-impl ScadObject2D {
-    /// Generate SCAD code for the object.
-    pub fn to_code(&self) -> String {
-        self.0.to_code()
-    }
-
-    /// Convert into the backwards-compatible untyped `ScadObject`.
-    pub fn into_untyped(self) -> ScadObject {
-        ScadObjectGeneric::from_impl(self.0.inner)
-    }
-}
-
-impl From<ScadObject2D> for ScadObject {
-    fn from(v: ScadObject2D) -> Self {
-        v.into_untyped()
-    }
-}
-
-impl ScadDisplay for ScadObject2D {
-    fn repr_scad(&self) -> String {
-        // Use the typed wrapper's to_code to produce the canonical SCAD
-        // representation (including any comment).
-        self.to_code()
-    }
-}
-
-/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
-/// These provide a typed, ergonomic API surface while reusing the existing
-/// runtime implementation under the hood.
-///
-/// Note: kept intentionally lightweight to remain non-breaking.
-///
-/// Public-facing wrapper types presented to library users. These are thin
-/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
-/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
-/// remain in their modules and are referenced via fully-qualified paths.
-#[derive(Clone, Debug)]
-pub struct ScadObject3D(pub(crate) ScadObjectGeneric<D3>);
-
-impl ScadObject3D {
-    /// Generate SCAD code for the object.
-    pub fn to_code(&self) -> String {
-        self.0.to_code()
-    }
-
-    /// Convert into the backwards-compatible untyped `ScadObject`.
-    pub fn into_untyped(self) -> ScadObject {
-        ScadObjectGeneric::from_impl(self.0.inner)
-    }
-}
-
-impl From<ScadObject3D> for ScadObject {
-    fn from(v: ScadObject3D) -> Self {
-        v.into_untyped()
-    }
-}
-
-impl ScadDisplay for ScadObject3D {
-    fn repr_scad(&self) -> String {
-        self.to_code()
-    }
-}
-
-// Allow converting an untyped runtime ScadObject (ScadObjectGeneric<DMixed>) into
-// a typed ScadObject3D by runtime-checking the inner variant. This enables ergonomic
-// calls like Translate3D::build_with(...).apply_to(untyped_scad_object).
-impl From<ScadObjectGeneric<DMixed>> for ScadObject3D {
-    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
-        assert!(
-            v.inner.get_type() == DimensionMarker::Object3D,
-            "Modifier requires: Object3D"
-        );
-        Self(ScadObjectGeneric::<D3>::from_impl(v.inner))
-    }
-}
-
-impl From<ScadObjectGeneric<DMixed>> for ScadObject2D {
-    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
-        assert!(
-            v.inner.get_type() == DimensionMarker::Object2D,
-            "Modifier requires: Object2D"
-        );
-        Self(ScadObjectGeneric::<D2>::from_impl(v.inner))
-    }
-}
-
-// Added From implementations for ScadObjectGeneric<D>
-impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D2> {
-    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
-        assert!(
-            v.inner.get_type() == DimensionMarker::Object2D,
-            "Dimension mismatch: expected Object2D, got {:?}",
-            v.inner.get_type()
-        );
-        Self::from_impl(v.inner)
-    }
-}
-
-impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D3> {
-    fn from(v: ScadObjectGeneric<DMixed>) -> Self {
-        assert!(
-            v.inner.get_type() == DimensionMarker::Object3D,
-            "Dimension mismatch: expected Object3D, got {:?}",
-            v.inner.get_type()
-        );
-        Self::from_impl(v.inner)
-    }
-}
-
-/// Thin, typed wrappers over the generic `ScadObjectGeneric`<D>.
-/// These provide a typed, ergonomic API surface while reusing the existing
-/// runtime implementation under the hood.
-///
-/// Note: kept intentionally lightweight to remain non-breaking.
-///
-/// Public-facing wrapper types presented to library users. These are thin
-/// wrappers around `ScadObjectGeneric`<D*> that expose a small, ergonomic API
-/// (`to_code` / `into_untyped`). The concrete enums in `scad_2d/scad_3d/scad_mixed`
-/// remain in their modules and are referenced via fully-qualified paths.
-#[derive(Clone, Debug)]
-pub struct ScadObjectMixed(pub(crate) ScadObjectGeneric<DMixed>);
-
-impl ScadObjectMixed {
-    /// Generate SCAD code for the object.
-    pub fn to_code(&self) -> String {
-        self.0.to_code()
-    }
-
-    /// Convert into the backwards-compatible untyped `ScadObject`.
-    pub fn into_untyped(self) -> ScadObject {
-        ScadObjectGeneric::from_impl(self.0.inner)
-    }
-}
-
-impl From<ScadObjectMixed> for ScadObject {
-    fn from(v: ScadObjectMixed) -> Self {
-        v.into_untyped()
-    }
-}
-
-// Added From implementations for concrete ScadObject2D and ScadObject3D to ScadObjectGeneric<D>
-impl From<ScadObject2D> for ScadObjectGeneric<D2> {
-    fn from(v: ScadObject2D) -> Self {
-        v.0
-    }
-}
-
-impl From<ScadObject3D> for ScadObjectGeneric<D3> {
-    fn from(v: ScadObject3D) -> Self {
-        v.0
-    }
-}
-
-// Added From implementations for typed ScadObjectGeneric to untyped ScadObjectGeneric<DMixed>
-impl From<ScadObjectGeneric<D2>> for ScadObjectGeneric<DMixed> {
-    fn from(v: ScadObjectGeneric<D2>) -> Self {
-        Self::from_impl(v.inner)
-    }
-}
-
-impl From<ScadObjectGeneric<D3>> for ScadObjectGeneric<DMixed> {
-    fn from(v: ScadObjectGeneric<D3>) -> Self {
-        Self::from_impl(v.inner)
-    }
-}
-
-impl ScadDisplay for ScadObjectMixed {
-    fn repr_scad(&self) -> String {
-        self.to_code()
-    }
-}
-
 // Implement conversion helpers and basic operators for untyped compatibility.
 // Note: heavy use of boxed trait objects simplifies the transition but can be
 // optimized later.
 
-// Operators for the generic untyped ScadObject (ScadObjectGeneric<DMixed>)
-// Provide Add/Sub/Mul so existing code using ScadObject values can use + - *
-impl Add for ScadObjectGeneric<DMixed> {
-    type Output = Self;
+// =============================================================================
+// Operators
+// =============================================================================
 
+fn flatten_union_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+        {
+            match concrete {
+                crate::scad_2d::ScadObject2D::Modifier(m) => {
+                    if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body {
+                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>(
+                            ) {
+                                if let crate::scad_2d::ScadObject2D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_2d::ScadObject2D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_union_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_2d::ScadBlock2D { objects: parts };
+    let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
+    let rc_impl_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Union::new();
+    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl_child))
+        .expect("Union modifier requires: Object2D");
+    let o = crate::scad_2d::ScadObject2D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+fn flatten_union_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+        {
+            match concrete {
+                crate::scad_3d::ScadObject3D::Modifier(m) => {
+                    if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body {
+                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>(
+                            ) {
+                                if let crate::scad_3d::ScadObject3D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_3d::ScadObject3D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_union_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_3d::ScadBlock3D { objects: parts };
+    let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
+    let rc_impl_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Union::new();
+    let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl_child))
+        .expect("Union modifier requires: Object3D");
+    let o = crate::scad_3d::ScadObject3D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+fn flatten_difference_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+        {
+            match concrete {
+                crate::scad_2d::ScadObject2D::Modifier(m) => {
+                    if let crate::scad_2d::ScadModifierBody2D::Difference(_) = m.body {
+                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>(
+                            ) {
+                                if let crate::scad_2d::ScadObject2D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_2d::ScadObject2D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_difference_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_2d::ScadBlock2D { objects: parts };
+    let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
+    let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Difference::new();
+    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
+        .expect("Difference modifier requires: Object2D");
+    let o = crate::scad_2d::ScadObject2D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+fn flatten_difference_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+        {
+            match concrete {
+                crate::scad_3d::ScadObject3D::Modifier(m) => {
+                    if let crate::scad_3d::ScadModifierBody3D::Difference(_) = m.body {
+                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>(
+                            ) {
+                                if let crate::scad_3d::ScadObject3D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_3d::ScadObject3D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_difference_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_3d::ScadBlock3D { objects: parts };
+    let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
+    let rc_impl_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Difference::new();
+    let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl_child))
+        .expect("Difference modifier requires: Object3D");
+    let o = crate::scad_3d::ScadObject3D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+fn flatten_intersection_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+        {
+            match concrete {
+                crate::scad_2d::ScadObject2D::Modifier(m) => {
+                    if let crate::scad_2d::ScadModifierBody2D::Intersection(_) = m.body {
+                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_2d::ScadObject2D>(
+                            ) {
+                                if let crate::scad_2d::ScadObject2D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_2d::ScadObject2D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_intersection_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_2d::ScadBlock2D { objects: parts };
+    let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
+    let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Intersection::new();
+    let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
+        .expect("Intersection modifier requires: Object2D");
+    let o = crate::scad_2d::ScadObject2D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+fn flatten_intersection_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
+        if let Some(concrete) = inner_enum_rc
+            .as_any()
+            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+        {
+            match concrete {
+                crate::scad_3d::ScadObject3D::Modifier(m) => {
+                    if let crate::scad_3d::ScadModifierBody3D::Intersection(_) = m.body {
+                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                            if let Some(child_concrete) = child_enum_rc
+                                .as_any()
+                                .downcast_ref::<crate::scad_3d::ScadObject3D>(
+                            ) {
+                                if let crate::scad_3d::ScadObject3D::Block(b) = child_concrete {
+                                    for obj in &b.objects {
+                                        parts.push(obj.clone());
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::scad_3d::ScadObject3D::Block(b) => {
+                    for obj in &b.objects {
+                        parts.push(obj.clone());
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+    parts.push((**rc).clone());
+}
+
+fn create_intersection_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObject {
+    let block = crate::scad_3d::ScadBlock3D { objects: parts };
+    let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
+    let rc_impl_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
+    let body = crate::scad_sentence::Intersection::new();
+    let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl_child))
+        .expect("Intersection modifier requires: Object3D");
+    let o = crate::scad_3d::ScadObject3D::Modifier(m);
+    let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
+    ScadObject::from_impl(rc_impl)
+}
+
+// Add implementations
+impl Add for ScadObject2D {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_union_parts_2d(&self.inner, &mut parts);
+        flatten_union_parts_2d(&rhs.inner, &mut parts);
+        create_union_object_2d(parts).into()
+    }
+}
+impl Add for ScadObject3D {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_union_parts_3d(&self.inner, &mut parts);
+        flatten_union_parts_3d(&rhs.inner, &mut parts);
+        create_union_object_3d(parts).into()
+    }
+}
+impl Add<ScadObject> for ScadObject2D {
+    type Output = ScadObject;
+    fn add(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) + rhs
+    }
+}
+impl Add<ScadObject2D> for ScadObject {
+    type Output = Self;
+    fn add(self, rhs: ScadObject2D) -> Self::Output {
+        self + ScadObject::from(rhs)
+    }
+}
+impl Add<ScadObject> for ScadObject3D {
+    type Output = ScadObject;
+    fn add(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) + rhs
+    }
+}
+impl Add<ScadObject3D> for ScadObject {
+    type Output = Self;
+    fn add(self, rhs: ScadObject3D) -> Self::Output {
+        self + ScadObject::from(rhs)
+    }
+}
+impl Add for ScadObject {
+    type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
         let left_rc = self.inner;
         let right_rc = rhs.inner;
+        let left_type = left_rc.get_type();
+        let right_type = right_rc.get_type();
 
-        // If runtime dimension mismatch -> panic with message tests expect.
+        if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
+            let mut parts: Vec<ScadObjectImpl> = Vec::new();
+            parts.push((*left_rc).clone());
+            parts.push((*right_rc).clone());
+            let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
+            let child = crate::scad_mixed::ScadObjectMixed::Block(block);
+            let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
+            let body = crate::scad_sentence::Union::new();
+            let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
+            let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
+            let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
+            return Self::from_impl(rc_impl);
+        }
+
         assert!(
-            left_rc.get_type() == right_rc.get_type(),
+            left_type == right_type,
             "`{}` is not allowed",
-            match (left_rc.get_type(), right_rc.get_type()) {
-                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                    "Object2D + Object3D"
-                }
-                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                    "Object3D + Object2D"
-                }
+            match (left_type, right_type) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => "Object2D + Object3D",
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => "Object3D + Object2D",
                 _ => "Mismatched dimensions",
             }
         );
 
-        match (&*left_rc, &*right_rc) {
-            // Same-dimension 2D: flatten left-side unions/blocks when possible.
-            (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
+        match left_type {
+            DimensionMarker::Object2D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_union_parts_2d(&left_rc, &mut parts); // flatten left
-                Self::flatten_union_parts_2d(&right_rc, &mut parts); // append right as whole (do not flatten rhs)
-                Self::create_union_object_2d(parts)
+                flatten_union_parts_2d(&left_rc, &mut parts);
+                flatten_union_parts_2d(&right_rc, &mut parts);
+                create_union_object_2d(parts)
             }
-
-            // Same-dimension 3D: flatten left-side unions/blocks when possible.
-            (ScadObjectImpl::Object3D(_), ScadObjectImpl::Object3D(_)) => {
+            DimensionMarker::Object3D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_union_parts_3d(&left_rc, &mut parts);
-                Self::flatten_union_parts_3d(&right_rc, &mut parts);
-                Self::create_union_object_3d(parts)
+                flatten_union_parts_3d(&left_rc, &mut parts);
+                flatten_union_parts_3d(&right_rc, &mut parts);
+                create_union_object_3d(parts)
             }
-
-            // Mixed or cross-dimension handled as mixed union (shouldn't happen due to earlier panic)
-            _ => {
-                let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                parts.push((*left_rc).clone());
-                parts.push((*right_rc).clone());
-                let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
-                let child = crate::scad_mixed::ScadObjectMixed::Block(block);
-                let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
-                let body = crate::scad_sentence::Union::new();
-                let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
-                let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
-                let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                Self::from_impl(rc_impl)
-            }
+            DimensionMarker::ObjectMixed => unreachable!(),
         }
     }
 }
 
-impl Sub for ScadObjectGeneric<DMixed> {
+// Sub implementations
+impl Sub for ScadObject2D {
     type Output = Self;
-
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_difference_parts_2d(&self.inner, &mut parts);
+        parts.push((*rhs.inner).clone());
+        create_difference_object_2d(parts).into()
+    }
+}
+impl Sub for ScadObject3D {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_difference_parts_3d(&self.inner, &mut parts);
+        parts.push((*rhs.inner).clone());
+        create_difference_object_3d(parts).into()
+    }
+}
+impl Sub<ScadObject> for ScadObject2D {
+    type Output = ScadObject;
+    fn sub(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) - rhs
+    }
+}
+impl Sub<ScadObject2D> for ScadObject {
+    type Output = Self;
+    fn sub(self, rhs: ScadObject2D) -> Self::Output {
+        self - ScadObject::from(rhs)
+    }
+}
+impl Sub<ScadObject> for ScadObject3D {
+    type Output = ScadObject;
+    fn sub(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) - rhs
+    }
+}
+impl Sub<ScadObject3D> for ScadObject {
+    type Output = Self;
+    fn sub(self, rhs: ScadObject3D) -> Self::Output {
+        self - ScadObject::from(rhs)
+    }
+}
+impl Sub for ScadObject {
+    type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         let left_rc = self.inner;
         let right_rc = rhs.inner;
+        let left_type = left_rc.get_type();
+        let right_type = right_rc.get_type();
 
-        // dimension mismatch -> panic with expected message
+        if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
+            let mut parts: Vec<ScadObjectImpl> = Vec::new();
+            parts.push((*left_rc).clone());
+            parts.push((*right_rc).clone());
+            let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
+            let child = crate::scad_mixed::ScadObjectMixed::Block(block);
+            let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
+            let body = crate::scad_sentence::Difference::new();
+            let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
+            let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
+            let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
+            return Self::from_impl(rc_impl);
+        }
+
         assert!(
-            left_rc.get_type() == right_rc.get_type(),
+            left_type == right_type,
             "`{}` is not allowed",
-            match (left_rc.get_type(), right_rc.get_type()) {
-                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                    "Object2D - Object3D"
-                }
-                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                    "Object3D - Object2D"
-                }
+            match (left_type, right_type) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => "Object2D - Object3D",
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => "Object3D - Object2D",
                 _ => "Mismatched dimensions",
             }
         );
 
-        match (&*left_rc, &*right_rc) {
-            (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
+        match left_type {
+            DimensionMarker::Object2D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_difference_parts_2d(&left_rc, &mut parts);
+                flatten_difference_parts_2d(&left_rc, &mut parts);
                 parts.push((*right_rc).clone());
-                Self::create_difference_object_2d(parts)
+                create_difference_object_2d(parts)
             }
-
-            (ScadObjectImpl::Object3D(_), ScadObjectImpl::Object3D(_)) => {
+            DimensionMarker::Object3D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_difference_parts_3d(&left_rc, &mut parts);
+                flatten_difference_parts_3d(&left_rc, &mut parts);
                 parts.push((*right_rc).clone());
-                Self::create_difference_object_3d(parts)
+                create_difference_object_3d(parts)
             }
-
-            _ => {
-                let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                parts.push((*left_rc).clone());
-                parts.push((*right_rc).clone());
-                let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
-                let child = crate::scad_mixed::ScadObjectMixed::Block(block);
-                let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
-                let body = crate::scad_sentence::Difference::new();
-                let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
-                let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
-                let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                Self::from_impl(rc_impl)
-            }
+            DimensionMarker::ObjectMixed => unreachable!(),
         }
     }
 }
 
-impl Mul for ScadObjectGeneric<DMixed> {
+// Mul implementations
+impl Mul for ScadObject2D {
     type Output = Self;
-
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_intersection_parts_2d(&self.inner, &mut parts);
+        flatten_intersection_parts_2d(&rhs.inner, &mut parts);
+        create_intersection_object_2d(parts).into()
+    }
+}
+impl Mul for ScadObject3D {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut parts: Vec<ScadObjectImpl> = Vec::new();
+        flatten_intersection_parts_3d(&self.inner, &mut parts);
+        flatten_intersection_parts_3d(&rhs.inner, &mut parts);
+        create_intersection_object_3d(parts).into()
+    }
+}
+impl Mul<ScadObject> for ScadObject2D {
+    type Output = ScadObject;
+    fn mul(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) * rhs
+    }
+}
+impl Mul<ScadObject2D> for ScadObject {
+    type Output = Self;
+    fn mul(self, rhs: ScadObject2D) -> Self::Output {
+        self * ScadObject::from(rhs)
+    }
+}
+impl Mul<ScadObject> for ScadObject3D {
+    type Output = ScadObject;
+    fn mul(self, rhs: ScadObject) -> Self::Output {
+        ScadObject::from(self) * rhs
+    }
+}
+impl Mul<ScadObject3D> for ScadObject {
+    type Output = Self;
+    fn mul(self, rhs: ScadObject3D) -> Self::Output {
+        self * ScadObject::from(rhs)
+    }
+}
+impl Mul for ScadObject {
+    type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         let left_rc = self.inner;
         let right_rc = rhs.inner;
+        let left_type = left_rc.get_type();
+        let right_type = right_rc.get_type();
 
-        // dimension mismatch -> panic with expected message
+        if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
+            let mut parts: Vec<ScadObjectImpl> = Vec::new();
+            parts.push((*left_rc).clone());
+            parts.push((*right_rc).clone());
+            let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
+            let child = crate::scad_mixed::ScadObjectMixed::Block(block);
+            let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
+            let body = crate::scad_sentence::Intersection::new();
+            let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
+            let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
+            let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
+            return Self::from_impl(rc_impl);
+        }
+
         assert!(
-            left_rc.get_type() == right_rc.get_type(),
+            left_type == right_type,
             "`{}` is not allowed",
-            match (left_rc.get_type(), right_rc.get_type()) {
-                (DimensionMarker::Object2D, DimensionMarker::Object3D) => {
-                    "Object2D * Object3D"
-                }
-                (DimensionMarker::Object3D, DimensionMarker::Object2D) => {
-                    "Object3D * Object2D"
-                }
+            match (left_type, right_type) {
+                (DimensionMarker::Object2D, DimensionMarker::Object3D) => "Object2D * Object3D",
+                (DimensionMarker::Object3D, DimensionMarker::Object2D) => "Object3D * Object2D",
                 _ => "Mismatched dimensions",
             }
         );
 
-        match (&*left_rc, &*right_rc) {
-            (ScadObjectImpl::Object2D(_), ScadObjectImpl::Object2D(_)) => {
+        match left_type {
+            DimensionMarker::Object2D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_intersection_parts_2d(&left_rc, &mut parts);
-                Self::flatten_intersection_parts_2d(&right_rc, &mut parts);
-                Self::create_intersection_object_2d(parts)
+                flatten_intersection_parts_2d(&left_rc, &mut parts);
+                flatten_intersection_parts_2d(&right_rc, &mut parts);
+                create_intersection_object_2d(parts)
             }
-
-            (ScadObjectImpl::Object3D(_), ScadObjectImpl::Object3D(_)) => {
+            DimensionMarker::Object3D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                Self::flatten_intersection_parts_3d(&left_rc, &mut parts);
-                Self::flatten_intersection_parts_3d(&right_rc, &mut parts);
-                Self::create_intersection_object_3d(parts)
+                flatten_intersection_parts_3d(&left_rc, &mut parts);
+                flatten_intersection_parts_3d(&right_rc, &mut parts);
+                create_intersection_object_3d(parts)
             }
-
-            _ => {
-                let mut parts: Vec<ScadObjectImpl> = Vec::new();
-                parts.push((*left_rc).clone());
-                parts.push((*right_rc).clone());
-                let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
-                let child = crate::scad_mixed::ScadObjectMixed::Block(block);
-                let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
-                let body = crate::scad_sentence::Intersection::new();
-                let modifier = crate::scad_mixed::ScadModifierMixed::new(body.into(), rc_child);
-                let o = crate::scad_mixed::ScadObjectMixed::Modifier(modifier);
-                let rc_impl = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(o)));
-                Self::from_impl(rc_impl)
-            }
+            DimensionMarker::ObjectMixed => unreachable!(),
         }
     }
 }
 
-impl ScadObjectGeneric<DMixed> {
-    fn flatten_union_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-            {
-                match concrete {
-                    crate::scad_2d::ScadObject2D::Modifier(m) => {
-                        if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body {
-                            if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                                {
-                                    if let crate::scad_2d::ScadObject2D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_2d::ScadObject2D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
+// From 2D to untyped
+impl From<ScadObjectGeneric<D2>> for ScadObjectGeneric<DMixed> {
+    fn from(val: ScadObjectGeneric<D2>) -> Self {
+        let mut obj = Self::from_impl(val.inner);
+        obj.comment = val.comment;
+        obj
     }
+}
 
-    fn create_union_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_2d::ScadBlock2D { objects: parts };
-        let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
-        let rc_impl_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Union::new();
-        let m =
-            crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_impl_child))
-                .expect("Union modifier requires: Object2D");
-        let o = crate::scad_2d::ScadObject2D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+// From 3D to untyped
+impl From<ScadObjectGeneric<D3>> for ScadObjectGeneric<DMixed> {
+    fn from(val: ScadObjectGeneric<D3>) -> Self {
+        let mut obj = Self::from_impl(val.inner);
+        obj.comment = val.comment;
+        obj
     }
+}
 
-    fn flatten_union_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-            {
-                match concrete {
-                    crate::scad_3d::ScadObject3D::Modifier(m) => {
-                        if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body {
-                            if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                                {
-                                    if let crate::scad_3d::ScadObject3D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_3d::ScadObject3D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
+// From untyped to 2D (requires runtime check)
+impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D2> {
+    fn from(val: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            val.inner.get_type() == D2::MARKER,
+            "dimension mismatch: expected 2D object, found {:?}",
+            val.inner.get_type()
+        );
+        let mut obj = Self::from_impl(val.inner);
+        obj.comment = val.comment;
+        obj
     }
+}
 
-    fn create_union_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_3d::ScadBlock3D { objects: parts };
-        let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
-        let rc_impl_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Union::new();
-        let m =
-            crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_impl_child))
-                .expect("Union modifier requires: Object3D");
-        let o = crate::scad_3d::ScadObject3D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-
-    fn flatten_difference_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-            {
-                match concrete {
-                    crate::scad_2d::ScadObject2D::Modifier(m) => {
-                        if let crate::scad_2d::ScadModifierBody2D::Difference(_) = m.body {
-                            if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                                {
-                                    if let crate::scad_2d::ScadObject2D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_2d::ScadObject2D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
-    }
-
-    fn create_difference_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_2d::ScadBlock2D { objects: parts };
-        let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
-        let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Difference::new();
-        let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
-            .expect("Difference modifier requires: Object2D");
-        let o = crate::scad_2d::ScadObject2D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-
-    fn flatten_difference_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-            {
-                match concrete {
-                    crate::scad_3d::ScadObject3D::Modifier(m) => {
-                        if let crate::scad_3d::ScadModifierBody3D::Difference(_) = m.body {
-                            if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                                {
-                                    if let crate::scad_3d::ScadObject3D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_3d::ScadObject3D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
-    }
-
-    fn create_difference_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_3d::ScadBlock3D { objects: parts };
-        let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
-        let rc_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Difference::new();
-        let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
-            .expect("Difference modifier requires: Object3D");
-        let o = crate::scad_3d::ScadObject3D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-
-    fn flatten_intersection_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-            {
-                match concrete {
-                    crate::scad_2d::ScadObject2D::Modifier(m) => {
-                        if let crate::scad_2d::ScadModifierBody2D::Intersection(_) = m.body {
-                            if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                                {
-                                    if let crate::scad_2d::ScadObject2D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_2d::ScadObject2D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
-    }
-
-    fn create_intersection_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_2d::ScadBlock2D { objects: parts };
-        let obj_enum = crate::scad_2d::ScadObject2D::Block(block);
-        let rc_child = Rc::new(ScadObjectImpl::Object2D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Intersection::new();
-        let m = crate::scad_2d::ScadModifier2D::try_new(body.into(), Rc::clone(&rc_child))
-            .expect("Intersection modifier requires: Object2D");
-        let o = crate::scad_2d::ScadObject2D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        Self::from_impl(rc_impl)
-    }
-
-    fn flatten_intersection_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
-        if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
-            if let Some(concrete) = inner_enum_rc
-                .as_any()
-                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-            {
-                match concrete {
-                    crate::scad_3d::ScadObject3D::Modifier(m) => {
-                        if let crate::scad_3d::ScadModifierBody3D::Intersection(_) = m.body {
-                            if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                                if let Some(child_concrete) =
-                                    child_enum_rc
-                                        .as_any()
-                                        .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                                {
-                                    if let crate::scad_3d::ScadObject3D::Block(b) =
-                                        child_concrete
-                                    {
-                                        for obj in &b.objects {
-                                            parts.push(obj.clone());
-                                        }
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    crate::scad_3d::ScadObject3D::Block(b) => {
-                        for obj in &b.objects {
-                            parts.push(obj.clone());
-                        }
-                        return;
-                    }
-                    _ => {}
-                }
-            }
-        }
-        parts.push((**rc).clone());
-    }
-
-    fn create_intersection_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObjectGeneric<DMixed> {
-        let block = crate::scad_3d::ScadBlock3D { objects: parts };
-        let obj_enum = crate::scad_3d::ScadObject3D::Block(block);
-        let rc_child = Rc::new(ScadObjectImpl::Object3D(Rc::new(obj_enum)));
-        let body = crate::scad_sentence::Intersection::new();
-        let m = crate::scad_3d::ScadModifier3D::try_new(body.into(), Rc::clone(&rc_child))
-            .expect("Intersection modifier requires: Object3D");
-        let o = crate::scad_3d::ScadObject3D::Modifier(m);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        Self::from_impl(rc_impl)
+// From untyped to 3D (requires runtime check)
+impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D3> {
+    fn from(val: ScadObjectGeneric<DMixed>) -> Self {
+        assert!(
+            val.inner.get_type() == D3::MARKER,
+            "dimension mismatch: expected 3D object, found {:?}",
+            val.inner.get_type()
+        );
+        let mut obj = Self::from_impl(val.inner);
+        obj.comment = val.comment;
+        obj
     }
 }

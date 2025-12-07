@@ -2,18 +2,18 @@ use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
 use nalgebra as na;
-use std::rc::Rc;
 
 use crate::{
-    __generate_scad_options, __impl_apply_to_modifier, __impl_builder_sentence,
-    __impl_modifier_chaining,
-    common::{DimensionType as _, IntoScad, ScadObjectGeneric, ScadObjectImpl},
+    common::{
+        AffineMatrix3D, DimensionType as _, Point3D, ScadBuildable, ScadBuilder, ScadObjectGeneric,
+        ScadSentence, Unit,
+    },
     internal::generate_sentence_repr,
-    scad_3d::{ScadBlock3D, ScadModifier3D, ScadModifierBody3D, ScadObject3D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::Angle,
-    AffineMatrix3D, Point3D, Unit,
 };
+
+use crate::common::D3;
 
 macro_rules! __impl_apply_2d {
     ($mod_ty:ident) => {
@@ -21,13 +21,14 @@ macro_rules! __impl_apply_2d {
             apply_to,
             $mod_ty,
             $crate::scad_3d::ScadModifierBody3D,
-            $crate::common::ScadObject3D,
+            $crate::common::ScadObjectGeneric<$crate::common::D3>,
             $crate::scad_3d::ScadModifier3D,
             $crate::scad_3d::ScadObject3D,
             $crate::common::ScadObjectImpl::Object3D,
             $crate::common::D3, // output_marker
             $crate::common::D2  // child_marker
         );
+        __impl_panicking_modifier_methods!($mod_ty, D3);
     };
 }
 
@@ -37,13 +38,14 @@ macro_rules! __impl_apply_3d {
             apply_to,
             $mod_ty,
             $crate::scad_3d::ScadModifierBody3D,
-            $crate::common::ScadObject3D,
+            $crate::common::ScadObjectGeneric<$crate::common::D3>,
             $crate::scad_3d::ScadModifier3D,
             $crate::scad_3d::ScadObject3D,
             $crate::common::ScadObjectImpl::Object3D,
             $crate::common::D3, // output_marker
             $crate::common::D3  // child_marker
         );
+        __impl_panicking_modifier_methods!($mod_ty, D3);
     };
 }
 
@@ -60,12 +62,6 @@ pub struct Translate3D {
 __impl_builder_sentence!(Translate3D);
 __impl_modifier_chaining!(Translate3D);
 __impl_apply_3d!(Translate3D);
-
-impl IntoScad<crate::common::D3> for Translate3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
 
 impl ScadDisplay for Translate3D {
     fn repr_scad(&self) -> String {
@@ -115,12 +111,6 @@ pub struct Rotate3D {
 __impl_builder_sentence!(Rotate3D);
 __impl_modifier_chaining!(Rotate3D);
 __impl_apply_3d!(Rotate3D);
-
-impl IntoScad<crate::common::D3> for Rotate3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
 
 impl Rotate3DBuilder {
     /// Set rotation angle in degrees.
@@ -181,12 +171,6 @@ __impl_builder_sentence!(Scale3D);
 __impl_modifier_chaining!(Scale3D);
 __impl_apply_3d!(Scale3D);
 
-impl IntoScad<crate::common::D3> for Scale3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
-
 impl ScadDisplay for Scale3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr("scale", __generate_scad_options!(("", self.v);))
@@ -224,12 +208,6 @@ __impl_builder_sentence!(Resize3D);
 __impl_modifier_chaining!(Resize3D);
 __impl_apply_3d!(Resize3D);
 
-impl IntoScad<crate::common::D3> for Resize3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
-
 impl ScadDisplay for Resize3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -254,12 +232,6 @@ __impl_builder_sentence!(Mirror3D);
 __impl_modifier_chaining!(Mirror3D);
 __impl_apply_3d!(Mirror3D);
 
-impl IntoScad<crate::common::D3> for Mirror3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
-
 impl ScadDisplay for Mirror3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr("mirror", __generate_scad_options!(("", self.v);))
@@ -278,12 +250,6 @@ pub struct MultMatrix3D {
 __impl_builder_sentence!(MultMatrix3D);
 __impl_modifier_chaining!(MultMatrix3D);
 __impl_apply_3d!(MultMatrix3D);
-
-impl IntoScad<crate::common::D3> for MultMatrix3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
 
 impl ScadDisplay for MultMatrix3D {
     fn repr_scad(&self) -> String {
@@ -332,12 +298,6 @@ pub struct LinearExtrude {
 __impl_builder_sentence!(LinearExtrude);
 __impl_modifier_chaining!(LinearExtrude);
 __impl_apply_2d!(LinearExtrude);
-
-impl IntoScad<crate::common::D3> for LinearExtrude {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
 
 impl ScadDisplay for LinearExtrude {
     fn repr_scad(&self) -> String {
@@ -394,12 +354,6 @@ __impl_builder_sentence!(RotateExtrude);
 __impl_modifier_chaining!(RotateExtrude);
 __impl_apply_2d!(RotateExtrude);
 
-impl IntoScad<crate::common::D3> for RotateExtrude {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        panic!("A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")
-    }
-}
-
 impl ScadDisplay for RotateExtrude {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -423,7 +377,7 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::ScadBuildable as _;
+    use crate::common::ScadBuildable as _;
 
     #[test]
     fn test_translate3d() {

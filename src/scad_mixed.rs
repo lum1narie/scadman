@@ -5,20 +5,28 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
+    common::{DMixed, DimensionMarker},
     internal::{block_repr, modifier_repr},
+    prelude::{Color, Difference, Hull, Intersection, Minkowski, Union},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-    scad_sentence::{Color, Difference, Hull, Intersection, Minkowski, Union},
-    DimensionMarker,
 };
 
 /// A Mixed object in SCAD.
-#[derive(Debug, Clone, Delegate, From)]
-#[delegate(ScadDisplay)]
+#[derive(Debug, Clone, From)]
 pub enum ScadObjectMixed {
     /// A modifier mixed object.
     Modifier(ScadModifierMixed),
     /// A block of mixed objects.
     Block(ScadBlockMixed),
+}
+
+impl ScadDisplay for ScadObjectMixed {
+    fn repr_scad(&self) -> String {
+        match self {
+            ScadObjectMixed::Modifier(m) => m.repr_scad(),
+            ScadObjectMixed::Block(b) => b.repr_scad(),
+        }
+    }
 }
 
 /// A modifier for a mixed object in SCAD.
@@ -56,8 +64,6 @@ impl ScadDisplay for ScadModifierMixed {
     }
 }
 
-
-
 /// A block of mixed objects in SCAD.
 #[derive(Debug, Clone, From)]
 pub struct ScadBlockMixed {
@@ -80,8 +86,6 @@ impl ScadDisplay for ScadBlockMixed {
     }
 }
 
-
-
 /// A modifier sentences for mixed objects in SCAD.
 #[derive(Debug, Clone, Delegate, From)]
 #[delegate(ScadDisplay)]
@@ -101,10 +105,10 @@ impl ScadModifierBodyMixed {
     }
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_scad_mixed {
-    ( $type:ident ) => {
-        $crate::__impl_builder_sentence!($type);
-    };
+impl From<ScadObjectMixed> for crate::common::ScadObjectGeneric<crate::common::DMixed> {
+    fn from(val: ScadObjectMixed) -> crate::common::ScadObjectGeneric<crate::common::DMixed> {
+        let rc_o = Rc::new(val);
+        let rc_impl = Rc::new(crate::common::ScadObjectImpl::ObjectMixed(rc_o));
+        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+    }
 }

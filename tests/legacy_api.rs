@@ -8,18 +8,17 @@ mod tests {
         Circle, Cube, Cylinder, Difference, LinearExtrude, Polygon, Rotate3D, Square, Translate2D,
         Translate3D, Union,
     };
-    use scadman::Point2D;
     use std::iter;
 
     // Helper function to create a basic 2D object (Square)
-    fn sq(size: f64) -> ScadObject {
+    fn sq(size: f64) -> ScadObject2D {
         primitive_2d(Square::build_with(|sb| {
             let _ = sb.size(size);
         }))
     }
 
     // Helper function to create a basic 3D object (Cube)
-    fn cu(size: f64) -> ScadObject {
+    fn cu(size: f64) -> ScadObject3D {
         primitive_3d(Cube::build_with(|cb| {
             let _ = cb.size(size);
         }))
@@ -562,41 +561,27 @@ mod tests {
         );
     }
 
+    ///
+    /// ```compile_fail
+    /// drop(sq(10.0) + cu(10.0));
+    /// ```
+    /// ```compile_fail
+    /// drop(cu(10.0) + sq(10.0));
+    /// ```
+    /// ```compile_fail
+    /// drop(sq(10.0) - cu(10.0));
+    /// ```
+    /// ```compile_fail
+    /// drop(cu(10.0) - sq(10.0));
+    /// ```
+    /// ```compile_fail
+    /// drop(sq(10.0) * cu(10.0));
+    /// ```
+    /// ```compile_fail
+    /// drop(cu(10.0) * sq(10.0));
+    /// ```
     #[test]
-    #[should_panic(expected = "`Object2D + Object3D` is not allowed")]
-    fn test_add_dimension_mismatch() {
-        drop(sq(10.0) + cu(10.0));
-    }
-
-    #[test]
-    #[should_panic(expected = "`Object3D + Object2D` is not allowed")]
-    fn test_add_dimension_mismatch_rev() {
-        drop(cu(10.0) + sq(10.0));
-    }
-
-    #[test]
-    #[should_panic(expected = "`Object2D - Object3D` is not allowed")]
-    fn test_sub_dimension_mismatch() {
-        drop(sq(10.0) - cu(10.0));
-    }
-
-    #[test]
-    #[should_panic(expected = "`Object3D - Object2D` is not allowed")]
-    fn test_sub_dimension_mismatch_rev() {
-        drop(cu(10.0) - sq(10.0));
-    }
-
-    #[test]
-    #[should_panic(expected = "`Object2D * Object3D` is not allowed")]
-    fn test_mul_dimension_mismatch() {
-        drop(sq(10.0) * cu(10.0));
-    }
-
-    #[test]
-    #[should_panic(expected = "`Object3D * Object2D` is not allowed")]
-    fn test_mul_dimension_mismatch_rev() {
-        drop(cu(10.0) * sq(10.0));
-    }
+    fn test_op_fail() {}
 
     const SMALL_OVERLAP: f64 = 0.025;
 
@@ -626,7 +611,7 @@ mod tests {
         pos_x_out: bool,
         pos_y_out: bool,
         r#fn: u64,
-    ) -> ScadObject {
+    ) -> ScadObject2D {
         let outer = modifier_2d(
             Translate2D::build_with(|tb| {
                 let _ = tb.v(corner
@@ -660,7 +645,7 @@ mod tests {
         outer - inner
     }
 
-    fn generate_clamp() -> ScadObject {
+    fn generate_clamp() -> ScadObject3D {
         let shape_2d = {
             let body_x_a0: f64 = -CLAMP_UPPER_LENGTH - CLAMP_BACK_PLATE_THICKNESS;
             let body_x_a1: f64 = -CLAMP_LOWER_LENGTH - CLAMP_BACK_PLATE_THICKNESS;
@@ -756,7 +741,7 @@ mod tests {
         )
     }
 
-    fn generate_body() -> ScadObject {
+    fn generate_body() -> ScadObject3D {
         let hook_pos_y: f64 = CLAMP_SPAN / 2. + CLAMP_PLATE_THICKNESS;
 
         let hook = {

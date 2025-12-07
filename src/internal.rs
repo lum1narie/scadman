@@ -1,6 +1,9 @@
 use std::fmt::{Display, Formatter};
 
-use crate::{common::ScadObjectImpl, scad_display::ScadDisplay, INDENT};
+use crate::{
+    common::{ScadObjectImpl, INDENT},
+    scad_display::ScadDisplay,
+};
 
 /// Indent a string
 ///
@@ -38,7 +41,7 @@ pub fn primitive_repr<T: ScadDisplay>(body: &T) -> String {
 
 /// Represent a modifier with its child object in SCAD
 ///
-/// - If the child's representation starts with '{', the modifier is placed directly before the block
+/// - If the child's representation starts with '{{', the modifier is placed directly before the block
 /// - Otherwise, the child is indented and placed on a new line after the modifier
 ///
 /// # Arguments
@@ -242,6 +245,31 @@ macro_rules! __impl_modifier_chaining {
     };
 }
 
+/// Macro to implement panicking `to_code` and `From` for modifiers.
+/// This ensures that attempting to treat a modifier as a complete `ScadObject`
+/// without a child will cause a runtime panic, as expected by some tests.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_panicking_modifier_methods {
+    ($mod_ty:ident, $dim_marker:ty) => {
+        impl $mod_ty {
+            pub fn to_code(&self) -> String {
+                panic!(
+                    "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
+                );
+            }
+        }
+
+        impl From<$mod_ty> for $crate::common::ScadObjectGeneric<$dim_marker> {
+            fn from(_: $mod_ty) -> Self {
+                panic!(
+                    "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
+                );
+            }
+        }
+    };
+}
+
 /// Macro to implement `apply_to` for modifiers.
 ///
 /// Parameters:
@@ -314,9 +342,7 @@ macro_rules! __impl_apply_to_modifier {
                 let rc_impl = Rc::new($impl_variant(Rc::new(o)));
 
                 // Convert rc_impl into the typed wrapper using from_impl and the provided marker.
-                $typed_output_obj(
-                    $crate::common::ScadObjectGeneric::<$output_marker>::from_impl(rc_impl),
-                )
+                $crate::common::ScadObjectGeneric::<$output_marker>::from_impl(rc_impl)
             }
         }
     };
@@ -328,18 +354,156 @@ macro_rules! __impl_apply_to_modifier {
 macro_rules! __impl_builder_sentence {
     ( $type:ident ) => {
         paste::paste! {
-            impl $crate::ScadSentence for $type {}
+            impl $crate::common::ScadSentence for $type {}
 
-            impl $crate::ScadBuildable for $type {
+            impl $crate::common::ScadBuildable for $type {
                 type Builder = [<$type Builder>];
             }
 
-            impl $crate::ScadBuilder for [<$type Builder>] {
+            impl $crate::common::ScadBuilder for [<$type Builder>] {
                 type Target = $type;
                 type Error = [<$type BuilderError>];
                 fn build_scad(&self) -> Result<Self::Target, Self::Error> {
                     Self::build(&self)
                 }
+            }
+        }
+    };
+}
+
+/// implement [`ScadSentnece`] and [`ScadBuilder`] for certain type
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_builder_primitive {
+    ( $type:ident, $dim:ty ) => {
+        paste::paste! {
+            impl $crate::common::ScadSentence for $type {}
+
+            impl $crate::common::ScadBuildable for $type {
+                type Builder = [<$type Builder>];
+            }
+
+            impl $crate::common::ScadBuilder for [<$type Builder>] {
+                type Target = $crate::common::ScadObjectGeneric<$dim>;
+                type Error = [<$type BuilderError>];
+                fn build_scad(&self) -> Result<Self::Target, Self::Error> {
+                    Self::build(&self).map(|s| s.into())
+                }
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_into_scad_for_collection_with_try_new {
+    (
+        $dim_marker:ty,         // e.g., D2
+        $scad_block_ty:ty,      // e.g., ScadBlock2D
+        $scad_object_enum_ty:ty,// e.g., ScadObject2D
+        $scad_object_impl_variant:path, // e.g., ScadObjectImpl::Object2D
+        $expect_msg:literal     // e.g., "Internal error: ..."
+    ) => {
+        impl<T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for Vec<T>
+        where
+            T: Into<$crate::common::ScadObjectGeneric<$dim_marker>>,
+        {
+            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
+                let objects_rc_impl: Vec<std::rc::Rc<$crate::common::ScadObjectImpl>> =
+                    self.into_iter().map(|item| item.into().inner).collect();
+                let objects_impl: Vec<$crate::common::ScadObjectImpl> = objects_rc_impl
+                    .into_iter()
+                    .map(|rc| (*rc).clone())
+                    .collect();
+
+                let block = <$scad_block_ty>::try_new(&objects_impl).expect($expect_msg);
+
+                let o = <$scad_object_enum_ty>::Block(block);
+                let rc_impl = std::rc::Rc::new($scad_object_impl_variant(std::rc::Rc::new(o)));
+                $crate::common::ScadObjectGeneric::from_impl(rc_impl)
+            }
+        }
+
+        impl<'a, T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for &'a [T]
+        where
+            T: Into<$crate::common::ScadObjectGeneric<$dim_marker>> + Clone,
+        {
+            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
+                // The Rc and ScadObjectImpl are already used in the macro, so no need to declare them here.
+                // use std::rc::Rc;
+                // use $crate::common::{ScadObjectImpl, IntoScad, ScadObjectGeneric};
+
+                let objects_rc_impl: Vec<std::rc::Rc<$crate::common::ScadObjectImpl>> =
+                    self.iter().map(|item| item.clone().into().inner).collect();
+                let objects_impl: Vec<$crate::common::ScadObjectImpl> = objects_rc_impl
+                    .into_iter()
+                    .map(|rc| (*rc).clone())
+                    .collect();
+
+                let block = <$scad_block_ty>::try_new(&objects_impl).expect($expect_msg);
+
+                let o = <$scad_object_enum_ty>::Block(block);
+                let rc_impl = std::rc::Rc::new($scad_object_impl_variant(std::rc::Rc::new(o)));
+                $crate::common::ScadObjectGeneric::from_impl(rc_impl)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_into_scad_for_collection_with_new {
+    (
+        $dim_marker:ty,         // e.g., DMixed
+        $scad_block_ty:ty,      // e.g., ScadBlockMixed
+        $scad_object_enum_ty:ty,// e.g., ScadObjectMixed
+        $scad_object_impl_variant:path  // e.g., ScadObjectImpl::ObjectMixed
+    ) => {
+        impl<T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for Vec<T>
+        where
+            T: Into<$crate::common::ScadObjectGeneric<$dim_marker>>,
+        {
+            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
+                // The Rc and ScadObjectImpl are already used in the macro, so no need to declare them here.
+                // use std::rc::Rc;
+                // use $crate::common::{ScadObjectImpl, IntoScad, ScadObjectGeneric};
+
+                let objects_rc_impl: Vec<std::rc::Rc<$crate::common::ScadObjectImpl>> =
+                    self.into_iter().map(|item| item.into().inner).collect();
+                let objects_impl: Vec<$crate::common::ScadObjectImpl> = objects_rc_impl
+                    .into_iter()
+                    .map(|rc| (*rc).clone())
+                    .collect();
+
+                let block = <$scad_block_ty>::new(&objects_impl);
+
+                let o = <$scad_object_enum_ty>::Block(block);
+                let rc_impl = std::rc::Rc::new($scad_object_impl_variant(std::rc::Rc::new(o)));
+                $crate::common::ScadObjectGeneric::from_impl(rc_impl)
+            }
+        }
+
+        impl<'a, T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for &'a [T]
+        where
+            T: Into<$crate::common::ScadObjectGeneric<$dim_marker>> + Clone,
+        {
+            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
+                // The Rc and ScadObjectImpl are already used in the macro, so no need to declare them here.
+                // use std::rc::Rc;
+                // use $crate::common::{ScadObjectImpl, IntoScad, ScadObjectGeneric};
+
+                let objects_rc_impl: Vec<std::rc::Rc<$crate::common::ScadObjectImpl>> =
+                    self.iter().map(|item| item.clone().into().inner).collect();
+                let objects_impl: Vec<$crate::common::ScadObjectImpl> = objects_rc_impl
+                    .into_iter()
+                    .map(|rc| (*rc).clone())
+                    .collect();
+
+                let block = <$scad_block_ty>::new(&objects_impl);
+
+                let o = <$scad_object_enum_ty>::Block(block);
+                let rc_impl = std::rc::Rc::new($scad_object_impl_variant(std::rc::Rc::new(o)));
+                $crate::common::ScadObjectGeneric::from_impl(rc_impl)
             }
         }
     };

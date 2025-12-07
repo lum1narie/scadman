@@ -3,9 +3,9 @@
 
 #[cfg(test)]
 mod tests {
+    use scadman::common::D2;
     use scadman::prelude::*;
 
-    use scadman::common::IntoScad as _;
     use scadman::scad_sentence::{
         Cube, Intersection, Rotate3D, Square, Translate2D, Translate3D, Union,
     };
@@ -16,7 +16,6 @@ mod tests {
             Square::build_with(|sb| {
                 let _ = sb.size(10.0);
             })
-            .scad()
             .to_code(),
             "square(size = 10);\n"
         );
@@ -24,32 +23,37 @@ mod tests {
             Cube::build_with(|cb| {
                 let _ = cb.size(5.0);
             })
-            .scad()
             .to_code(),
             "cube(size = 5);\n"
         );
     }
 
     #[test]
-    #[should_panic(expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods.")]
-    fn test_modifier_scad_method() {
+    #[should_panic(
+        expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
+    )]
+    fn test_modifier_into_fail() {
+        Into::<ScadObjectGeneric<D2>>::into(Translate2D::build_with(|tb| {
+            let _ = tb.v([1.0, 2.0]);
+        }));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
+    )]
+    fn test_modifier_code_fail() {
         Translate2D::build_with(|tb| {
             let _ = tb.v([1.0, 2.0]);
         })
-        .scad();
-
-        Rotate3D::build_with(|rb| {
-            let _ = rb.deg([0., 90., 0.]);
-        })
-        .scad();
+        .to_code();
     }
 
     #[test]
     fn test_modifier_apply_chaining() {
         let square_scad = Square::build_with(|sb| {
             let _ = sb.size(10.0);
-        })
-        .scad();
+        });
 
         // Chain modifier definitions
         let translated_modifier = Translate2D::build_with(|tb| {
@@ -73,8 +77,7 @@ mod tests {
 
         let cube_scad = Cube::build_with(|cb| {
             let _ = cb.size(5.0);
-        })
-        .scad();
+        });
 
         // Chain modifier definitions for 3D
         let translated_modifier_3d = Translate3D::build_with(|tb| {
@@ -104,7 +107,7 @@ mod tests {
         let translated = Translate2D::build_with(|tb| {
             let _ = tb.v([5.0, 5.0]);
         })
-        .apply_to(square_scad.scad());
+        .apply_to(square_scad);
         assert_eq!(
             translated.to_code(),
             "translate([5, 5])
@@ -118,22 +121,23 @@ mod tests {
         let rotated = Rotate3D::build_with(|rb| {
             let _ = rb.deg(45.0);
         })
-        .apply_to(cube_scad.scad());
-        assert_eq!(rotated.to_code(), "rotate(a = 45)
+        .apply_to(cube_scad);
+        assert_eq!(
+            rotated.to_code(),
+            "rotate(a = 45)
   cube(size = 10);
-");
+"
+        );
     }
 
     #[test]
     fn test_universal_modifier_scad_and_apply_to() {
         let square_scad = Square::build_with(|sb| {
             let _ = sb.size(10.0);
-        })
-        .scad();
+        });
         let cube_scad = Cube::build_with(|cb| {
             let _ = cb.size(10.0);
-        })
-        .scad();
+        });
 
         // Test Union 2D
         assert_eq!(

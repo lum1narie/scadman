@@ -1,13 +1,14 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
-use std::rc::Rc;
 
 use crate::{
-    __generate_scad_options, __impl_builder_sentence,
-    common::{Point2D, IntoScad, ScadObjectGeneric, ScadObjectImpl, Unit},
+    common::{
+        Point2D, ScadBuildable as _, ScadBuilder as _, ScadObjectGeneric, ScadSentence as _, Unit,
+        D2,
+    },
     internal::generate_sentence_repr,
-    scad_2d::{ScadObject2D, ScadPrimitive2D},
-    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
+    scad_2d::{ScadPrimitive2D, ScadPrimitiveBody2D},
+    scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
     value_type::RoundSize,
 };
 
@@ -62,12 +63,18 @@ pub struct Square {
 
 __impl_builder_sentence!(Square);
 
-impl IntoScad<crate::common::D2> for Square {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
-        let prim = ScadPrimitive2D::new(self.into());
-        let o = ScadObject2D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+impl From<Square> for ScadObjectGeneric<D2> {
+    fn from(val: Square) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Square {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = (*self).into();
+        obj.to_code()
     }
 }
 
@@ -104,12 +111,18 @@ pub struct Circle {
 
 __impl_builder_sentence!(Circle);
 
-impl IntoScad<crate::common::D2> for Circle {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
-        let prim = ScadPrimitive2D::new(self.into());
-        let o = ScadObject2D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+impl From<Circle> for ScadObjectGeneric<D2> {
+    fn from(val: Circle) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Circle {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = (*self).into();
+        obj.to_code()
     }
 }
 
@@ -196,12 +209,18 @@ pub struct Polygon {
 
 __impl_builder_sentence!(Polygon);
 
-impl IntoScad<crate::common::D2> for Polygon {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
-        let prim = ScadPrimitive2D::new(self.into());
-        let o = ScadObject2D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+impl From<Polygon> for ScadObjectGeneric<D2> {
+    fn from(val: Polygon) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Polygon {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
     }
 }
 
@@ -301,12 +320,18 @@ pub struct Text {
 
 __impl_builder_sentence!(Text);
 
-impl IntoScad<crate::common::D2> for Text {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
-        let prim = ScadPrimitive2D::new(self.into());
-        let o = ScadObject2D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+impl From<Text> for ScadObjectGeneric<D2> {
+    fn from(val: Text) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Text {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
     }
 }
 
@@ -366,12 +391,18 @@ pub struct Import2D {
 
 __impl_builder_sentence!(Import2D);
 
-impl IntoScad<crate::common::D2> for Import2D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D2> {
-        let prim = ScadPrimitive2D::new(self.into());
-        let o = ScadObject2D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object2D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
+impl From<Import2D> for ScadObjectGeneric<D2> {
+    fn from(val: Import2D) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Import2D {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
     }
 }
 
@@ -396,8 +427,6 @@ impl ScadDisplay for Import2D {
 
 #[cfg(test)]
 mod tests {
-    use crate::ScadBuildable as _;
-
     use super::*;
 
     #[test]
@@ -515,7 +544,7 @@ mod tests {
             [-0.5, 0.5],
         ]);
         assert_eq!(
-            p1.clone().paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
+            p1.paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
             "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]])"
         );
         assert_eq!(

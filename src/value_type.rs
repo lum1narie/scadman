@@ -1,13 +1,9 @@
 //! Types used to represent values in the library.
 
-use ambassador::Delegate;
 use derive_more::derive::From;
 use nalgebra as na;
 
-use crate::{
-    common::Unit,
-    scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
-};
+use crate::{common::Unit, scad_display::ScadDisplay};
 
 /// Vector representing an RGB color.
 pub type RGB = na::Vector3<Unit>;
@@ -33,7 +29,7 @@ impl Angle {
     /// # Examples
     ///
     /// ```
-    /// use scadman::{Unit, value_type::Angle};
+    /// use scadman::{prelude::Unit, value_type::Angle};
     /// let d = Angle::Deg(90.0 as Unit);
     /// assert!((d.deg() - 90.0).abs() < 1e5);
     /// let r = Angle::Rad(std::f64::consts::PI as Unit / 2.);
@@ -133,5 +129,3 @@ impl ScadDisplay for ScadColor {
         }
     }
 }
-
-

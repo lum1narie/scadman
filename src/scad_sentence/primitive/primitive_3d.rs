@@ -1,13 +1,14 @@
 use ambassador::Delegate;
 use derive_builder::Builder;
 use derive_more::derive::From;
-use std::rc::Rc;
 
 use crate::{
-    __generate_scad_options, __impl_builder_sentence,
-    common::{Point3D, IntoScad, ScadObjectGeneric, ScadObjectImpl, Unit},
+    common::{
+        Point3D, ScadBuildable as _, ScadBuilder as _, ScadObjectGeneric, ScadSentence as _, Unit,
+        D3,
+    },
     internal::generate_sentence_repr,
-    scad_3d::{ScadObject3D, ScadPrimitive3D},
+    scad_3d::{ScadPrimitive3D, ScadPrimitiveBody3D},
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
     value_type::RoundSize,
 };
@@ -33,15 +34,6 @@ pub struct Sphere {
 }
 
 __impl_builder_sentence!(Sphere);
-
-impl IntoScad<crate::common::D3> for Sphere {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
 
 impl SphereBuilder {
     /// Set `r` option in SCAD.
@@ -79,6 +71,14 @@ impl ScadDisplay for Sphere {
                 )
             ),
         )
+    }
+}
+
+impl From<Sphere> for ScadObjectGeneric<D3> {
+    fn from(val: Sphere) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
     }
 }
 
@@ -133,15 +133,6 @@ pub struct Cube {
 
 __impl_builder_sentence!(Cube);
 
-impl IntoScad<crate::common::D3> for Cube {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
-
 impl ScadDisplay for Cube {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -150,6 +141,21 @@ impl ScadDisplay for Cube {
                 ("size", self.size); opt: (("center", self.center);)
             ),
         )
+    }
+}
+
+impl From<Cube> for ScadObjectGeneric<D3> {
+    fn from(val: Cube) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
+    }
+}
+
+impl Cube {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D3> = (*self).into();
+        obj.to_code()
     }
 }
 
@@ -246,15 +252,6 @@ impl CylinderBuilder {
 
 __impl_builder_sentence!(Cylinder);
 
-impl IntoScad<crate::common::D3> for Cylinder {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
-
 impl ScadDisplay for Cylinder {
     fn repr_scad(&self) -> String {
         let size_str = match self.size {
@@ -284,6 +281,14 @@ impl ScadDisplay for Cylinder {
                 .collect::<Vec<_>>()
                 .join(", ")
         )
+    }
+}
+
+impl From<Cylinder> for ScadObjectGeneric<D3> {
+    fn from(val: Cylinder) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
     }
 }
 
@@ -337,15 +342,6 @@ pub struct Polyhedron {
 
 __impl_builder_sentence!(Polyhedron);
 
-impl IntoScad<crate::common::D3> for Polyhedron {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
-
 impl PolyhedronBuilder {
     /// Check if `faces` is in the range of `points`'s indicies.
     fn validate(&self) -> Result<(), String> {
@@ -394,6 +390,14 @@ impl ScadDisplay for Polyhedron {
     }
 }
 
+impl From<Polyhedron> for ScadObjectGeneric<D3> {
+    fn from(val: Polyhedron) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
+    }
+}
+
 /// SCAD object imported from external file.
 /// `import()` in SCAD.
 /// This Rust type is regarded as 3D object.
@@ -418,15 +422,6 @@ pub struct Import3D {
 
 __impl_builder_sentence!(Import3D);
 
-impl IntoScad<crate::common::D3> for Import3D {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
-
 impl ScadDisplay for Import3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -441,6 +436,14 @@ impl ScadDisplay for Import3D {
                 )
             ),
         )
+    }
+}
+
+impl From<Import3D> for ScadObjectGeneric<D3> {
+    fn from(val: Import3D) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
     }
 }
 
@@ -469,15 +472,6 @@ pub struct Surface {
 
 __impl_builder_sentence!(Surface);
 
-impl IntoScad<crate::common::D3> for Surface {
-    fn scad(self) -> ScadObjectGeneric<crate::common::D3> {
-        let prim = ScadPrimitive3D::new(self.into());
-        let o = ScadObject3D::Primitive(prim);
-        let rc_impl = Rc::new(ScadObjectImpl::Object3D(Rc::new(o)));
-        ScadObjectGeneric::from_impl(rc_impl)
-    }
-}
-
 impl ScadDisplay for Surface {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
@@ -494,10 +488,16 @@ impl ScadDisplay for Surface {
     }
 }
 
+impl From<Surface> for ScadObjectGeneric<D3> {
+    fn from(val: Surface) -> ScadObjectGeneric<D3> {
+        let body = ScadPrimitiveBody3D::from(val);
+        let primitive = ScadPrimitive3D::new(body);
+        primitive.into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::ScadBuildable as _;
-
     use super::*;
 
     #[test]
