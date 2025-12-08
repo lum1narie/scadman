@@ -357,9 +357,6 @@ macro_rules! __impl_apply_to_modifier {
 macro_rules! __impl_builder_primitive {
     ( $type:ident, $dim_marker:ty ) => {
         paste::paste! {
-            impl $crate::common::ScadSentence for $type {
-            }
-
             impl $crate::common::ScadBuildable for $type {
                 type Target = $crate::common::ScadObjectGeneric<$dim_marker>;
                 type Builder = [<$type Builder>];
@@ -382,9 +379,6 @@ macro_rules! __impl_builder_primitive {
 macro_rules! __impl_builder_modifier {
     ( $type:ident ) => {
         paste::paste! {
-            impl $crate::common::ScadSentence for $type {
-            }
-
             impl $crate::common::ScadBuildable for $type {
                 type Target = $type;
                 type Builder = [<$type Builder>];

@@ -63,10 +63,6 @@ pub trait ScadBuildable: Sized {
 /// Trait for types that can be directly converted into a `ScadObjectGeneric`<D>.
 /// Replaced by standard `Into` trait.
 
-/// Trait for Scad sentence types (primitives/modifiers).
-
-pub(crate) trait ScadSentence: ScadDisplay + ScadBuildable {}
-
 /// Trait for object that can be shown with comment.
 
 /// Marker types to represent object dimensions at the type level.
