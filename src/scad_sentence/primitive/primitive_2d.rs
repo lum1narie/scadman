@@ -9,6 +9,13 @@ use crate::{
     value_type::RoundSize,
 };
 
+macro_rules! __impl_primitive_2d {
+    ($prim_ty:ident) => {
+        __impl_builder_primitive!($prim_ty, D2);
+        __impl_primitive_to_code!($prim_ty, D2);
+    };
+}
+
 /// Size of square in SCAD.
 #[derive(Copy, Clone, Debug, PartialEq, Delegate)]
 #[delegate(ScadDisplay)]
@@ -53,25 +60,18 @@ pub struct Square {
     ///
     /// + `true` - square's origin is at center of square.
     /// + `false` - square's origin is at the point where
-    ///     x and y coordinate is the smallest.
+    ///   x and y coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
 }
 
-__impl_builder_primitive!(Square, D2);
+__impl_primitive_2d!(Square);
 
 impl From<Square> for ScadObjectGeneric<D2> {
     fn from(val: Square) -> Self {
         let body = ScadPrimitiveBody2D::from(val);
         let primitive = ScadPrimitive2D::new(body);
         primitive.into()
-    }
-}
-
-impl Square {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D2> = (*self).into();
-        obj.to_code()
     }
 }
 
@@ -106,20 +106,13 @@ pub struct Circle {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_primitive!(Circle, D2);
+__impl_primitive_2d!(Circle);
 
 impl From<Circle> for ScadObjectGeneric<D2> {
     fn from(val: Circle) -> Self {
         let body = ScadPrimitiveBody2D::from(val);
         let primitive = ScadPrimitive2D::new(body);
         primitive.into()
-    }
-}
-
-impl Circle {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D2> = (*self).into();
-        obj.to_code()
     }
 }
 
@@ -204,20 +197,13 @@ pub struct Polygon {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_primitive!(Polygon, D2);
+__impl_primitive_2d!(Polygon);
 
 impl From<Polygon> for ScadObjectGeneric<D2> {
     fn from(val: Polygon) -> Self {
         let body = ScadPrimitiveBody2D::from(val);
         let primitive = ScadPrimitive2D::new(body);
         primitive.into()
-    }
-}
-
-impl Polygon {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D2> = self.clone().into();
-        obj.to_code()
     }
 }
 
@@ -315,20 +301,13 @@ pub struct Text {
     pub r#fn: Option<u64>,
 }
 
-__impl_builder_primitive!(Text, D2);
+__impl_primitive_2d!(Text);
 
 impl From<Text> for ScadObjectGeneric<D2> {
     fn from(val: Text) -> Self {
         let body = ScadPrimitiveBody2D::from(val);
         let primitive = ScadPrimitive2D::new(body);
         primitive.into()
-    }
-}
-
-impl Text {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D2> = self.clone().into();
-        obj.to_code()
     }
 }
 
@@ -386,20 +365,13 @@ pub struct Import2D {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_primitive!(Import2D, D2);
+__impl_primitive_2d!(Import2D);
 
 impl From<Import2D> for ScadObjectGeneric<D2> {
     fn from(val: Import2D) -> Self {
         let body = ScadPrimitiveBody2D::from(val);
         let primitive = ScadPrimitive2D::new(body);
         primitive.into()
-    }
-}
-
-impl Import2D {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D2> = self.clone().into();
-        obj.to_code()
     }
 }
 

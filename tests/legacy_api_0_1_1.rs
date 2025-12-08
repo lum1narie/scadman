@@ -4,9 +4,8 @@
 
 #[cfg(test)]
 mod tests {
-    use scadman::prelude::*;
     use scadman::legacy::v0_1_1::*;
-    use std::iter;
+    use scadman::prelude::*;
 
     // Helper function to create a basic 2D object (Square)
     fn sq(size: f64) -> ScadObject2D {
@@ -724,11 +723,8 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            modifier_2d_commented(
-                Union::new(),
-                block_2d(&iter::once(body_rounded).chain(teeth).collect::<Vec<_>>()),
-                "body with teeth",
-            )
+            let targets = [vec![body_rounded], teeth].concat();
+            modifier_2d_commented(Union::new(), block_2d(&targets), "body with teeth")
         };
 
         modifier_3d(

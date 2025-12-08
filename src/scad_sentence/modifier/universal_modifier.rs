@@ -1,7 +1,7 @@
 use derive_builder::Builder;
 
 use crate::{
-    common::{DimensionType as _, ScadBuildable as _, Unit},
+    common::{DimensionType as _, Unit},
     internal::generate_sentence_repr,
     scad_display::ScadDisplay,
     value_type::ScadColor,
@@ -10,11 +10,11 @@ use crate::{
 /// Give an implementation of a modifier sentence without parameter.
 macro_rules! __impl_operator {
     ( $type:ident, $name:expr_2021 ) => {
-        // #[doc = concat!($name, " modifier `", $name, "()" in SCAD.)]
         #[allow(missing_debug_implementations)]
         #[allow(clippy::missing_const_for_fn)]
         #[allow(missing_copy_implementations)]
         #[derive(derive_builder::Builder, Debug, Clone, Copy)]
+        #[doc = concat!($name, " modifier `", $name, "() in SCAD.")]
         pub struct $type {}
 
         $crate::__impl_builder_modifier!($type);

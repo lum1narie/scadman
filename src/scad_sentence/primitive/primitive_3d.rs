@@ -10,6 +10,14 @@ use crate::{
     value_type::RoundSize,
 };
 
+
+macro_rules! __impl_primitive_3d {
+    ($prim_ty:ident) => {
+        __impl_builder_primitive!($prim_ty, D3);
+        __impl_primitive_to_code!($prim_ty, D3);
+    };
+}
+
 /// Sphere object `sphere()` in SCAD.obj
 #[derive(Builder, Copy, Clone, Debug, PartialEq)]
 pub struct Sphere {
@@ -30,7 +38,7 @@ pub struct Sphere {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_primitive!(Sphere, D3);
+__impl_primitive_3d!(Sphere);
 
 impl SphereBuilder {
     /// Set `r` option in SCAD.
@@ -123,12 +131,12 @@ pub struct Cube {
     ///
     /// + `true` - square's origin is at center of square.
     /// + `false` - square's origin is at the point where
-    ///     x, y, and z coordinate is the smallest.
+    ///   x, y, and z coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
 }
 
-__impl_builder_primitive!(Cube, D3);
+__impl_primitive_3d!(Cube);
 
 impl ScadDisplay for Cube {
     fn repr_scad(&self) -> String {
@@ -146,13 +154,6 @@ impl From<Cube> for ScadObjectGeneric<D3> {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
-    }
-}
-
-impl Cube {
-    pub fn to_code(&self) -> String {
-        let obj: ScadObjectGeneric<D3> = (*self).into();
-        obj.to_code()
     }
 }
 
@@ -198,7 +199,7 @@ pub struct Cylinder {
     ///
     /// + `true` - sphere's z origin is at center of cylinder.
     /// + `false` - square's z origin is at the point where
-    ///     z coordinate is the smallest.
+    ///   z coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
     /// `$fa` option in SCAD.
@@ -247,7 +248,7 @@ impl CylinderBuilder {
     }
 }
 
-__impl_builder_primitive!(Cylinder, D3);
+__impl_primitive_3d!(Cylinder);
 
 impl ScadDisplay for Cylinder {
     fn repr_scad(&self) -> String {
@@ -337,7 +338,7 @@ pub struct Polyhedron {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_primitive!(Polyhedron, D3);
+__impl_primitive_3d!(Polyhedron);
 
 impl PolyhedronBuilder {
     /// Check if `faces` is in the range of `points`'s indicies.
@@ -417,7 +418,7 @@ pub struct Import3D {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_primitive!(Import3D, D3);
+__impl_primitive_3d!(Import3D);
 
 impl ScadDisplay for Import3D {
     fn repr_scad(&self) -> String {
@@ -455,7 +456,7 @@ pub struct Surface {
     ///
     /// + `true` - Object's xy origin is at center of it.
     /// + `false` - Object's xy origin is at the point where
-    ///     x and y coordinate is the smallest.
+    ///   x and y coordinate is the smallest.
     #[builder(setter(into, strip_option), default)]
     pub center: Option<bool>,
     /// Inverts how the color values of imported images are translated into height values.
@@ -467,7 +468,7 @@ pub struct Surface {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_primitive!(Surface, D3);
+__impl_primitive_3d!(Surface);
 
 impl ScadDisplay for Surface {
     fn repr_scad(&self) -> String {

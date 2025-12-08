@@ -92,10 +92,15 @@ impl ScadDisplay for ScadBlockMixed {
 pub enum ScadModifierBodyMixed {
     /// `color()` in SCAD.
     Color(Color),
+    /// `hull()` in SCAD.
     Hull(Hull),
+    /// `minkowski()` in SCAD.
     Minkowski(Minkowski),
+    /// `union()` in SCAD.
     Union(Union),
+    /// `difference()` in SCAD.
     Difference(Difference),
+    /// `intersection()` in SCAD.
     Intersection(Intersection),
 }
 

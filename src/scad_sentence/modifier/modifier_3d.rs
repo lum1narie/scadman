@@ -48,7 +48,7 @@ macro_rules! __impl_apply_3d {
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
-#[derive(Builder, Debug, Clone)]
+#[derive(Builder, Debug, Clone, Copy)]
 pub struct Translate3D {
     /// Translation vector.
     /// `v` option in SCAD.
