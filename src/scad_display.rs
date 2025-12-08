@@ -7,7 +7,7 @@ use crate::common::{AffineMatrix2D, AffineMatrix3D, Container2D, Container3D, Un
 
 /// Trait for types that can be represented as a string in SCAD.
 #[delegatable_trait]
-pub(crate) trait ScadDisplay {
+pub trait ScadDisplay {
     /// Returns a string representation of the type in SCAD.
     ///
     /// # Returns

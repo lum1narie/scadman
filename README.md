@@ -11,15 +11,18 @@ your parametric models using Rust code. This approach leverages Rust's strong ty
 module system, testing capabilities, and build tools to manage your designs.
 
 The library represents OpenSCAD primitives, modifiers, and blocks as distinct Rust types,
-wrapped within a unified `ScadObject` structure. It provides traits and helper functions
-to build, combine, and transform these objects, handling the complexities of OpenSCAD
-syntax generation, including parameter formatting, object nesting, and indentation.
+managed by a powerful generic type system centered around `ScadObjectGeneric<D>`. This system
+provides enhanced type safety by tracking object dimensions (2D, 3D, Mixed) at compile time
+where possible, while allowing for flexible runtime handling when necessary. It provides
+traits and helper functions to build, combine, and transform these objects, handling the
+complexities of OpenSCAD syntax generation, including parameter formatting, object nesting,
+and indentation.
 
 ## Features
 
 *   **Type-Safe Object Model**: Define 2D, 3D, and mixed-dimension objects using a clear
-    type hierarchy (`ScadObject2D`, `ScadObject3D`, `ScadObjectMixed`) wrapped in
-    `ScadObject`.
+    type hierarchy based on `ScadObjectGeneric<D>` and public-facing wrappers like
+    `ScadObject2D`, `ScadObject3D`, and `ScadObjectMixed`.
 *   **Comprehensive Primitive Support**: Create basic shapes like `square`, `circle`,
     `sphere`, `cube`, `cylinder`, `polygon`, `polyhedron`, `text`, and `import`.
 *   **Extensive Modifier Support**: Apply transformations and operations such as
@@ -29,7 +32,10 @@ syntax generation, including parameter formatting, object nesting, and indentati
 *   **Boolean and Block Operations**: Combine objects using `union`, `difference`, and
     `intersection`. Blocks (`{ ... }`) are also explicitly supported.
 *   **Operator Overloading**: Use standard Rust operators (`+`, `-`, `*`) for `union`,
-    `difference`, and `intersection` operations on `ScadObject`s of the same dimension.
+    `difference`, and `intersection` operations. These operators work on the
+    `ScadObject` (untyped alias) and perform a runtime check, requiring both operands
+    to have the same internal dimension (`Object2D`, `Object3D`, or `ObjectMixed`).
+    Operations between objects of different dimensions will result in a panic.
 *   **Comment Support**: Easily add comments to individual objects or blocks using the
     `.commented()` method or dedicated factory functions.
 *   **Builder Pattern**: Many complex primitives and modifiers provide a type-safe builder
@@ -51,7 +57,66 @@ Add this to your `Cargo.toml`:
 scadman = { tag = "v0.3.0", git = "https://github.com/lum1narie/scadman.git" }
 ```
 
-## Basic Usage
+## Working with Typed Dimensions: Primitives, Modifiers, and Conversions
+
+`scadman` uses a robust generic type system to ensure dimensional correctness (2D, 3D, Mixed) at compile time wherever possible, while providing flexibility through conversions.
+
+### Creating Typed Objects: `primitive_*` Functions
+
+To create an object with a specific dimension, use the corresponding factory function:
+
+*   **`primitive_2d(body)`**: Creates a `ScadObject2D` (which wraps `ScadObjectGeneric<D2>`). For example, `primitive_2d(Square::new())`.
+*   **`primitive_3d(body)`**: Creates a `ScadObject3D` (which wraps `ScadObjectGeneric<D3>`). For example, `primitive_3d(Cube::new())`.
+
+These functions typically take a primitive "body" (e.g., `Square`, `Cube`) that is often constructed using its `build_with` builder pattern.
+
+### Applying Typed Modifiers: `modifier_*` Functions
+
+Similarly, to apply a modifier to a typed object, use the matching factory function:
+
+*   **`modifier_2d(modifier_body, child_object_2d)`**: Applies a 2D modifier (e.g., `Translate2D`) to a `ScadObject2D`, returning a new `ScadObject2D`. This ensures that you're not trying to apply a 2D translation to a 3D object at compile time.
+*   **`modifier_3d(modifier_body, child_object_3d)`**: Applies a 3D modifier (e.g., `Rotate3D`) to a `ScadObject3D`, returning a new `ScadObject3D`.
+
+Some modifiers, like `Color`, can apply to any dimension. For these, use:
+
+*   **`modifier_mixed(modifier_body, child_object_any_dimension)`**: Applies a mixed-dimension modifier to an object that can be `ScadObject2D`, `ScadObject3D`, or `ScadObjectMixed`. This function will implicitly convert the `child_object` into its untyped `ScadObject` (i.e., `ScadObjectGeneric<DMixed>`) representation before applying the modifier. The result will be a `ScadObjectMixed`.
+
+### Understanding Conversions (`.into()`)
+
+`scadman` provides automatic conversions to make composition flexible:
+
+*   Any `ScadObject2D` or `ScadObject3D` can be converted into `ScadObject` (which is an alias for `ScadObjectGeneric<DMixed>`) using the `.into()` method. This is useful when you need to treat a dimensionally specific object in a more generic (untyped) context, such as passing it to `block_mixed` or `modifier_mixed`.
+
+    ```rust
+    use scadman::prelude::*;
+
+    let square_2d = primitive_2d(Square::new()); // ScadObject2D
+    let cube_3d = primitive_3d(Cube::new());     // ScadObject3D
+
+    // Convert to untyped ScadObject for a mixed context
+    let generic_square: ScadObject = square_2d.into();
+    let generic_cube: ScadObject = cube_3d.into();
+
+    // Now they can be used together in a mixed block
+    let mixed_objects = block_mixed(&[generic_square, generic_cube]);
+    println!("{}", mixed_objects.to_code());
+    /* Output:
+    union() { // block_mixed defaults to union if not specified
+      square();
+      cube();
+    }
+    */
+    ```
+
+### Typed Blocks: `block_*` Functions
+
+Similar to primitives and modifiers, blocks also come in typed variants:
+
+*   **`block_2d(objects)`**: Creates a `ScadObject2D` containing other `ScadObject2D` instances.
+*   **`block_3d(objects)`**: Creates a `ScadObject3D` containing other `ScadObject3D` instances.
+*   **`block_mixed(objects)`**: Creates a `ScadObjectMixed` containing any combination of `ScadObject`s (i.e., `ScadObjectGeneric<DMixed>`). When passing `ScadObject2D` or `ScadObject3D` to `block_mixed`, they will be implicitly converted to `ScadObject`.
+
+This type system allows you to catch dimensional mismatches at compile time for common operations, while still providing the flexibility to work with mixed-dimension constructs when OpenSCAD's nature requires it.
 
 Import the prelude to get access to common types and functions:
 
@@ -220,34 +285,24 @@ approach to creating complex parametric designs in OpenSCAD using the power of R
 
 ## Key Concepts
 
-*   **`ScadObject`**: The main container struct. It wraps the actual object body
-    (`ScadObjectBody`) and holds an optional comment. All functions that build or
-    manipulate SCAD geometry ultimately work with `ScadObject`.
-*   **`ScadObjectBody`**: An enum (`Object2D`, `Object3D`, `ObjectMixed`) that holds the
-    specific type of SCAD object (Primitive, Modifier, or Block) for a given dimension.
-*   **`ScadObjectTrait`**: A trait implemented by `ScadObject` and its internal body types,
-    providing core functionality like `to_code()` (generating the SCAD string) and
-    `get_type()` (determining the object's dimension).
-*   **`ScadDisplay`**: A fundamental trait implemented by any type that can be represented
-    as a string in OpenSCAD code (numbers, vectors, strings, booleans, and the specific
-    primitive/modifier/block body types). The `repr_scad()` method generates the SCAD
-    string for that specific value or object part.
-*   **`ScadCommentDisplay`**: A trait (delegated from `ScadObjectTrait`) that adds the
-    ability to generate SCAD code with a comment (`repr_scad_with_comment`).
-*   **`ScadBuilder` / `ScadBuildable`**: Traits supporting the builder pattern for
-    configuring complex SCAD sentences with optional parameters. `ScadBuildable::build_with`
-    is the primary entry point for using builders.
-*   **Primitives, Modifiers, and Blocks**: These correspond directly to OpenSCAD's
-    structural elements. The library provides specific types (`ScadPrimitive2D`,
-    `ScadModifier3D`, `ScadBlockMixed`, etc.) and enums (`ScadPrimitiveBody2D`,
-    `ScadModifierBody3D`, `ScadModifierBodyMixed`) to represent them.
-*   **Factory Functions (`primitive_`, `modifier_`, `block_`)**: Functions like
-    `primitive_2d`, `modifier_3d`, `block_mixed`, etc., provided in the `lib.rs` root,
-    are the primary way to construct `ScadObject` instances from the specific
-    primitive/modifier/block types defined in the `scad_2d`, `scad_3d`, and `scad_mixed`
-    modules. `try_` variants are provided for operations that might fail due to dimension
-    mismatches.
-*   **Value Types**: Custom types in `value_type.rs` (like `Angle`, `RGBA`, `RoundSize`,
-    etc.) and standard types (`f64` for `Unit`, `bool`, `String`, vectors from `nalgebra`)
-    implement `ScadDisplay` to ensure correct formatting in the generated SCAD code.
+`scadman`'s object model is built around a generic type system that combines compile-time type safety with runtime flexibility for OpenSCAD's dimensional nature.
+
+*   **`ScadObjectGeneric<D>`**: This is the fundamental generic structure that wraps an internal representation of any SCAD object. `D` is a marker type that implements the `DimensionType` trait, providing type-level distinction for object dimensions (2D, 3D, or Mixed). Internally, it holds `Rc<ScadObjectImpl>` for shared ownership and runtime polymorphism.
+*   **`DimensionType` Trait and Marker Types (`D2`, `D3`, `DMixed`)**:
+    *   The `DimensionType` trait is a marker trait that associates a compile-time type (`D`) with a runtime `DimensionMarker` (`Object2D`, `Object3D`, `ObjectMixed`).
+    *   `D2`, `D3`, `DMixed` are zero-sized marker types implementing `DimensionType`, used as generic parameters for `ScadObjectGeneric<D>` to denote 2D, 3D, and mixed/untyped dimensions, respectively.
+*   **Public-Facing Wrapper Types (`ScadObject2D`, `ScadObject3D`, `ScadObjectMixed`)**:
+    *   These are newtype wrappers (`struct ScadObject2D(ScadObjectGeneric<D2>)`) that provide ergonomic public APIs for library users. They explicitly represent objects whose primary dimension is 2D, 3D, or mixed, respectively.
+    *   These types automatically implement `From` conversions to `ScadObject` (the untyped alias), allowing them to be easily composed.
+*   **`ScadObject` (Untyped Alias)**:
+    *   For backward compatibility and convenience in untyped contexts, `ScadObject` is a type alias for `ScadObjectGeneric<DMixed>`.
+    *   This type can hold any 2D, 3D, or mixed object internally, with its precise dimension determined at runtime.
+*   **`ScadObjectImpl`**: This is an internal `enum` that holds the actual, concrete runtime implementation of a SCAD object (e.g., `Object2D(Rc<dyn ScadObjectRepr2D>)`). It's used behind `Rc` to enable polymorphism and shared ownership, making it easier to manage the heterogeneous nature of SCAD elements.
+*   **`ScadObjectTrait`**: A compatibility trait maintained for older modules. It provides a common interface for `to_code()` and `get_type()` but is less central to the new generic type system.
+*   **`ScadDisplay`**: A fundamental trait implemented by any type that can be represented as a string in OpenSCAD code (numbers, vectors, strings, booleans, and the specific primitive/modifier/block body types). The `repr_scad()` method generates the SCAD string for that specific value or object part.
+
+*   **`ScadBuilder` / `ScadBuildable`**: Traits supporting the builder pattern for configuring complex SCAD sentences with optional parameters. `ScadBuildable::build_with` is the primary entry point for using builders.
+*   **Primitives, Modifiers, and Blocks**: These correspond directly to OpenSCAD's structural elements. The library provides specific types (`ScadPrimitive2D`, `ScadModifier3D`, `ScadBlockMixed`, etc.) and enums (`ScadPrimitiveBody2D`, `ScadModifierBody3D`, `ScadModifierBodyMixed`) to represent them.
+*   **Factory Functions (`primitive_`, `modifier_`, `block_`)**: Functions like `primitive_2d`, `modifier_3d`, `block_mixed`, etc., provided in the `lib.rs` root, are the primary way to construct `ScadObject` instances from the specific primitive/modifier/block types defined in the `scad_2d`, `scad_3d`, and `scad_mixed` modules. `try_` variants are provided for operations that might fail due to dimension mismatches.
+*   **Value Types**: Custom types in `value_type.rs` (like `Angle`, `RGBA`, `RoundSize`, etc.) and standard types (`f64` for `Unit`, `bool`, `String`, vectors from `nalgebra`) implement `ScadDisplay` to ensure correct formatting in the generated SCAD code.
 

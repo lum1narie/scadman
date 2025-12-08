@@ -2,9 +2,9 @@ use ambassador::Delegate;
 use derive_builder::Builder;
 
 use crate::{
-    __generate_scad_options, __impl_builder_sentence,
-    common::{Point2D, Unit},
+    common::{Point2D, ScadObjectGeneric, Unit, D2},
     internal::generate_sentence_repr,
+    scad_2d::{ScadPrimitive2D, ScadPrimitiveBody2D},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::RoundSize,
 };
@@ -58,15 +58,29 @@ pub struct Square {
     pub center: Option<bool>,
 }
 
-__impl_builder_sentence!(Square);
+__impl_builder_primitive!(Square, D2);
+
+impl From<Square> for ScadObjectGeneric<D2> {
+    fn from(val: Square) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Square {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = (*self).into();
+        obj.to_code()
+    }
+}
 
 impl ScadDisplay for Square {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
             "square",
             __generate_scad_options!(
-                ("size", self.size);
-                ("center", self.center);
+                ("size", self.size); opt:(("center", self.center);)
             ),
         )
     }
@@ -92,7 +106,22 @@ pub struct Circle {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(Circle);
+__impl_builder_primitive!(Circle, D2);
+
+impl From<Circle> for ScadObjectGeneric<D2> {
+    fn from(val: Circle) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Circle {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = (*self).into();
+        obj.to_code()
+    }
+}
 
 impl CircleBuilder {
     /// Set `r` option in SCAD.
@@ -100,7 +129,7 @@ impl CircleBuilder {
     /// # Arguments
     ///
     /// + `value` - `r` option in SCAD. This is the radius of circle.
-    pub fn r(&mut self, value: Unit) -> &mut Self {
+    pub const fn r(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Radius(value));
         new
@@ -111,7 +140,7 @@ impl CircleBuilder {
     /// # Arguments
     ///
     /// + `value` - `d` option in SCAD. This is the diameter of circle.
-    pub fn d(&mut self, value: Unit) -> &mut Self {
+    pub const fn d(&mut self, value: Unit) -> &mut Self {
         let new = self;
         new.size = Some(RoundSize::Diameter(value));
         new
@@ -124,7 +153,11 @@ impl ScadDisplay for Circle {
             "circle",
             __generate_scad_options!(
                 (self.size.name(), self.size);
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -171,7 +204,22 @@ pub struct Polygon {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_sentence!(Polygon);
+__impl_builder_primitive!(Polygon, D2);
+
+impl From<Polygon> for ScadObjectGeneric<D2> {
+    fn from(val: Polygon) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Polygon {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
+    }
+}
 
 impl PolygonBuilder {
     /// Check if `paths` is in the range of `points`'s indicies.
@@ -212,7 +260,10 @@ impl ScadDisplay for Polygon {
             "polygon",
             __generate_scad_options!(
                 ("points", self.points.clone());
-                ("paths", self.paths.clone()), ("convexity", self.convexity);
+                opt: (
+                    ("paths", self.paths.clone());
+                    ("convexity", self.convexity);
+                )
             ),
         )
     }
@@ -264,7 +315,22 @@ pub struct Text {
     pub r#fn: Option<u64>,
 }
 
-__impl_builder_sentence!(Text);
+__impl_builder_primitive!(Text, D2);
+
+impl From<Text> for ScadObjectGeneric<D2> {
+    fn from(val: Text) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Text {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
+    }
+}
 
 impl ScadDisplay for Text {
     fn repr_scad(&self) -> String {
@@ -272,15 +338,17 @@ impl ScadDisplay for Text {
             "text",
             __generate_scad_options!(
                 ("", self.text.clone());
-                ("font", self.font.clone()),
-                ("size", self.size),
-                ("halign", self.halign.clone()),
-                ("valign", self.valign.clone()),
-                ("spacing", self.spacing.clone()),
-                ("direction", self.direction.clone()),
-                ("language", self.language.clone()),
-                ("script", self.script.clone()),
-                ("$fn", self.r#fn);
+                opt: (
+                    ("font", self.font.clone());
+                    ("size", self.size);
+                    ("halign", self.halign.clone());
+                    ("valign", self.valign.clone());
+                    ("spacing", self.spacing.clone());
+                    ("direction", self.direction.clone());
+                    ("language", self.language.clone());
+                    ("script", self.script.clone());
+                    ("$fn", self.r#fn);
+                )
             ),
         )
     }
@@ -318,7 +386,22 @@ pub struct Import2D {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(Import2D);
+__impl_builder_primitive!(Import2D, D2);
+
+impl From<Import2D> for ScadObjectGeneric<D2> {
+    fn from(val: Import2D) -> Self {
+        let body = ScadPrimitiveBody2D::from(val);
+        let primitive = ScadPrimitive2D::new(body);
+        primitive.into()
+    }
+}
+
+impl Import2D {
+    pub fn to_code(&self) -> String {
+        let obj: ScadObjectGeneric<D2> = self.clone().into();
+        obj.to_code()
+    }
+}
 
 impl ScadDisplay for Import2D {
     fn repr_scad(&self) -> String {
@@ -326,9 +409,14 @@ impl ScadDisplay for Import2D {
             "import",
             __generate_scad_options!(
                 ("", self.file.clone());
-                ("convexity", self.convexity), ("id", self.id),
-                ("layer", self.layer),
-                ("$fa", self.fa), ("$fn", self.r#fn), ("$fs", self.fs);
+                opt: (
+                    ("convexity", self.convexity);
+                    ("id", self.id);
+                    ("layer", self.layer);
+                    ("$fa", self.fa);
+                    ("$fn", self.r#fn);
+                    ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -336,45 +424,50 @@ impl ScadDisplay for Import2D {
 
 #[cfg(test)]
 mod tests {
-    use crate::ScadBuildable as _;
-
     use super::*;
 
     #[test]
     fn test_square() {
         assert_eq!(
-            Square::build_with(|b| {
-                let _ = b.size(3.);
-            })
-            .repr_scad(),
+            SquareBuilder::default()
+                .size(3.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "square(size = 3)"
         );
         assert_eq!(
-            Square::build_with(|b| {
-                let _ = b.size(3.).center(true);
-            })
-            .repr_scad(),
+            SquareBuilder::default()
+                .size(3.)
+                .center(true)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "square(size = 3, center = true)"
         );
         assert_eq!(
-            Square::build_with(|b| {
-                let _ = b.size([3., 2.]);
-            })
-            .repr_scad(),
+            SquareBuilder::default()
+                .size([3., 2.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "square(size = [3, 2])"
         );
         assert_eq!(
-            Square::build_with(|b| {
-                let _ = b.size(Point2D::new(3., 2.));
-            })
-            .repr_scad(),
+            SquareBuilder::default()
+                .size(Point2D::new(3., 2.))
+                .build()
+                .unwrap()
+                .repr_scad(),
             "square(size = [3, 2])"
         );
         assert_eq!(
-            Square::build_with(|b| {
-                let _ = b.size([3., 2.]).center(true);
-            })
-            .repr_scad(),
+            SquareBuilder::default()
+                .size([3., 2.])
+                .center(true)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "square(size = [3, 2], center = true)"
         );
         drop(SquareBuilder::default().center(true).build().unwrap_err());
@@ -383,31 +476,31 @@ mod tests {
     #[test]
     fn test_circle() {
         assert_eq!(
-            Circle::build_with(|b| {
-                let _ = b.r(3.);
-            })
-            .repr_scad(),
+            CircleBuilder::default().r(3.).build().unwrap().repr_scad(),
             "circle(r = 3)"
         );
         assert_eq!(
-            Circle::build_with(|b| {
-                let _ = b.d(4.);
-            })
-            .repr_scad(),
+            CircleBuilder::default().d(4.).build().unwrap().repr_scad(),
             "circle(d = 4)"
         );
         assert_eq!(
-            Circle::build_with(|b| {
-                let _ = b.r(3.).fa(0.5).r#fn(20_u64);
-            })
-            .repr_scad(),
+            CircleBuilder::default()
+                .r(3.)
+                .fa(0.5)
+                .r#fn(20_u64)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "circle(r = 3, $fa = 0.5, $fn = 20)"
         );
         assert_eq!(
-            Circle::build_with(|b| {
-                let _ = b.r(3.).fs(40).fa(0.5);
-            })
-            .repr_scad(),
+            CircleBuilder::default()
+                .r(3.)
+                .fs(40)
+                .fa(0.5)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "circle(r = 3, $fa = 0.5, $fs = 40)"
         );
         drop(
@@ -429,21 +522,31 @@ mod tests {
             Point2D::new(0., 0.),
         ]);
         assert_eq!(
-            p0.build().unwrap().repr_scad(),
-            "polygon(points = [[1, 1], [-1, 2], [0, 0]])"
-        );
-        assert_eq!(
-            p0.clone()
-                .paths(vec![vec![0, 2, 1]])
+            PolygonBuilder::default()
+                .points(vec![
+                    Point2D::new(1., 1.),
+                    Point2D::new(-1., 2.),
+                    Point2D::new(0., 0.),
+                ])
                 .build()
                 .unwrap()
                 .repr_scad(),
-            "polygon(points = [[1, 1], [-1, 2], [0, 0]], paths = [[0, 2, 1]])"
+            "polygon(points = [[1, 1], [-1, 2], [0, 0]])"
         );
-        assert_eq!(
-            p0.convexity(2_u64).build().unwrap().repr_scad(),
-            "polygon(points = [[1, 1], [-1, 2], [0, 0]], convexity = 2)"
-        );
+        {
+            let mut tmp = p0.clone();
+            assert_eq!(
+                tmp.paths(vec![vec![0, 2, 1]]).build().unwrap().repr_scad(),
+                "polygon(points = [[1, 1], [-1, 2], [0, 0]], paths = [[0, 2, 1]])"
+            );
+        }
+        {
+            let mut tmp = p0.clone();
+            assert_eq!(
+                tmp.convexity(2_u64).build().unwrap().repr_scad(),
+                "polygon(points = [[1, 1], [-1, 2], [0, 0]], convexity = 2)"
+            );
+        }
 
         let mut p1 = PolygonBuilder::default();
         _ = p1.points(vec![
@@ -454,10 +557,13 @@ mod tests {
             [0.5, 0.5],
             [-0.5, 0.5],
         ]);
-        assert_eq!(
-            p1.clone().paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
-            "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]])"
-        );
+        {
+            let mut tmp = p1.clone();
+            assert_eq!(
+                tmp.paths([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
+                "polygon(points = [[2, 0], [1, 1], [-1, 1], [1, 0], [0.5, 0.5], [-0.5, 0.5]], paths = [[0, 1, 2], [3, 4, 5]])"
+            );
+        }
         assert_eq!(
             p1.paths([vec![0, 1, 2], vec![6, 4, 5]])
                 .build()
@@ -471,24 +577,29 @@ mod tests {
     #[test]
     fn test_text() {
         assert_eq!(
-            Text::build_with(|tb| {
-                let _ = tb.text("Hello World");
-            })
-            .repr_scad(),
+            TextBuilder::default()
+                .text("Hello World")
+                .build()
+                .unwrap()
+                .repr_scad(),
             "text(\"Hello World\")"
         );
         assert_eq!(
-            Text::build_with(|tb| {
-                let _ = tb.text("Hello World").font("LiberationSans-Regular");
-            })
-            .repr_scad(),
+            TextBuilder::default()
+                .text("Hello World")
+                .font("LiberationSans-Regular")
+                .build()
+                .unwrap()
+                .repr_scad(),
             "text(\"Hello World\", font = \"LiberationSans-Regular\")"
         );
         assert_eq!(
-            Text::build_with(|tb| {
-                let _ = tb.text("Hello World").size(3.);
-            })
-            .repr_scad(),
+            TextBuilder::default()
+                .text("Hello World")
+                .size(3.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "text(\"Hello World\", size = 3)"
         );
     }
@@ -496,18 +607,21 @@ mod tests {
     #[test]
     fn test_import2d() {
         assert_eq!(
-            Import2D::build_with(|ib| {
-                let _ = ib.file("shape.svg");
-            })
-            .repr_scad(),
+            Import2DBuilder::default()
+                .file("shape.svg")
+                .build()
+                .unwrap()
+                .repr_scad(),
             "import(\"shape.svg\")"
         );
 
         assert_eq!(
-            Import2D::build_with(|ib| {
-                let _ = ib.file("shape.svg").convexity(10_u64);
-            })
-            .repr_scad(),
+            Import2DBuilder::default()
+                .file("shape.svg")
+                .convexity(10_u64)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "import(\"shape.svg\", convexity = 10)"
         );
     }
