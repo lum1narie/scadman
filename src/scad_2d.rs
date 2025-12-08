@@ -128,7 +128,7 @@ impl ScadBlock2D {
     }
 }
 
-__impl_into_scad_for_collection_with_try_new!(
+__impl_from_scad_for_collection_with_try_new!(
     crate::common::D2,
     ScadBlock2D,
     ScadObject2D,

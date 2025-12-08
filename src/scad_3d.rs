@@ -129,7 +129,7 @@ impl ScadBlock3D {
     }
 }
 
-__impl_into_scad_for_collection_with_try_new!(
+__impl_from_scad_for_collection_with_try_new!(
     crate::common::D3,
     ScadBlock3D,
     ScadObject3D,

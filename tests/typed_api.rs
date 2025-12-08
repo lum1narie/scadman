@@ -24,6 +24,30 @@ mod tests {
     }
 
     #[test]
+    fn test_block() {
+        assert_eq!(
+            ScadObject2D::from([
+                Square::build_with(|sb| {
+                    let _ = sb.size(10.0);
+                }),
+                Translate2D::build_with(|tb| {
+                    let _ = tb.v([30., 0.]);
+                })
+                .apply_to(Circle::build_with(|cb| {
+                    let _ = cb.d(10.0);
+                }))
+            ])
+            .to_code(),
+            r"{
+  square(size = 10);
+  translate([30, 0])
+    circle(d = 10);
+}
+"
+        );
+    }
+
+    #[test]
     #[should_panic(
         expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
     )]

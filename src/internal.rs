@@ -403,7 +403,7 @@ macro_rules! __impl_builder_modifier {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __impl_into_scad_for_collection_with_try_new {
+macro_rules! __impl_from_scad_for_collection_with_try_new {
     (
         $dim_marker:ty,         // e.g., D2
         $scad_block_ty:ty,      // e.g., ScadBlock2D
@@ -411,13 +411,13 @@ macro_rules! __impl_into_scad_for_collection_with_try_new {
         $scad_object_impl_variant:path, // e.g., ScadObjectImpl::Object2D
         $expect_msg:literal     // e.g., "Internal error: ..."
     ) => {
-        impl<T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for &[T]
+        impl<T> From<&[T]> for $crate::common::ScadObjectGeneric<$dim_marker>
         where
             T: Into<$crate::common::ScadObjectGeneric<$dim_marker>> + Clone,
         {
-            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
+            fn from(item: &[T]) -> Self {
                 let objects_rc_impl: Vec<std::rc::Rc<$crate::common::ScadObjectImpl>> =
-                    self.iter().map(|item| item.clone().into().inner).collect();
+                    item.iter().map(|item| item.clone().into().inner).collect();
                 let objects_impl: Vec<$crate::common::ScadObjectImpl> = objects_rc_impl
                     .into_iter()
                     .map(|rc| Rc::unwrap_or_clone(rc))
@@ -431,21 +431,21 @@ macro_rules! __impl_into_scad_for_collection_with_try_new {
             }
         }
 
-        impl<T, const N: usize> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for [T; N]
+        impl<T, const N: usize> From<[T; N]> for $crate::common::ScadObjectGeneric<$dim_marker>
         where
             T: Into<$crate::common::ScadObjectGeneric<$dim_marker>> + Clone,
         {
-            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
-                self[..].into()
+            fn from(item: [T; N]) -> Self {
+                item[..].into()
             }
         }
 
-        impl<T> Into<$crate::common::ScadObjectGeneric<$dim_marker>> for Vec<T>
+        impl<T> From<Vec<T>> for $crate::common::ScadObjectGeneric<$dim_marker>
         where
             T: Into<$crate::common::ScadObjectGeneric<$dim_marker>> + Clone,
         {
-            fn into(self) -> $crate::common::ScadObjectGeneric<$dim_marker> {
-                self.as_slice().into()
+            fn from(item: Vec<T>) -> Self {
+                item.as_slice().into()
             }
         }
     };
