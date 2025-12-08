@@ -3,12 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use scadman::common::D2;
     use scadman::prelude::*;
-
-    use scadman::scad_sentence::{
-        Cube, Intersection, Rotate3D, Square, Translate2D, Translate3D, Union,
-    };
 
     #[test]
     fn test_primitive_scad_method() {
@@ -33,7 +28,7 @@ mod tests {
         expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
     )]
     fn test_modifier_into_fail() {
-        Into::<ScadObjectGeneric<D2>>::into(Translate2D::build_with(|tb| {
+        Into::<ScadObject2D>::into(Translate2D::build_with(|tb| {
             let _ = tb.v([1.0, 2.0]);
         }));
     }

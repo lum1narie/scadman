@@ -1,13 +1,11 @@
 #![allow(unused_crate_dependencies)]
 #![allow(missing_docs)]
+#![allow(deprecated)]
 
 #[cfg(test)]
 mod tests {
     use scadman::prelude::*;
-    use scadman::scad_sentence::{
-        Circle, Cube, Cylinder, Difference, LinearExtrude, Polygon, Rotate3D, Square, Translate2D,
-        Translate3D, Union,
-    };
+    use scadman::legacy::v0_1_1::*;
     use std::iter;
 
     // Helper function to create a basic 2D object (Square)
