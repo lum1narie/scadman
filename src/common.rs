@@ -32,28 +32,31 @@ pub const INDENT: usize = 2;
 
 pub trait ScadBuilder: Default {
     /// Type of the object that this builder constructs.
-    type Target;
+    type Sentence;
 
     /// Type of error that can be returned when building.
     type Error: Debug;
 
     /// Build the target object.
-    fn build_scad(&self) -> Result<Self::Target, Self::Error>;
+    fn build_scad(&self) -> Result<Self::Sentence, Self::Error>;
 }
 
 /// Trait for objects that can be built via a builder.
 
 pub trait ScadBuildable: Sized {
     type Builder: ScadBuilder;
+    type Target;
 
-    fn build_with<T: FnOnce(&mut Self::Builder)>(
-        builder_config: T,
-    ) -> <Self::Builder as ScadBuilder>::Target {
+    fn build_with<T: FnOnce(&mut Self::Builder)>(builder_config: T) -> Self::Target
+    where
+        Self::Target: From<<<Self as ScadBuildable>::Builder as ScadBuilder>::Sentence>,
+    {
         let mut builder = Self::Builder::default();
 
         builder_config(&mut builder);
 
-        builder.build_scad().expect("required fields are not set")
+        let sentence = builder.build_scad().expect("required fields are not set");
+        sentence.into()
     }
 }
 
@@ -889,7 +892,7 @@ impl Add<ScadObject> for ScadObject2D {
 impl Add<ScadObject2D> for ScadObject {
     type Output = Self;
     fn add(self, rhs: ScadObject2D) -> Self::Output {
-        self + ScadObject::from(rhs)
+        self + Self::from(rhs)
     }
 }
 impl Add<ScadObject> for ScadObject3D {
@@ -901,7 +904,7 @@ impl Add<ScadObject> for ScadObject3D {
 impl Add<ScadObject3D> for ScadObject {
     type Output = Self;
     fn add(self, rhs: ScadObject3D) -> Self::Output {
-        self + ScadObject::from(rhs)
+        self + Self::from(rhs)
     }
 }
 impl Add for ScadObject {
@@ -914,8 +917,8 @@ impl Add for ScadObject {
 
         if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
             let mut parts: Vec<ScadObjectImpl> = Vec::new();
-            parts.push((*left_rc).clone());
-            parts.push((*right_rc).clone());
+            parts.push(Rc::unwrap_or_clone(left_rc));
+            parts.push(Rc::unwrap_or_clone(right_rc));
             let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
             let child = crate::scad_mixed::ScadObjectMixed::Block(block);
             let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
@@ -960,7 +963,7 @@ impl Sub for ScadObject2D {
     fn sub(self, rhs: Self) -> Self::Output {
         let mut parts: Vec<ScadObjectImpl> = Vec::new();
         flatten_difference_parts_2d(&self.inner, &mut parts);
-        parts.push((*rhs.inner).clone());
+        parts.push(Rc::unwrap_or_clone(rhs.inner));
         create_difference_object_2d(parts).into()
     }
 }
@@ -969,7 +972,7 @@ impl Sub for ScadObject3D {
     fn sub(self, rhs: Self) -> Self::Output {
         let mut parts: Vec<ScadObjectImpl> = Vec::new();
         flatten_difference_parts_3d(&self.inner, &mut parts);
-        parts.push((*rhs.inner).clone());
+        parts.push(Rc::unwrap_or_clone(rhs.inner));
         create_difference_object_3d(parts).into()
     }
 }
@@ -982,7 +985,7 @@ impl Sub<ScadObject> for ScadObject2D {
 impl Sub<ScadObject2D> for ScadObject {
     type Output = Self;
     fn sub(self, rhs: ScadObject2D) -> Self::Output {
-        self - ScadObject::from(rhs)
+        self - Self::from(rhs)
     }
 }
 impl Sub<ScadObject> for ScadObject3D {
@@ -994,7 +997,7 @@ impl Sub<ScadObject> for ScadObject3D {
 impl Sub<ScadObject3D> for ScadObject {
     type Output = Self;
     fn sub(self, rhs: ScadObject3D) -> Self::Output {
-        self - ScadObject::from(rhs)
+        self - Self::from(rhs)
     }
 }
 impl Sub for ScadObject {
@@ -1007,8 +1010,8 @@ impl Sub for ScadObject {
 
         if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
             let mut parts: Vec<ScadObjectImpl> = Vec::new();
-            parts.push((*left_rc).clone());
-            parts.push((*right_rc).clone());
+            parts.push(Rc::unwrap_or_clone(left_rc));
+            parts.push(Rc::unwrap_or_clone(right_rc));
             let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
             let child = crate::scad_mixed::ScadObjectMixed::Block(block);
             let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));
@@ -1033,13 +1036,13 @@ impl Sub for ScadObject {
             DimensionMarker::Object2D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
                 flatten_difference_parts_2d(&left_rc, &mut parts);
-                parts.push((*right_rc).clone());
+                parts.push(Rc::unwrap_or_clone(right_rc));
                 create_difference_object_2d(parts)
             }
             DimensionMarker::Object3D => {
                 let mut parts: Vec<ScadObjectImpl> = Vec::new();
                 flatten_difference_parts_3d(&left_rc, &mut parts);
-                parts.push((*right_rc).clone());
+                parts.push(Rc::unwrap_or_clone(right_rc));
                 create_difference_object_3d(parts)
             }
             DimensionMarker::ObjectMixed => unreachable!(),
@@ -1075,7 +1078,7 @@ impl Mul<ScadObject> for ScadObject2D {
 impl Mul<ScadObject2D> for ScadObject {
     type Output = Self;
     fn mul(self, rhs: ScadObject2D) -> Self::Output {
-        self * ScadObject::from(rhs)
+        self * Self::from(rhs)
     }
 }
 impl Mul<ScadObject> for ScadObject3D {
@@ -1087,7 +1090,7 @@ impl Mul<ScadObject> for ScadObject3D {
 impl Mul<ScadObject3D> for ScadObject {
     type Output = Self;
     fn mul(self, rhs: ScadObject3D) -> Self::Output {
-        self * ScadObject::from(rhs)
+        self * Self::from(rhs)
     }
 }
 impl Mul for ScadObject {
@@ -1100,8 +1103,8 @@ impl Mul for ScadObject {
 
         if left_type == DimensionMarker::ObjectMixed || right_type == DimensionMarker::ObjectMixed {
             let mut parts: Vec<ScadObjectImpl> = Vec::new();
-            parts.push((*left_rc).clone());
-            parts.push((*right_rc).clone());
+            parts.push(Rc::unwrap_or_clone(left_rc));
+            parts.push(Rc::unwrap_or_clone(right_rc));
             let block = crate::scad_mixed::ScadBlockMixed::new(&parts);
             let child = crate::scad_mixed::ScadObjectMixed::Block(block);
             let rc_child = Rc::new(ScadObjectImpl::ObjectMixed(Rc::new(child)));

@@ -91,7 +91,7 @@ mod tests {
             .commented("body outer shape");
 
             let body_rounded = Difference::new()
-                .apply_to_2d(&[
+                .apply_to_2d([
                     body,
                     generate_lattice_r_void(
                         &[body_x_a1, body_y_a1].into(),
@@ -141,7 +141,7 @@ mod tests {
                 .collect::<Vec<_>>();
 
             Union::new()
-                .apply_to_2d(&iter::once(body_rounded).chain(teeth).collect::<Vec<_>>())
+                .apply_to_2d(iter::once(body_rounded).chain(teeth).collect::<Vec<_>>())
                 .commented("body with teeth")
         };
 

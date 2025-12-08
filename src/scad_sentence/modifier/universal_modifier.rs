@@ -1,9 +1,7 @@
 use derive_builder::Builder;
 
 use crate::{
-    common::{
-        DimensionType as _, ScadBuildable, ScadBuilder, ScadObjectGeneric, ScadSentence, Unit,
-    },
+    common::{DimensionType as _, ScadBuildable as _, Unit},
     internal::generate_sentence_repr,
     scad_display::ScadDisplay,
     value_type::ScadColor,
@@ -19,7 +17,7 @@ macro_rules! __impl_operator {
         #[derive(derive_builder::Builder, Debug, Clone, Copy)]
         pub struct $type {}
 
-        $crate::__impl_builder_sentence!($type);
+        $crate::__impl_builder_modifier!($type);
 
         impl $crate::scad_display::ScadDisplay for $type {
             fn repr_scad(&self) -> String {
@@ -59,7 +57,7 @@ pub struct Color {
     pub a: Option<Unit>,
 }
 
-__impl_builder_sentence!(Color);
+__impl_builder_modifier!(Color);
 __impl_modifier_chaining!(Color);
 
 impl ScadDisplay for Color {
@@ -162,7 +160,6 @@ mod tests {
     use super::*;
     use crate::{
         common::ScadBuildable as _,
-        prelude::{primitive_2d, primitive_3d},
         scad_sentence::{Cube, Square},
         value_type::{RGB, RGBA},
     };
@@ -170,31 +167,36 @@ mod tests {
     #[test]
     fn test_colormixed() {
         assert_eq!(
-            Color::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2));
-            })
-            .repr_scad(),
+            ColorBuilder::default()
+                .c(RGB::new(0.3, 0.5, 0.2))
+                .build()
+                .unwrap()
+                .repr_scad(),
             "color(c = [0.3, 0.5, 0.2])"
         );
         assert_eq!(
-            Color::build_with(|cb| {
-                let _ = cb.c(RGB::new(0.3, 0.5, 0.2)).a(1.0);
-            })
-            .repr_scad(),
+            ColorBuilder::default()
+                .c(RGB::new(0.3, 0.5, 0.2))
+                .a(1.0)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "color(c = [0.3, 0.5, 0.2], a = 1)"
         );
         assert_eq!(
-            Color::build_with(|cb| {
-                let _ = cb.c(RGBA::new(0.3, 0.5, 0.2, 1.0));
-            })
-            .repr_scad(),
+            ColorBuilder::default()
+                .c(RGBA::new(0.3, 0.5, 0.2, 1.0))
+                .build()
+                .unwrap()
+                .repr_scad(),
             "color(c = [0.3, 0.5, 0.2, 1])"
         );
         assert_eq!(
-            Color::build_with(|cb| {
-                let _ = cb.c("#C0FFEE".to_string());
-            })
-            .repr_scad(),
+            ColorBuilder::default()
+                .c("#C0FFEE".to_string())
+                .build()
+                .unwrap()
+                .repr_scad(),
             "color(\"#C0FFEE\")"
         );
     }
@@ -218,18 +220,18 @@ mod tests {
 
     #[test]
     fn test_apply_to_2d() {
-        let square = primitive_2d(Square::build_with(|b| {
+        let square = Square::build_with(|b| {
             let _ = b.size(10.0);
-        }));
+        });
         let unioned = Union::new().apply_to_2d(square);
         assert_eq!(unioned.to_code(), "union()\n  square(size = 10);\n");
     }
 
     #[test]
     fn test_apply_to_3d() {
-        let cube = primitive_3d(Cube::build_with(|b| {
+        let cube = Cube::build_with(|b| {
             let _ = b.size(10.0);
-        }));
+        });
         let hulled = Hull::new().apply_to_3d(cube);
         assert_eq!(hulled.to_code(), "hull()\n  cube(size = 10);\n");
     }

@@ -5,7 +5,7 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    common::{DimensionMarker, D3},
+    common::DimensionMarker,
     internal::{block_repr, modifier_repr, primitive_repr},
     prelude::{
         Color, Cube, Cylinder, Difference, Hull, Import3D, Intersection, LinearExtrude, Minkowski,
@@ -29,9 +29,9 @@ pub enum ScadObject3D {
 impl ScadDisplay for ScadObject3D {
     fn repr_scad(&self) -> String {
         match self {
-            ScadObject3D::Primitive(p) => p.repr_scad(),
-            ScadObject3D::Modifier(m) => m.repr_scad(),
-            ScadObject3D::Block(b) => b.repr_scad(),
+            Self::Primitive(p) => p.repr_scad(),
+            Self::Modifier(m) => m.repr_scad(),
+            Self::Block(b) => b.repr_scad(),
         }
     }
 }
@@ -57,11 +57,11 @@ impl ScadDisplay for ScadPrimitive3D {
 }
 
 impl From<ScadPrimitive3D> for crate::common::ScadObjectGeneric<crate::common::D3> {
-    fn from(val: ScadPrimitive3D) -> crate::common::ScadObjectGeneric<crate::common::D3> {
+    fn from(val: ScadPrimitive3D) -> Self {
         let o = ScadObject3D::Primitive(val);
         let rc_o = Rc::new(o);
         let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object3D(rc_o));
-        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+        Self::from_impl(rc_impl)
     }
 }
 
@@ -158,37 +158,37 @@ pub enum ScadPrimitiveBody3D {
 // Manual From implementations
 impl From<Cube> for ScadPrimitiveBody3D {
     fn from(val: Cube) -> Self {
-        ScadPrimitiveBody3D::Cube(val)
+        Self::Cube(val)
     }
 }
 
 impl From<Cylinder> for ScadPrimitiveBody3D {
     fn from(val: Cylinder) -> Self {
-        ScadPrimitiveBody3D::Cylinder(val)
+        Self::Cylinder(val)
     }
 }
 
 impl From<Import3D> for ScadPrimitiveBody3D {
     fn from(val: Import3D) -> Self {
-        ScadPrimitiveBody3D::Import(val)
+        Self::Import(val)
     }
 }
 
 impl From<Polyhedron> for ScadPrimitiveBody3D {
     fn from(val: Polyhedron) -> Self {
-        ScadPrimitiveBody3D::Polyhedron(val)
+        Self::Polyhedron(val)
     }
 }
 
 impl From<Sphere> for ScadPrimitiveBody3D {
     fn from(val: Sphere) -> Self {
-        ScadPrimitiveBody3D::Sphere(val)
+        Self::Sphere(val)
     }
 }
 
 impl From<Surface> for ScadPrimitiveBody3D {
     fn from(val: Surface) -> Self {
-        ScadPrimitiveBody3D::Surface(val)
+        Self::Surface(val)
     }
 }
 
@@ -247,9 +247,9 @@ impl ScadModifierBody3D {
 }
 
 impl From<ScadObject3D> for crate::common::ScadObjectGeneric<crate::common::D3> {
-    fn from(val: ScadObject3D) -> crate::common::ScadObjectGeneric<crate::common::D3> {
+    fn from(val: ScadObject3D) -> Self {
         let rc_o = Rc::new(val);
         let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object3D(rc_o));
-        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+        Self::from_impl(rc_impl)
     }
 }

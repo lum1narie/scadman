@@ -114,8 +114,8 @@ impl RoundSize {
 impl ScadDisplay for RoundSize {
     fn repr_scad(&self) -> String {
         match self {
-            RoundSize::Radius(r) => r.repr_scad(),
-            RoundSize::Diameter(d) => d.repr_scad(),
+            Self::Radius(r) => r.repr_scad(),
+            Self::Diameter(d) => d.repr_scad(),
         }
     }
 }
@@ -123,9 +123,9 @@ impl ScadDisplay for RoundSize {
 impl ScadDisplay for ScadColor {
     fn repr_scad(&self) -> String {
         match self {
-            ScadColor::RGB(rgb) => rgb.repr_scad(),
-            ScadColor::RGBA(rgba) => rgba.repr_scad(),
-            ScadColor::Name(name) => format!("\"{}\"", name), // Named colors are strings in OpenSCAD
+            Self::RGB(rgb) => rgb.repr_scad(),
+            Self::RGBA(rgba) => rgba.repr_scad(),
+            Self::Name(name) => format!("\"{name}\""), // Named colors are strings in OpenSCAD
         }
     }
 }

@@ -109,29 +109,27 @@ pub mod prelude {
 ///
 /// # Arguments
 ///
-/// + `sentence` - A value that can be converted into a [`ScadPrimitiveBody2D`]
+/// TODO:
 ///
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 2D primitive
-pub fn primitive_2d<T: Into<ScadPrimitiveBody2D>>(sentence: T) -> ScadObjectGeneric<D2> {
-    let s: ScadPrimitiveBody2D = sentence.into();
-    let p: ScadPrimitive2D = s.into();
-    p.into()
+pub fn primitive_2d(sentence: ScadObjectGeneric<D2>) -> ScadObjectGeneric<D2> {
+    sentence
 }
 
 /// Creates a 2D primitive [`ScadObject`] with a comment.
 ///
 /// # Arguments
 ///
-/// + `sentence` - A value that can be converted into a [`ScadPrimitiveBody2D`]
+/// + `sentence` - TODO:
 /// + `comment` - A string slice to add a comment to the [`ScadObject`]
 ///
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 2D primitive with an attached comment
-pub fn primitive_2d_commented<T: Into<ScadPrimitiveBody2D>>(
-    sentence: T,
+pub fn primitive_2d_commented(
+    sentence: ScadObjectGeneric<D2>,
     comment: &str,
 ) -> ScadObjectGeneric<D2> {
     primitive_2d(sentence).commented(comment)
@@ -313,29 +311,27 @@ pub fn block_2d_commented(
 ///
 /// # Arguments
 ///
-/// + `sentence` - A value that can be converted into a [`ScadPrimitiveBody3D`]
+/// TODO:
 ///
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 3D primitive
-pub fn primitive_3d<T: Into<ScadPrimitiveBody3D>>(sentence: T) -> ScadObjectGeneric<D3> {
-    let s: ScadPrimitiveBody3D = sentence.into();
-    let p: ScadPrimitive3D = s.into();
-    p.into()
+pub fn primitive_3d(sentence: ScadObjectGeneric<D3>) -> ScadObjectGeneric<D3> {
+    sentence
 }
 
 /// Creates a 3D primitive [`ScadObject`] with a comment.
 ///
 /// # Arguments
 ///
-/// + `sentence` - A value that can be converted into a [`ScadPrimitiveBody3D`]
+/// + `sentence` - TODO:
 /// + `comment` - A string slice to add a comment to the [`ScadObject`]
 ///
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 3D primitive with an attached comment
-pub fn primitive_3d_commented<T: Into<ScadPrimitiveBody3D>>(
-    sentence: T,
+pub fn primitive_3d_commented(
+    sentence: ScadObjectGeneric<D3>,
     comment: &str,
 ) -> ScadObjectGeneric<D3> {
     primitive_3d(sentence).commented(comment)

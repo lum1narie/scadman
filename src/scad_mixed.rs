@@ -5,7 +5,7 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    common::{DMixed, DimensionMarker},
+    common::DimensionMarker,
     internal::{block_repr, modifier_repr},
     prelude::{Color, Difference, Hull, Intersection, Minkowski, Union},
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
@@ -23,8 +23,8 @@ pub enum ScadObjectMixed {
 impl ScadDisplay for ScadObjectMixed {
     fn repr_scad(&self) -> String {
         match self {
-            ScadObjectMixed::Modifier(m) => m.repr_scad(),
-            ScadObjectMixed::Block(b) => b.repr_scad(),
+            Self::Modifier(m) => m.repr_scad(),
+            Self::Block(b) => b.repr_scad(),
         }
     }
 }
@@ -106,9 +106,9 @@ impl ScadModifierBodyMixed {
 }
 
 impl From<ScadObjectMixed> for crate::common::ScadObjectGeneric<crate::common::DMixed> {
-    fn from(val: ScadObjectMixed) -> crate::common::ScadObjectGeneric<crate::common::DMixed> {
+    fn from(val: ScadObjectMixed) -> Self {
         let rc_o = Rc::new(val);
         let rc_impl = Rc::new(crate::common::ScadObjectImpl::ObjectMixed(rc_o));
-        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+        Self::from_impl(rc_impl)
     }
 }

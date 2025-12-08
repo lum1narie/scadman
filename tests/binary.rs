@@ -6,14 +6,14 @@ mod tests {
     use scadman::prelude::*;
 
     // Helper function to create a basic 2D object (Square)
-    fn sq(size: f64) -> Square {
+    fn sq(size: f64) -> ScadObject2D {
         Square::build_with(|sb| {
             let _ = sb.size(size);
         })
     }
 
     // Helper function to create a basic 3D object (Cube)
-    fn cu(size: f64) -> Cube {
+    fn cu(size: f64) -> ScadObject3D {
         Cube::build_with(|cb| {
             let _ = cb.size(size);
         })

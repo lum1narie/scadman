@@ -5,7 +5,7 @@ use ambassador::Delegate;
 use derive_more::derive::From;
 
 use crate::{
-    common::{DimensionMarker, D2},
+    common::DimensionMarker,
     internal::{block_repr, modifier_repr, primitive_repr},
     prelude::{
         Circle, Color, Difference, Hull, Import2D, Intersection, Minkowski, Mirror2D, MultMatrix2D,
@@ -28,9 +28,9 @@ pub enum ScadObject2D {
 impl ScadDisplay for ScadObject2D {
     fn repr_scad(&self) -> String {
         match self {
-            ScadObject2D::Primitive(p) => p.repr_scad(),
-            ScadObject2D::Modifier(m) => m.repr_scad(),
-            ScadObject2D::Block(b) => b.repr_scad(),
+            Self::Primitive(p) => p.repr_scad(),
+            Self::Modifier(m) => m.repr_scad(),
+            Self::Block(b) => b.repr_scad(),
         }
     }
 }
@@ -56,11 +56,11 @@ impl ScadDisplay for ScadPrimitive2D {
 }
 
 impl From<ScadPrimitive2D> for crate::common::ScadObjectGeneric<crate::common::D2> {
-    fn from(val: ScadPrimitive2D) -> crate::common::ScadObjectGeneric<crate::common::D2> {
+    fn from(val: ScadPrimitive2D) -> Self {
         let o = ScadObject2D::Primitive(val);
         let rc_o = Rc::new(o);
         let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object2D(rc_o));
-        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+        Self::from_impl(rc_impl)
     }
 }
 
@@ -137,10 +137,10 @@ __impl_into_scad_for_collection_with_try_new!(
 );
 
 impl From<ScadObject2D> for crate::common::ScadObjectGeneric<crate::common::D2> {
-    fn from(val: ScadObject2D) -> crate::common::ScadObjectGeneric<crate::common::D2> {
+    fn from(val: ScadObject2D) -> Self {
         let rc_o = Rc::new(val);
         let rc_impl = Rc::new(crate::common::ScadObjectImpl::Object2D(rc_o));
-        crate::common::ScadObjectGeneric::from_impl(rc_impl)
+        Self::from_impl(rc_impl)
     }
 }
 
@@ -163,31 +163,31 @@ pub enum ScadPrimitiveBody2D {
 // Manual From implementations
 impl From<Circle> for ScadPrimitiveBody2D {
     fn from(val: Circle) -> Self {
-        ScadPrimitiveBody2D::Circle(val)
+        Self::Circle(val)
     }
 }
 
 impl From<Import2D> for ScadPrimitiveBody2D {
     fn from(val: Import2D) -> Self {
-        ScadPrimitiveBody2D::Import(val)
+        Self::Import(val)
     }
 }
 
 impl From<Polygon> for ScadPrimitiveBody2D {
     fn from(val: Polygon) -> Self {
-        ScadPrimitiveBody2D::Polygon(val)
+        Self::Polygon(val)
     }
 }
 
 impl From<Square> for ScadPrimitiveBody2D {
     fn from(val: Square) -> Self {
-        ScadPrimitiveBody2D::Square(val)
+        Self::Square(val)
     }
 }
 
 impl From<Text> for ScadPrimitiveBody2D {
     fn from(val: Text) -> Self {
-        ScadPrimitiveBody2D::Text(val)
+        Self::Text(val)
     }
 }
 

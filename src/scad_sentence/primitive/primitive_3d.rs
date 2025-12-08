@@ -3,10 +3,7 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    common::{
-        Point3D, ScadBuildable as _, ScadBuilder as _, ScadObjectGeneric, ScadSentence as _, Unit,
-        D3,
-    },
+    common::{Point3D, ScadObjectGeneric, Unit, D3},
     internal::generate_sentence_repr,
     scad_3d::{ScadPrimitive3D, ScadPrimitiveBody3D},
     scad_display::{ambassador_impl_ScadDisplay, Identifier, ScadDisplay},
@@ -33,7 +30,7 @@ pub struct Sphere {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(Sphere);
+__impl_builder_primitive!(Sphere, D3);
 
 impl SphereBuilder {
     /// Set `r` option in SCAD.
@@ -75,7 +72,7 @@ impl ScadDisplay for Sphere {
 }
 
 impl From<Sphere> for ScadObjectGeneric<D3> {
-    fn from(val: Sphere) -> ScadObjectGeneric<D3> {
+    fn from(val: Sphere) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -131,7 +128,7 @@ pub struct Cube {
     pub center: Option<bool>,
 }
 
-__impl_builder_sentence!(Cube);
+__impl_builder_primitive!(Cube, D3);
 
 impl ScadDisplay for Cube {
     fn repr_scad(&self) -> String {
@@ -145,7 +142,7 @@ impl ScadDisplay for Cube {
 }
 
 impl From<Cube> for ScadObjectGeneric<D3> {
-    fn from(val: Cube) -> ScadObjectGeneric<D3> {
+    fn from(val: Cube) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -250,7 +247,7 @@ impl CylinderBuilder {
     }
 }
 
-__impl_builder_sentence!(Cylinder);
+__impl_builder_primitive!(Cylinder, D3);
 
 impl ScadDisplay for Cylinder {
     fn repr_scad(&self) -> String {
@@ -285,7 +282,7 @@ impl ScadDisplay for Cylinder {
 }
 
 impl From<Cylinder> for ScadObjectGeneric<D3> {
-    fn from(val: Cylinder) -> ScadObjectGeneric<D3> {
+    fn from(val: Cylinder) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -340,7 +337,7 @@ pub struct Polyhedron {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_sentence!(Polyhedron);
+__impl_builder_primitive!(Polyhedron, D3);
 
 impl PolyhedronBuilder {
     /// Check if `faces` is in the range of `points`'s indicies.
@@ -391,7 +388,7 @@ impl ScadDisplay for Polyhedron {
 }
 
 impl From<Polyhedron> for ScadObjectGeneric<D3> {
-    fn from(val: Polyhedron) -> ScadObjectGeneric<D3> {
+    fn from(val: Polyhedron) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -420,7 +417,7 @@ pub struct Import3D {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(Import3D);
+__impl_builder_primitive!(Import3D, D3);
 
 impl ScadDisplay for Import3D {
     fn repr_scad(&self) -> String {
@@ -440,7 +437,7 @@ impl ScadDisplay for Import3D {
 }
 
 impl From<Import3D> for ScadObjectGeneric<D3> {
-    fn from(val: Import3D) -> ScadObjectGeneric<D3> {
+    fn from(val: Import3D) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -470,7 +467,7 @@ pub struct Surface {
     pub convexity: Option<u64>,
 }
 
-__impl_builder_sentence!(Surface);
+__impl_builder_primitive!(Surface, D3);
 
 impl ScadDisplay for Surface {
     fn repr_scad(&self) -> String {
@@ -489,7 +486,7 @@ impl ScadDisplay for Surface {
 }
 
 impl From<Surface> for ScadObjectGeneric<D3> {
-    fn from(val: Surface) -> ScadObjectGeneric<D3> {
+    fn from(val: Surface) -> Self {
         let body = ScadPrimitiveBody3D::from(val);
         let primitive = ScadPrimitive3D::new(body);
         primitive.into()
@@ -503,31 +500,31 @@ mod tests {
     #[test]
     fn test_sphere() {
         assert_eq!(
-            Sphere::build_with(|sb| {
-                let _ = sb.r(3.0);
-            })
-            .repr_scad(),
+            SphereBuilder::default().r(3.0).build().unwrap().repr_scad(),
             "sphere(r = 3)"
         );
         assert_eq!(
-            Sphere::build_with(|sb| {
-                let _ = sb.d(4.0);
-            })
-            .repr_scad(),
+            SphereBuilder::default().d(4.0).build().unwrap().repr_scad(),
             "sphere(d = 4)"
         );
         assert_eq!(
-            Sphere::build_with(|sb| {
-                let _ = sb.r(3.0).fa(0.5).r#fn(20_u64);
-            })
-            .repr_scad(),
+            SphereBuilder::default()
+                .r(3.0)
+                .fa(0.5)
+                .r#fn(20_u64)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "sphere(r = 3, $fa = 0.5, $fn = 20)"
         );
         assert_eq!(
-            Sphere::build_with(|sb| {
-                let _ = sb.r(3.0).fs(40.).fa(0.5);
-            })
-            .repr_scad(),
+            SphereBuilder::default()
+                .r(3.0)
+                .fs(40.)
+                .fa(0.5)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "sphere(r = 3, $fa = 0.5, $fs = 40)"
         );
         let _x = SphereBuilder::default()
@@ -541,31 +538,36 @@ mod tests {
     #[test]
     fn test_cube() {
         assert_eq!(
-            Cube::build_with(|cb| {
-                let _ = cb.size(3.0);
-            })
-            .repr_scad(),
+            CubeBuilder::default()
+                .size(3.0)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cube(size = 3)"
         );
         assert_eq!(
-            Cube::build_with(|cb| {
-                let _ = cb.size([4.0, 2.0, 3.0]);
-            })
-            .repr_scad(),
+            CubeBuilder::default()
+                .size([4.0, 2.0, 3.0])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cube(size = [4, 2, 3])"
         );
         assert_eq!(
-            Cube::build_with(|cb| {
-                let _ = cb.size(Point3D::new(4.0, 2.0, 3.0));
-            })
-            .repr_scad(),
+            CubeBuilder::default()
+                .size(Point3D::new(4.0, 2.0, 3.0))
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cube(size = [4, 2, 3])"
         );
         assert_eq!(
-            Cube::build_with(|cb| {
-                let _ = cb.size(3.0).center(true);
-            })
-            .repr_scad(),
+            CubeBuilder::default()
+                .size(3.0)
+                .center(true)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cube(size = 3, center = true)"
         );
     }
@@ -573,38 +575,49 @@ mod tests {
     #[test]
     fn test_cylinder() {
         assert_eq!(
-            Cylinder::build_with(|cb| {
-                let _ = cb.h(5.0).r(3.0);
-            })
-            .repr_scad(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r(3.0)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cylinder(h = 5, r = 3)"
         );
         assert_eq!(
-            Cylinder::build_with(|cb| {
-                let _ = cb.h(5.0).d(3.0);
-            })
-            .repr_scad(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .d(3.0)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cylinder(h = 5, d = 3)"
         );
         assert_eq!(
-            Cylinder::build_with(|cb| {
-                let _ = cb.h(5.0).r([1.0, 2.0]);
-            })
-            .repr_scad(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r([1.0, 2.0])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cylinder(h = 5, r1 = 1, r2 = 2)"
         );
         assert_eq!(
-            Cylinder::build_with(|cb| {
-                let _ = cb.h(5.0).d([1.0, 2.0]);
-            })
-            .repr_scad(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .d([1.0, 2.0])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cylinder(h = 5, d1 = 1, d2 = 2)"
         );
         assert_eq!(
-            Cylinder::build_with(|cb| {
-                let _ = cb.h(5.0).r(3.0).fa(2.0);
-            })
-            .repr_scad(),
+            CylinderBuilder::default()
+                .h(5.0)
+                .r(3.0)
+                .fa(2.0)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "cylinder(h = 5, r = 3, $fa = 2)"
         );
     }
@@ -618,21 +631,31 @@ mod tests {
             Point3D::new(0., 0., 0.),
         ]);
         assert_eq!(
-            p0.build().unwrap().repr_scad(),
-            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]])"
-        );
-        assert_eq!(
-            p0.clone()
-                .faces(vec![vec![0, 2, 1]])
+            PolyhedronBuilder::default()
+                .points(vec![
+                    Point3D::new(1., 1., 1.),
+                    Point3D::new(-1., 2., -1.),
+                    Point3D::new(0., 0., 0.),
+                ])
                 .build()
                 .unwrap()
                 .repr_scad(),
-            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], faces = [[0, 2, 1]])"
+            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]])"
         );
-        assert_eq!(
-            p0.convexity(2_u64).build().unwrap().repr_scad(),
-            "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], convexity = 2)"
-        );
+        {
+            let mut tmp = p0.clone();
+            assert_eq!(
+                tmp.faces(vec![vec![0, 2, 1]]).build().unwrap().repr_scad(),
+                "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], faces = [[0, 2, 1]])"
+            );
+        }
+        {
+            let mut tmp = p0.clone();
+            assert_eq!(
+                tmp.convexity(2_u64).build().unwrap().repr_scad(),
+                "polyhedron(points = [[1, 1, 1], [-1, 2, -1], [0, 0, 0]], convexity = 2)"
+            );
+        }
 
         let mut p1 = PolyhedronBuilder::default();
         _ = p1.points(vec![
@@ -643,10 +666,13 @@ mod tests {
             [0.5, 0.5, 0.7],
             [-0.5, 0.5, -0.3],
         ]);
-        assert_eq!(
-            p1.faces([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
-            "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], faces = [[0, 1, 2], [3, 4, 5]])"
-        );
+        {
+            let mut tmp = p1.clone();
+            assert_eq!(
+                tmp.faces([vec![0, 1, 2], vec![3, 4, 5]]).build().unwrap().repr_scad(),
+                "polyhedron(points = [[2, 0, 2], [1, 1, 1], [-1, 1, 0], [1, 0, -1], [0.5, 0.5, 0.7], [-0.5, 0.5, -0.3]], faces = [[0, 1, 2], [3, 4, 5]])"
+            );
+        }
         assert_eq!(
             p1.clone()
                 .faces([vec![0, 1, 2], vec![6, 4, 5]])
@@ -661,18 +687,21 @@ mod tests {
     #[test]
     fn test_import3d() {
         assert_eq!(
-            Import3D::build_with(|ib| {
-                let _ = ib.file("shape.stl");
-            })
-            .repr_scad(),
+            Import3DBuilder::default()
+                .file("shape.stl")
+                .build()
+                .unwrap()
+                .repr_scad(),
             "import(\"shape.stl\")"
         );
 
         assert_eq!(
-            Import3D::build_with(|ib| {
-                let _ = ib.file("shape.stl").convexity(10_u64);
-            })
-            .repr_scad(),
+            Import3DBuilder::default()
+                .file("shape.stl")
+                .convexity(10_u64)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "import(\"shape.stl\", convexity = 10)"
         );
     }
@@ -680,22 +709,23 @@ mod tests {
     #[test]
     fn test_surface() {
         assert_eq!(
-            Surface::build_with(|sb| {
-                let _ = sb.file("shape.dat");
-            })
-            .repr_scad(),
+            SurfaceBuilder::default()
+                .file("shape.dat")
+                .build()
+                .unwrap()
+                .repr_scad(),
             "surface(file = \"shape.dat\")"
         );
 
         assert_eq!(
-            Surface::build_with(|sb| {
-                let _ = sb
-                    .file("shape.dat")
-                    .convexity(10_u64)
-                    .center(true)
-                    .invert(true);
-            })
-            .repr_scad(),
+            SurfaceBuilder::default()
+                .file("shape.dat")
+                .convexity(10_u64)
+                .center(true)
+                .invert(true)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "surface(file = \"shape.dat\", center = true, invert = true, convexity = 10)"
         );
     }

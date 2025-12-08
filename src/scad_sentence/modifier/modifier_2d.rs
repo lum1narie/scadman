@@ -3,10 +3,7 @@ use derive_builder::Builder;
 use derive_more::derive::From;
 
 use crate::{
-    common::{
-        AffineMatrix2D, DimensionType as _, Point2D, ScadBuildable, ScadBuilder, ScadObjectGeneric,
-        ScadSentence, Unit,
-    },
+    common::{AffineMatrix2D, DimensionType as _, Point2D, Unit},
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::Angle,
@@ -58,7 +55,7 @@ pub struct Translate2D {
     pub v: Point2D,
 }
 
-__impl_builder_sentence!(Translate2D);
+__impl_builder_modifier!(Translate2D);
 __impl_modifier_chaining!(Translate2D);
 __impl_apply_2d!(Translate2D);
 
@@ -80,7 +77,7 @@ pub struct Rotate2D {
     pub a: Angle,
 }
 
-__impl_builder_sentence!(Rotate2D);
+__impl_builder_modifier!(Rotate2D);
 __impl_modifier_chaining!(Rotate2D);
 __impl_apply_2d!(Rotate2D);
 
@@ -123,7 +120,7 @@ pub struct Scale2D {
     pub v: Point2D,
 }
 
-__impl_builder_sentence!(Scale2D);
+__impl_builder_modifier!(Scale2D);
 __impl_modifier_chaining!(Scale2D);
 __impl_apply_2d!(Scale2D);
 
@@ -160,7 +157,7 @@ pub struct Resize2D {
     pub auto: Option<ResizeAuto2D>,
 }
 
-__impl_builder_sentence!(Resize2D);
+__impl_builder_modifier!(Resize2D);
 __impl_modifier_chaining!(Resize2D);
 __impl_apply_2d!(Resize2D);
 
@@ -184,7 +181,7 @@ pub struct Mirror2D {
     pub v: Point2D,
 }
 
-__impl_builder_sentence!(Mirror2D);
+__impl_builder_modifier!(Mirror2D);
 __impl_modifier_chaining!(Mirror2D);
 __impl_apply_2d!(Mirror2D);
 
@@ -203,7 +200,7 @@ pub struct MultMatrix2D {
     pub m: AffineMatrix2D,
 }
 
-__impl_builder_sentence!(MultMatrix2D);
+__impl_builder_modifier!(MultMatrix2D);
 __impl_modifier_chaining!(MultMatrix2D);
 __impl_apply_2d!(MultMatrix2D);
 
@@ -263,7 +260,7 @@ pub struct Offset {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(Offset);
+__impl_builder_modifier!(Offset);
 __impl_modifier_chaining!(Offset);
 __impl_apply_2d!(Offset);
 
@@ -319,7 +316,7 @@ pub struct Projection {
     pub cut: Option<bool>,
 }
 
-__impl_builder_sentence!(Projection);
+__impl_builder_modifier!(Projection);
 __impl_modifier_chaining!(Projection);
 __impl_apply_3d!(Projection);
 
@@ -338,15 +335,15 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::common::ScadBuildable as _;
 
     #[test]
     fn test_translate2d() {
         assert_eq!(
-            Translate2D::build_with(|tb| {
-                let _ = tb.v([8., -4.]);
-            })
-            .repr_scad(),
+            Translate2DBuilder::default()
+                .v([8., -4.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "translate([8, -4])"
         );
     }
@@ -354,17 +351,19 @@ mod tests {
     #[test]
     fn test_rotate2d() {
         assert_eq!(
-            Rotate2D::build_with(|rb| {
-                let _ = rb.deg(45.);
-            })
-            .repr_scad(),
+            Rotate2DBuilder::default()
+                .deg(45.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate(a = 45)"
         );
         assert_eq!(
-            Rotate2D::build_with(|rb| {
-                let _ = rb.rad(PI / 4.);
-            })
-            .repr_scad(),
+            Rotate2DBuilder::default()
+                .rad(PI / 4.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate(a = 45)"
         );
     }
@@ -372,10 +371,11 @@ mod tests {
     #[test]
     fn test_mirror2d() {
         assert_eq!(
-            Mirror2D::build_with(|mb| {
-                let _ = mb.v([1., -1.]);
-            })
-            .repr_scad(),
+            Mirror2DBuilder::default()
+                .v([1., -1.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "mirror([1, -1])"
         );
     }
@@ -383,10 +383,11 @@ mod tests {
     #[test]
     fn test_scale2d() {
         assert_eq!(
-            Scale2D::build_with(|sb| {
-                let _ = sb.v([3., 2.]);
-            })
-            .repr_scad(),
+            Scale2DBuilder::default()
+                .v([3., 2.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "scale([3, 2])"
         );
     }
@@ -410,10 +411,11 @@ mod tests {
     fn test_multimatrix2d() {
         let m = AffineMatrix2D::new(1., 2., 3., 4., 5., 6.);
         assert_eq!(
-            MultMatrix2D::build_with(|mb| {
-                let _ = mb.m(m);
-            })
-            .repr_scad(),
+            MultMatrix2DBuilder::default()
+                .m(m)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "multmatrix(m = [[1, 2, 0, 3], [4, 5, 0, 6], [0, 0, 1, 0]])"
         );
     }
@@ -421,24 +423,25 @@ mod tests {
     #[test]
     fn test_offset() {
         assert_eq!(
-            Offset::build_with(|ob| {
-                let _ = ob.r(1.);
-            })
-            .repr_scad(),
+            OffsetBuilder::default().r(1.).build().unwrap().repr_scad(),
             "offset(r = 1)"
         );
         assert_eq!(
-            Offset::build_with(|ob| {
-                let _ = ob.delta(2.);
-            })
-            .repr_scad(),
+            OffsetBuilder::default()
+                .delta(2.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "offset(delta = 2)"
         );
         assert_eq!(
-            Offset::build_with(|ob| {
-                let _ = ob.r(1.).chamfer(true).fs(10);
-            })
-            .repr_scad(),
+            OffsetBuilder::default()
+                .r(1.)
+                .chamfer(true)
+                .fs(10)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "offset(r = 1, chamfer = true, $fs = 10)"
         );
     }
@@ -446,17 +449,15 @@ mod tests {
     #[test]
     fn test_projection() {
         assert_eq!(
-            Projection::build_with(|pb| {
-                let _ = pb;
-            })
-            .repr_scad(),
+            ProjectionBuilder::default().build().unwrap().repr_scad(),
             "projection()"
         );
         assert_eq!(
-            Projection::build_with(|pb| {
-                let _ = pb.cut(true);
-            })
-            .repr_scad(),
+            ProjectionBuilder::default()
+                .cut(true)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "projection(cut = true)"
         );
     }
