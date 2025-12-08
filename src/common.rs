@@ -154,9 +154,6 @@ pub struct ScadObjectGeneric<D: DimensionType> {
     /// A `std::marker::PhantomData<D>` to associate the dimension
     /// marker `D` with this struct without actually storing a value of type `D`.
     pub(crate) phantom: std::marker::PhantomData<D>,
-    /// An `Option<String>` to store an optional comment that will
-    /// be prepended to the generated SCAD code when `to_code()` is called.
-    pub comment: Option<String>,
 }
 
 impl<D: DimensionType> ScadObjectGeneric<D> {
@@ -192,7 +189,6 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
         Self {
             inner,
             phantom: std::marker::PhantomData,
-            comment: None,
         }
     }
 
@@ -215,10 +211,10 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
     /// # Returns
     /// The `ScadObjectGeneric<D>` instance with the comment attached.
     pub fn commented(mut self, comment: &str) -> Self {
-        // keep backwards-compatible comment field
-        self.comment = Some(comment.to_string());
-
-        // Avoid double-wrapping: if inner already is our adapter, do not wrap again.
+        // Wrap the inner implementation with the comment adapter so that the
+        // concrete runtime variant continues to carry the comment when embedded
+        // into other structures. Do not store the comment on ScadObjectGeneric
+        // itself; comment is managed by the inner wrapper only.
         let already_wrapped = match &*self.inner {
             ScadObjectImpl::Object2D(rc) => rc
                 .as_any()
@@ -236,9 +232,6 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
 
         if !already_wrapped {
             let old_inner = Rc::clone(&self.inner);
-            // Preserve the original variant (2D/3D/Mixed) so downstream consumers
-            // that inspect the discriminant (e.g. block_2d) still see the same
-            // runtime type.
             let new_impl = match old_inner.get_type() {
                 DimensionMarker::Object2D => ScadObjectImpl::Object2D(Rc::new(
                     ScadObjectImplWithComment::new(old_inner, comment.to_string()),
@@ -266,10 +259,9 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
     /// A `String` containing the OpenSCAD code for the object, potentially
     /// including a comment.
     pub fn to_code(&self) -> String {
-        match &self.comment {
-            Some(c) => format!("/* {} */\n{}", c, self.inner.to_code()),
-            None => self.inner.to_code(),
-        }
+        // Comment output is handled by inner wrapper (ScadObjectImplWithComment)
+        // when present. The generic wrapper does not itself carry comment state.
+        self.inner.to_code()
     }
 
     /// Converts this `ScadObjectGeneric<D>` into a `ScadObjectWrapperToDeprecated`.
@@ -284,7 +276,6 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
     pub fn into_wrapper(self) -> ScadObjectWrapperToDeprecated {
         ScadObjectWrapperToDeprecated {
             inner: Rc::downgrade(&self.inner),
-            comment: self.comment,
         }
     }
 }
@@ -306,8 +297,6 @@ impl<D: DimensionType> ScadObjectGeneric<D> {
 pub struct ScadObjectWrapperToDeprecated {
     /// Inner implementation.
     pub(crate) inner: std::rc::Weak<ScadObjectImpl>,
-    /// Attached comment with SCAD object.
-    pub comment: Option<String>,
 }
 
 impl ScadObjectWrapperToDeprecated {
@@ -324,10 +313,7 @@ impl ScadObjectWrapperToDeprecated {
     /// wrapped object is no longer valid.
     pub fn to_code(&self) -> String {
         match self.inner.upgrade() {
-            Some(rc) => match &self.comment {
-                Some(c) => format!("/* {} */\n{}", c, rc.to_code()),
-                None => rc.to_code(),
-            },
+            Some(rc) => rc.to_code(),
             _ => String::new(),
         }
     }
@@ -1145,18 +1131,14 @@ impl Mul for ScadObject {
 // From 2D to untyped
 impl From<ScadObjectGeneric<D2>> for ScadObjectGeneric<DMixed> {
     fn from(val: ScadObjectGeneric<D2>) -> Self {
-        let mut obj = Self::from_impl(val.inner);
-        obj.comment = val.comment;
-        obj
+        Self::from_impl(val.inner)
     }
 }
 
 // From 3D to untyped
 impl From<ScadObjectGeneric<D3>> for ScadObjectGeneric<DMixed> {
     fn from(val: ScadObjectGeneric<D3>) -> Self {
-        let mut obj = Self::from_impl(val.inner);
-        obj.comment = val.comment;
-        obj
+        Self::from_impl(val.inner)
     }
 }
 
@@ -1168,9 +1150,8 @@ impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D2> {
             "dimension mismatch: expected 2D object, found {:?}",
             val.inner.get_type()
         );
-        let mut obj = Self::from_impl(val.inner);
-        obj.comment = val.comment;
-        obj
+
+        Self::from_impl(val.inner)
     }
 }
 
@@ -1182,8 +1163,7 @@ impl From<ScadObjectGeneric<DMixed>> for ScadObjectGeneric<D3> {
             "dimension mismatch: expected 3D object, found {:?}",
             val.inner.get_type()
         );
-        let mut obj = Self::from_impl(val.inner);
-        obj.comment = val.comment;
-        obj
+
+        Self::from_impl(val.inner)
     }
 }
