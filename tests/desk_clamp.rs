@@ -3,5 +3,283 @@
 
 #[cfg(test)]
 mod tests {
-    // This file is now empty as its contents have been moved to tests/legacy_api.rs
+    use std::iter;
+
+    use scadman::prelude::*;
+
+    const SMALL_OVERLAP: f64 = 0.025;
+
+    const CLAMP_Z_SIZE: f64 = 45.;
+    const CLAMP_PLATE_THICKNESS: f64 = 5.;
+    const CLAMP_BACK_PLATE_THICKNESS: f64 = 5.;
+    const CLAMP_UPPER_LENGTH: f64 = 30.;
+    const CLAMP_SPAN: f64 = 19.;
+    const CLAMP_LOWER_LENGTH: f64 = 10.;
+    const CLAMP_CHAMFER_R: f64 = 2.;
+
+    const CLAMP_NAIL_HEIGHT: f64 = 0.4;
+    const CLAMP_NAIL_BASE_WIDTH: f64 = 3.6;
+    const CLAMP_NAIL_TOP_WIDTH: f64 = 1.8;
+    const CLAMP_NAIL_POS: [f64; 2] = [4.5, 20.];
+
+    const HOOK_OUTER_R: f64 = 14.;
+    const HOOK_INNER_R: f64 = 12.;
+    const HOOK_INFILL_HEIGHT: f64 = 5.;
+    const HOOK_LENGTH: f64 = 60.;
+    const HOOK_END_R: f64 = 21.;
+    const HOOK_END_LENGTH: f64 = 5.;
+
+    fn generate_lattice_r_void(
+        corner: &Point2D,
+        r: f64,
+        pos_x_out: bool,
+        pos_y_out: bool,
+        r#fn: u64,
+    ) -> ScadObject2D {
+        let outer = Translate2D::build_with(|tb| {
+            let _ = tb.v(corner
+                - r * if pos_x_out {
+                    Point2D::x()
+                } else {
+                    Point2D::zeros()
+                }
+                - r * if pos_y_out {
+                    Point2D::y()
+                } else {
+                    Point2D::zeros()
+                });
+        })
+        .apply_to(Square::build_with(|sb| {
+            let _ = sb.size(r);
+        }));
+
+        let inner = Translate2D::build_with(|tb| {
+            let _ = tb.v(corner
+                + if pos_x_out { -r } else { r } * Point2D::x()
+                + if pos_y_out { -r } else { r } * Point2D::y());
+        })
+        .apply_to(Circle::build_with(|cb| {
+            let _ = cb.r(r).r#fn(r#fn);
+        }));
+
+        outer - inner
+    }
+
+    fn generate_clamp() -> ScadObject3D {
+        let shape_2d = {
+            let body_x_a0: f64 = -CLAMP_UPPER_LENGTH - CLAMP_BACK_PLATE_THICKNESS;
+            let body_x_a1: f64 = -CLAMP_LOWER_LENGTH - CLAMP_BACK_PLATE_THICKNESS;
+            let body_x_a2: f64 = -CLAMP_BACK_PLATE_THICKNESS;
+            let body_x_a3: f64 = 0.;
+            let body_y_a0: f64 = 0.;
+            let body_y_a1: f64 = CLAMP_PLATE_THICKNESS;
+            let body_y_a2: f64 = CLAMP_SPAN + CLAMP_PLATE_THICKNESS;
+            let body_y_a3 = 2.0_f64.mul_add(CLAMP_PLATE_THICKNESS, CLAMP_SPAN);
+            let body_points = vec![
+                [body_x_a3, body_y_a0],
+                [body_x_a3, body_y_a3],
+                [body_x_a0, body_y_a3],
+                [body_x_a0, body_y_a2],
+                [body_x_a2, body_y_a2],
+                [body_x_a2, body_y_a1],
+                [body_x_a1, body_y_a1],
+                [body_x_a1, body_y_a0],
+            ];
+            let body = ScadObject2D::from(Polygon::build_with(|pb| {
+                let _ = pb.points(body_points);
+            }))
+            .commented("body outer shape");
+
+            let body_rounded = Difference::new()
+                .apply_to_2d(&[
+                    body,
+                    generate_lattice_r_void(
+                        &[body_x_a1, body_y_a1].into(),
+                        CLAMP_CHAMFER_R,
+                        false,
+                        true,
+                        64,
+                    )
+                    .commented("upper chamfer"),
+                    generate_lattice_r_void(
+                        &[body_x_a0, body_y_a2].into(),
+                        CLAMP_CHAMFER_R,
+                        false,
+                        false,
+                        64,
+                    )
+                    .commented("lower chamfer"),
+                ])
+                .commented("body rounded");
+
+            let tooth_x_a0: f64 = -CLAMP_NAIL_BASE_WIDTH;
+            let tooth_x_a1: f64 = (-CLAMP_NAIL_TOP_WIDTH - CLAMP_NAIL_BASE_WIDTH) / 2.;
+            let tooth_x_a2: f64 = (CLAMP_NAIL_TOP_WIDTH - CLAMP_NAIL_BASE_WIDTH) / 2.;
+            let tooth_x_a3: f64 = 0.;
+            let tooth_y_a0: f64 = -CLAMP_NAIL_HEIGHT;
+            let tooth_y_a1: f64 = 0.;
+            let tooth_y_a2: f64 = SMALL_OVERLAP;
+            let tooth_points = vec![
+                [tooth_x_a0, tooth_y_a1],
+                [tooth_x_a1, tooth_y_a0],
+                [tooth_x_a2, tooth_y_a0],
+                [tooth_x_a3, tooth_y_a1],
+                [tooth_x_a3, tooth_y_a2],
+                [tooth_x_a0, tooth_y_a2],
+            ];
+            let tooth_shape = Polygon::build_with(|pb| {
+                let _ = pb.points(tooth_points);
+            });
+            let teeth = CLAMP_NAIL_POS
+                .iter()
+                .map(|x| {
+                    Translate2D::build_with(|tb| {
+                        let _ = tb.v([body_x_a2 - x, body_y_a2]);
+                    })
+                    .apply_to(tooth_shape.clone())
+                })
+                .collect::<Vec<_>>();
+
+            Union::new()
+                .apply_to_2d(&iter::once(body_rounded).chain(teeth).collect::<Vec<_>>())
+                .commented("body with teeth")
+        };
+
+        LinearExtrude::build_with(|lb| {
+            let _ = lb.height(CLAMP_Z_SIZE);
+        })
+        .apply_to(shape_2d)
+    }
+
+    fn generate_body() -> ScadObject3D {
+        let hook_pos_y: f64 = CLAMP_SPAN / 2. + CLAMP_PLATE_THICKNESS;
+
+        let hook = {
+            let hook_outer = (Translate3D::build_with(|tb| {
+                let _ = tb.v([0., 0., -SMALL_OVERLAP]);
+            })
+            .apply_to(Cylinder::build_with(|cb| {
+                let _ = cb
+                    .h(2.0_f64.mul_add(SMALL_OVERLAP, HOOK_LENGTH))
+                    .r(HOOK_OUTER_R)
+                    .r#fn(64_u64);
+            })) + Translate3D::build_with(|tb| {
+                let _ = tb.v([0., 0., HOOK_LENGTH]);
+            })
+            .apply_to(Cylinder::build_with(|cb| {
+                let _ = cb.h(HOOK_END_LENGTH).r(HOOK_END_R).r#fn(64_u64);
+            })))
+            .commented("hook outer");
+
+            let hook_void = Translate3D::build_with(|tb| {
+                let _ = tb.v([0., 0., HOOK_INFILL_HEIGHT]);
+            })
+            .apply_to(Cylinder::build_with(|cb| {
+                let _ = cb
+                    .h(HOOK_LENGTH + HOOK_END_LENGTH - HOOK_INFILL_HEIGHT + SMALL_OVERLAP)
+                    .r(HOOK_INNER_R)
+                    .r#fn(6_u64);
+            }))
+            .commented("hook void");
+
+            hook_outer - hook_void
+        };
+
+        generate_clamp()
+            + Translate3D::build_with(|tb| {
+                let _ = tb.v([-SMALL_OVERLAP, hook_pos_y, CLAMP_Z_SIZE / 2.]);
+            })
+            .apply_to(
+                Rotate3D::build_with(|rb| {
+                    let _ = rb.deg([0., 90., 0.]);
+                })
+                .apply_to(hook),
+            )
+    }
+
+    #[test]
+    fn test_clamp() {
+        assert_eq!(
+            generate_clamp().to_code(),
+            r"linear_extrude(height = 45)
+  /* body with teeth */
+  union() {
+    /* body rounded */
+    difference() {
+      /* body outer shape */
+      polygon(points = [[0, 0], [0, 29], [-35, 29], [-35, 24], [-5, 24], [-5, 5], [-15, 5], [-15, 0]]);
+      /* upper chamfer */
+      difference() {
+        translate([-15, 3])
+          square(size = 2);
+        translate([-13, 3])
+          circle(r = 2, $fn = 64);
+      }
+      /* lower chamfer */
+      difference() {
+        translate([-35, 24])
+          square(size = 2);
+        translate([-33, 26])
+          circle(r = 2, $fn = 64);
+      }
+    }
+    translate([-9.5, 24])
+      polygon(points = [[-3.6, 0], [-2.7, -0.4], [-0.9, -0.4], [0, 0], [0, 0.025], [-3.6, 0.025]]);
+    translate([-25, 24])
+      polygon(points = [[-3.6, 0], [-2.7, -0.4], [-0.9, -0.4], [0, 0], [0, 0.025], [-3.6, 0.025]]);
+  }
+"
+        );
+    }
+
+    #[test]
+    fn test_body() {
+        assert_eq!(
+            generate_body().to_code(),
+            r"union() {
+  linear_extrude(height = 45)
+    /* body with teeth */
+    union() {
+      /* body rounded */
+      difference() {
+        /* body outer shape */
+        polygon(points = [[0, 0], [0, 29], [-35, 29], [-35, 24], [-5, 24], [-5, 5], [-15, 5], [-15, 0]]);
+        /* upper chamfer */
+        difference() {
+          translate([-15, 3])
+            square(size = 2);
+          translate([-13, 3])
+            circle(r = 2, $fn = 64);
+        }
+        /* lower chamfer */
+        difference() {
+          translate([-35, 24])
+            square(size = 2);
+          translate([-33, 26])
+            circle(r = 2, $fn = 64);
+        }
+      }
+      translate([-9.5, 24])
+        polygon(points = [[-3.6, 0], [-2.7, -0.4], [-0.9, -0.4], [0, 0], [0, 0.025], [-3.6, 0.025]]);
+      translate([-25, 24])
+        polygon(points = [[-3.6, 0], [-2.7, -0.4], [-0.9, -0.4], [0, 0], [0, 0.025], [-3.6, 0.025]]);
+    }
+  translate([-0.025, 14.5, 22.5])
+    rotate(a = [0, 90, 0])
+      difference() {
+        /* hook outer */
+        union() {
+          translate([0, 0, -0.025])
+            cylinder(h = 60.05, r = 14, $fn = 64);
+          translate([0, 0, 60])
+            cylinder(h = 5, r = 21, $fn = 64);
+        }
+        /* hook void */
+        translate([0, 0, 5])
+          cylinder(h = 60.025, r = 12, $fn = 6);
+      }
+}
+"
+        );
+    }
 }
