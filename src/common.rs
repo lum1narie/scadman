@@ -571,34 +571,27 @@ pub type ScadObject3D = ScadObjectGeneric<D3>;
 /// Backwards-compatible alias for the earlier runtime enum type.
 // Backwards-compat alias removed: use `DimensionMarker` directly.
 fn flatten_union_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Union
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_2d::ScadObject2D>()
         {
-            match concrete {
-                crate::scad_2d::ScadObject2D::Modifier(m) => {
-                    if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body {
-                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_2d::ScadObject2D::Modifier(m) = concrete {
+                if let crate::scad_2d::ScadModifierBody2D::Union(_) = m.body {
+                    if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_2d::ScadObject2D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
@@ -618,34 +611,27 @@ fn create_union_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
 }
 
 fn flatten_union_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Union
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_3d::ScadObject3D>()
         {
-            match concrete {
-                crate::scad_3d::ScadObject3D::Modifier(m) => {
-                    if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body {
-                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_3d::ScadObject3D::Modifier(m) = concrete {
+                if let crate::scad_3d::ScadModifierBody3D::Union(_) = m.body {
+                    if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_3d::ScadObject3D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
@@ -665,34 +651,27 @@ fn create_union_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObject {
 }
 
 fn flatten_difference_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Difference
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_2d::ScadObject2D>()
         {
-            match concrete {
-                crate::scad_2d::ScadObject2D::Modifier(m) => {
-                    if let crate::scad_2d::ScadModifierBody2D::Difference(_) = m.body {
-                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_2d::ScadObject2D::Modifier(m) = concrete {
+                if let crate::scad_2d::ScadModifierBody2D::Difference(_) = m.body {
+                    if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_2d::ScadObject2D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
@@ -712,34 +691,27 @@ fn create_difference_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
 }
 
 fn flatten_difference_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Difference
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_3d::ScadObject3D>()
         {
-            match concrete {
-                crate::scad_3d::ScadObject3D::Modifier(m) => {
-                    if let crate::scad_3d::ScadModifierBody3D::Difference(_) = m.body {
-                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_3d::ScadObject3D::Modifier(m) = concrete {
+                if let crate::scad_3d::ScadModifierBody3D::Difference(_) = m.body {
+                    if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_3d::ScadObject3D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
@@ -759,34 +731,27 @@ fn create_difference_object_3d(parts: Vec<ScadObjectImpl>) -> ScadObject {
 }
 
 fn flatten_intersection_parts_2d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Intersection
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object2D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_2d::ScadObject2D>()
         {
-            match concrete {
-                crate::scad_2d::ScadObject2D::Modifier(m) => {
-                    if let crate::scad_2d::ScadModifierBody2D::Intersection(_) = m.body {
-                        if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_2d::ScadObject2D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_2d::ScadObject2D::Modifier(m) = concrete {
+                if let crate::scad_2d::ScadModifierBody2D::Intersection(_) = m.body {
+                    if let ScadObjectImpl::Object2D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_2d::ScadObject2D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_2d::ScadObject2D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_2d::ScadObject2D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
@@ -806,34 +771,27 @@ fn create_intersection_object_2d(parts: Vec<ScadObjectImpl>) -> ScadObject {
 }
 
 fn flatten_intersection_parts_3d(rc: &Rc<ScadObjectImpl>, parts: &mut Vec<ScadObjectImpl>) {
+    // Only flatten when the runtime object is a Modifier whose body is Intersection
+    // and whose child is a Block. Do NOT unconditionally flatten bare Blocks.
     if let ScadObjectImpl::Object3D(inner_enum_rc) = &**rc {
         if let Some(concrete) = inner_enum_rc
             .as_any()
             .downcast_ref::<crate::scad_3d::ScadObject3D>()
         {
-            match concrete {
-                crate::scad_3d::ScadObject3D::Modifier(m) => {
-                    if let crate::scad_3d::ScadModifierBody3D::Intersection(_) = m.body {
-                        if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
-                            if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
-                                .as_any()
-                                .downcast_ref::<crate::scad_3d::ScadObject3D>()
-                            {
-                                for obj in &b.objects {
-                                    parts.push(obj.clone());
-                                }
-                                return;
+            if let crate::scad_3d::ScadObject3D::Modifier(m) = concrete {
+                if let crate::scad_3d::ScadModifierBody3D::Intersection(_) = m.body {
+                    if let ScadObjectImpl::Object3D(child_enum_rc) = &*m.child {
+                        if let Some(crate::scad_3d::ScadObject3D::Block(b)) = child_enum_rc
+                            .as_any()
+                            .downcast_ref::<crate::scad_3d::ScadObject3D>()
+                        {
+                            for obj in &b.objects {
+                                parts.push(obj.clone());
                             }
+                            return;
                         }
                     }
                 }
-                crate::scad_3d::ScadObject3D::Block(b) => {
-                    for obj in &b.objects {
-                        parts.push(obj.clone());
-                    }
-                    return;
-                }
-                _ => {}
             }
         }
     }
