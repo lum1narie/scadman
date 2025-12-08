@@ -27,7 +27,7 @@ use crate::{
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 2D primitive
-pub fn primitive_2d(sentence: ScadObjectGeneric<D2>) -> ScadObjectGeneric<D2> {
+pub const fn primitive_2d(sentence: ScadObjectGeneric<D2>) -> ScadObjectGeneric<D2> {
     sentence
 }
 
@@ -229,7 +229,7 @@ pub fn block_2d_commented(
 /// # Returns
 ///
 /// A [`ScadObject`] representing the 3D primitive
-pub fn primitive_3d(sentence: ScadObjectGeneric<D3>) -> ScadObjectGeneric<D3> {
+pub const fn primitive_3d(sentence: ScadObjectGeneric<D3>) -> ScadObjectGeneric<D3> {
     sentence
 }
 

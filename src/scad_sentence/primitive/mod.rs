@@ -1,3 +1,5 @@
+//! Primitive sentences.
+
 #[allow(clippy::redundant_pub_crate)]
 mod primitive_2d;
 pub use primitive_2d::*;

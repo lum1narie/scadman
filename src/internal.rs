@@ -186,10 +186,12 @@ macro_rules! __generate_scad_options {
     // required and optional sequences.
     ( $( ($name:expr_2021, $value:expr_2021) );* $(;)? $( opt: ( $( ($oname:expr_2021, $ovalue:expr_2021) );* $(;)? ) )? ) => {
         {
-            let mut opts: Vec<$crate::internal::ScadOption> = Vec::new();
-            $(
-                opts.push($crate::internal::ScadOption::from_key_value(&$name, $value));
-            )*
+            #[allow(unused_mut)]
+            let mut opts: Vec<$crate::internal::ScadOption> = vec![
+                $(
+                    $crate::internal::ScadOption::from_key_value(&$name, $value),
+                )*
+            ];
             $(
                 $(
                     if let Some(opt) = $crate::internal::ScadOption::from_key_value_option(&$oname, $ovalue) {
@@ -257,6 +259,11 @@ macro_rules! __impl_modifier_chaining {
 macro_rules! __impl_panicking_modifier_methods {
     ($mod_ty:ident, $dim_marker:ty) => {
         impl $mod_ty {
+            /// Generate SCAD code from this SCAD object.
+            ///
+            /// # Exceptions
+            ///
+            /// Panics because the object is modifier without child objects.
             pub fn to_code(&self) -> String {
                 panic!(
                     "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
@@ -269,6 +276,25 @@ macro_rules! __impl_panicking_modifier_methods {
                 panic!(
                     "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
                 );
+            }
+        }
+    };
+}
+
+/// TODO: doc
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_primitive_to_code {
+    ($prim_ty:ident, $dim_marker:ty) => {
+        impl $prim_ty {
+            /// Generate SCAD code from this SCAD object.
+            ///
+            /// # Returns
+            ///
+            /// [`String`] represents code for OpenSCAD.
+            pub fn to_code(&self) -> String {
+                let obj: ScadObjectGeneric<$dim_marker> = self.clone().into();
+                obj.to_code()
             }
         }
     };
@@ -306,9 +332,18 @@ macro_rules! __impl_apply_to_modifier {
         $child_marker:path
     ) => {
         impl $mod_ty {
-            pub fn $method_name(
+            /// apply this modifier to a child object
+            ///
+            /// # Arguments
+            ///
+            /// - `child` - the child object to apply the modifier to
+            ///
+            /// # Returns
+            ///
+            /// A new object with the modifier applied.
+            pub fn $method_name<T: Into<$crate::common::ScadObjectGeneric<$child_marker>>>(
                 self,
-                child: impl Into<$crate::common::ScadObjectGeneric<$child_marker>>,
+                child: T,
             ) -> $typed_output_obj {
                 use std::rc::Rc;
 
@@ -449,7 +484,7 @@ macro_rules! __impl_from_scad_for_collection_with_try_new {
 mod tests {
     use std::rc::Rc;
 
-    use crate::{common::ScadObjectImpl, common::Unit};
+    use crate::common::Unit;
 
     use super::*;
 

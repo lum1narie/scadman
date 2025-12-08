@@ -34,8 +34,6 @@ pub mod scad_mixed;
 
 pub mod legacy;
 
-use common::{ScadBuildable as _, ScadBuilder as _};
-
 /// import `prelude::*` so you can be ready to code!
 ///
 /// This prelude intentionally exports a curated subset of the public API that

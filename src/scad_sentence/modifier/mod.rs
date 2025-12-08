@@ -1,3 +1,5 @@
+//! Modifier sentences.
+
 #[allow(clippy::redundant_pub_crate)]
 mod modifier_2d;
 pub use modifier_2d::*;

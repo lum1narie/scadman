@@ -52,9 +52,9 @@ mod tests {
         expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
     )]
     fn test_modifier_into_fail() {
-        Into::<ScadObject2D>::into(Translate2D::build_with(|tb| {
+        drop(Into::<ScadObject2D>::into(Translate2D::build_with(|tb| {
             let _ = tb.v([1.0, 2.0]);
-        }));
+        })));
     }
 
     #[test]
@@ -62,10 +62,12 @@ mod tests {
         expected = "A modifier cannot be converted to SCAD code directly without a child object. Use .apply_to() or similar methods."
     )]
     fn test_modifier_code_fail() {
-        Translate2D::build_with(|tb| {
-            let _ = tb.v([1.0, 2.0]);
-        })
-        .to_code();
+        drop(
+            Translate2D::build_with(|tb| {
+                let _ = tb.v([1.0, 2.0]);
+            })
+            .to_code(),
+        );
     }
 
     #[test]
