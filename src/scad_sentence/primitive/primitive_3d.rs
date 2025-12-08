@@ -10,7 +10,6 @@ use crate::{
     value_type::RoundSize,
 };
 
-
 macro_rules! __impl_primitive_3d {
     ($prim_ty:ident) => {
         __impl_builder_primitive!($prim_ty, D3);
