@@ -1,1 +1,1 @@
-//! A collection of helper macros exported for extenal use.
+//! Helper macros might be used by users as helper.

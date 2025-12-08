@@ -11,15 +11,18 @@ your parametric models using Rust code. This approach leverages Rust's strong ty
 module system, testing capabilities, and build tools to manage your designs.
 
 The library represents OpenSCAD primitives, modifiers, and blocks as distinct Rust types,
-wrapped within a unified `ScadObject` structure. It provides traits and helper functions
-to build, combine, and transform these objects, handling the complexities of OpenSCAD
-syntax generation, including parameter formatting, object nesting, and indentation.
+managed by a powerful generic type system centered around `ScadObjectGeneric<D>`. This system
+provides enhanced type safety by tracking object dimensions (2D, 3D, Mixed) at compile time
+where possible, while allowing for flexible runtime handling when necessary. It provides
+traits and helper functions to build, combine, and transform these objects, handling the
+complexities of OpenSCAD syntax generation, including parameter formatting, object nesting,
+and indentation.
 
 ## Features
 
 *   **Type-Safe Object Model**: Define 2D, 3D, and mixed-dimension objects using a clear
-    type hierarchy (`ScadObject2D`, `ScadObject3D`, `ScadObjectMixed`) wrapped in
-    `ScadObject`.
+    type hierarchy based on `ScadObjectGeneric<D>` and public-facing wrappers like
+    `ScadObject2D`, `ScadObject3D`, and `ScadObjectMixed`.
 *   **Comprehensive Primitive Support**: Create basic shapes like `square`, `circle`,
     `sphere`, `cube`, `cylinder`, `polygon`, `polyhedron`, `text`, and `import`.
 *   **Extensive Modifier Support**: Apply transformations and operations such as
@@ -29,7 +32,10 @@ syntax generation, including parameter formatting, object nesting, and indentati
 *   **Boolean and Block Operations**: Combine objects using `union`, `difference`, and
     `intersection`. Blocks (`{ ... }`) are also explicitly supported.
 *   **Operator Overloading**: Use standard Rust operators (`+`, `-`, `*`) for `union`,
-    `difference`, and `intersection` operations on `ScadObject`s of the same dimension.
+    `difference`, and `intersection` operations. These operators work on the
+    `ScadObject` (untyped alias) and perform a runtime check, requiring both operands
+    to have the same internal dimension (`Object2D`, `Object3D`, or `ObjectMixed`).
+    Operations between objects of different dimensions will result in a panic.
 *   **Comment Support**: Easily add comments to individual objects or blocks using the
     `.commented()` method or dedicated factory functions.
 *   **Builder Pattern**: Many complex primitives and modifiers provide a type-safe builder
@@ -48,10 +54,69 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-scadman = { tag = "v0.3.0", git = "https://github.com/lum1narie/scadman.git" }
+scadman
 ```
 
-## Basic Usage
+## Working with Typed Dimensions: Primitives, Modifiers, and Conversions
+
+`scadman` uses a robust generic type system to ensure dimensional correctness (2D, 3D, Mixed) at compile time wherever possible, while providing flexibility through conversions.
+
+### Creating Typed Objects: `primitive_*` Functions
+
+To create an object with a specific dimension, use the corresponding factory function:
+
+*   **`primitive_2d(body)`**: Creates a `ScadObject2D` (which wraps `ScadObjectGeneric<D2>`). For example, `primitive_2d(Square::new())`.
+*   **`primitive_3d(body)`**: Creates a `ScadObject3D` (which wraps `ScadObjectGeneric<D3>`). For example, `primitive_3d(Cube::new())`.
+
+These functions typically take a primitive "body" (e.g., `Square`, `Cube`) that is often constructed using its `build_with` builder pattern.
+
+### Applying Typed Modifiers: `modifier_*` Functions
+
+Similarly, to apply a modifier to a typed object, use the matching factory function:
+
+*   **`modifier_2d(modifier_body, child_object_2d)`**: Applies a 2D modifier (e.g., `Translate2D`) to a `ScadObject2D`, returning a new `ScadObject2D`. This ensures that you're not trying to apply a 2D translation to a 3D object at compile time.
+*   **`modifier_3d(modifier_body, child_object_3d)`**: Applies a 3D modifier (e.g., `Rotate3D`) to a `ScadObject3D`, returning a new `ScadObject3D`.
+
+Some modifiers, like `Color`, can apply to any dimension. For these, use:
+
+*   **`modifier_mixed(modifier_body, child_object_any_dimension)`**: Applies a mixed-dimension modifier to an object that can be `ScadObject2D`, `ScadObject3D`, or `ScadObjectMixed`. This function will implicitly convert the `child_object` into its untyped `ScadObject` (i.e., `ScadObjectGeneric<DMixed>`) representation before applying the modifier. The result will be a `ScadObjectMixed`.
+
+### Understanding Conversions (`.into()`)
+
+`scadman` provides automatic conversions to make composition flexible:
+
+*   Any `ScadObject2D` or `ScadObject3D` can be converted into `ScadObject` (which is an alias for `ScadObjectGeneric<DMixed>`) using the `.into()` method. This is useful when you need to treat a dimensionally specific object in a more generic (untyped) context, such as passing it to `block_mixed` or `modifier_mixed`.
+
+    ```rust
+    use scadman::prelude::*;
+
+    let square_2d = primitive_2d(Square::new()); // ScadObject2D
+    let cube_3d = primitive_3d(Cube::new());     // ScadObject3D
+
+    // Convert to untyped ScadObject for a mixed context
+    let generic_square: ScadObject = square_2d.into();
+    let generic_cube: ScadObject = cube_3d.into();
+
+    // Now they can be used together in a mixed block
+    let mixed_objects = block_mixed(&[generic_square, generic_cube]);
+    println!("{}", mixed_objects.to_code());
+    /* Output:
+    union() { // block_mixed defaults to union if not specified
+      square();
+      cube();
+    }
+    */
+    ```
+
+### Typed Blocks: `block_*` Functions
+
+Similar to primitives and modifiers, blocks also come in typed variants:
+
+*   **`block_2d(objects)`**: Creates a `ScadObject2D` containing other `ScadObject2D` instances.
+*   **`block_3d(objects)`**: Creates a `ScadObject3D` containing other `ScadObject3D` instances.
+*   **`block_mixed(objects)`**: Creates a `ScadObjectMixed` containing any combination of `ScadObject`s (i.e., `ScadObjectGeneric<DMixed>`). When passing `ScadObject2D` or `ScadObject3D` to `block_mixed`, they will be implicitly converted to `ScadObject`.
+
+This type system allows you to catch dimensional mismatches at compile time for common operations, while still providing the flexibility to work with mixed-dimension constructs when OpenSCAD's nature requires it.
 
 Import the prelude to get access to common types and functions:
 
@@ -61,43 +126,43 @@ use scadman::prelude::*;
 
 ### Creating Primitives
 
-Use the `primitive_2d` or `primitive_3d` factory functions with the corresponding builder or
-direct value:
+Use primitives with the `build_with` factory functions with direct value:
 
 ```rust
 // Create a square with size 10
-let square = primitive_2d(Square::build_with(|sb| {
+let square = Square::build_with(|sb| {
     let _ = sb.size(10.0);
-}));
+});
 println!("{}", square.to_code());
 // Output: square(size = 10);
 
 // Create a sphere with radius 5 using the builder
-let sphere = primitive_3d(Sphere::build_with(|cb| {
+let sphere = Sphere::build_with(|cb| {
     let _ = cb.r(5.0);
-}));
+});
 println!("{}", sphere.to_code());
 // Output: sphere(r = 5);
-
+to
 // Create a cylinder with height 10 and radius 3
-let cylinder = primitive_3d(Cylinder::build_with(|cb| {
+let cylinder = Cylinder::build_with(|cb| {
     let _ = cb.h(10.0).r(3.0);
-}));
+});
 println!("{}", cylinder.to_code());
 // Output: cylinder(h = 10, r = 3);
 ```
 
 ### Applying Modifiers
 
-Use the `modifier_2d`, `modifier_3d`, or `modifier_mixed` factory functions. Note that
-modifiers check the dimension compatibility of their child object (except for mixed
-modifiers like `color`).
+Use the `apply_to` factory functions.
+Use `apply_to_2d`, `apply_to_3d` for universal modifiers without parameters like `Union`.
+Modifiers with parameters like Translate is splitted in like `Translate2D`, `Translate3D`,
+due to parameters' dimension.
 
 ```rust
 // Translate the square by (5, 5)
-let translated_square = modifier_2d(Translate2D::build_with(|tb| {
+let translated_square = Translate2D::build_with(|tb| {
     let _ = tb.v([5.0, 5.0]);
-}), square);
+}).apply_to(square);
 println!("{}", translated_square.to_code());
 /* Output:
 translate([5, 5])
@@ -105,19 +170,19 @@ translate([5, 5])
 */
 
 // Rotate the sphere by 90 degrees around the Y axis
-let rotated_sphere = modifier_3d(Rotate3D::build_with(|rb| {
+let rotated_sphere = Rotate3D::build_with(|rb| {
     let _ = rb.deg([0.0, 90.0, 0.0]);
-}), sphere);
+}).apply_to(sphere);
 println!("{}", rotated_sphere.to_code());
 /* Output:
 rotate(a = [0, 90, 0])
   sphere(r = 5);
 */
 
-// Apply a color modifier (mixed dimension)
-let colored_cylinder = modifier_mixed(Color::build_with(|cb| {
+// Apply a color modifier
+let colored_cylinder = Color::build_with(|cb| {
     let _ = cb.c(RGB::new(1.0, 0.0, 0.0));
-}), cylinder);
+}).apply_to_3d(cylinder);
 println!("{}", colored_cylinder.to_code());
 /* Output:
 color(c = [1, 0, 0])
@@ -127,20 +192,22 @@ color(c = [1, 0, 0])
 
 ### Using Blocks and Boolean Operations
 
-Use the `block_2d`, `block_3d`, or `block_mixed` factory functions, or leverage operator
-overloading for boolean operations (`+` for `union`, `-` for `difference`, `*` for
-`intersection`).
+`Vector` or arrays of `ScadObject2D` or `ScadObject3D` can be converted as block object.
+You can make this with `ScadObject2D::from`, `ScadObject3D::from`, or
+automatically converted in `apply_to` function.
+Leverage operators overload for boolean operations
+(`+` for `union`, `-` for `difference`, `*` for `intersection`).
 
 ```rust
-let sphere = primitive_3d(Sphere::build_with(|cb| {
+let sphere = Sphere::build_with(|cb| {
     let _ = cb.r(10.0);
-}));
-let cube = primitive_3d(Cube::build_with(|cb| {
+});
+let cube = Cube::build_with(|cb| {
     let _ = cb.size(15.0).center(true);
-}));
+});
 
 // Subtract the cube from the sphere using the difference modifier
-let result_modifier = modifier_3d(Difference::new(), block_3d(&[sphere.clone(), cube.clone()]));
+let result_modifier = Difference::new().apply_to_3d([sphere.clone(), cube.clone()]);
 println!("{}", result_modifier.to_code());
 /* Output:
 difference() {
@@ -162,32 +229,16 @@ difference() {
 
 ### Adding Comments
 
-Use the `.commented()` method or the `_commented` variants of the factory functions:
+Use the `.commented()` method:
 
 ```rust
-let commented_cube = primitive_3d(Cube::build_with(|cb| {
+let commented_cube = Cube::build_with(|cb| {
     let _ = cb.size(5.0);
-})).commented("This is a simple cube");
+}).commented("This is a simple cube");
 println!("{}", commented_cube.to_code());
 /* Output:
 /* This is a simple cube */
 cube(size = 5);
-*/
-
-let commented_translated_square = modifier_2d_commented(
-    Translate2D::build_with(|tb| {
-        let _ = tb.v([5.0, 5.0]);
-    }),
-    primitive_2d(Square::build_with(|sb| {
-        let _ = sb.size(10.0);
-    })), // Convert primitive sentence to ScadObject
-    "Translated square"
-);
-println!("{}", commented_translated_square.to_code());
-/* Output:
-/* Translated square */
-translate([5, 5])
-  square(size = 10);
 */
 ```
 
@@ -204,7 +255,7 @@ It demonstrates several key techniques facilitated by `scadman`:
     Each function constructs and returns a `ScadObject` representing a component of the
     final assembly.
 3.  **Composition via Modifiers and Blocks**: The helper functions return `ScadObject`s,
-    which are then combined using `modifier_3d`, `block_3d`, and operator overloading (`+`,
+    which are then combined using `modifier_3d`, and operator overloading (`+`,
     `-`) to build the final structure. This mirrors how objects are combined in OpenSCAD
     itself.
 4.  **Leveraging Builders for Clarity**: Builders (`Translate2D::build_with`,
@@ -241,12 +292,7 @@ approach to creating complex parametric designs in OpenSCAD using the power of R
     structural elements. The library provides specific types (`ScadPrimitive2D`,
     `ScadModifier3D`, `ScadBlockMixed`, etc.) and enums (`ScadPrimitiveBody2D`,
     `ScadModifierBody3D`, `ScadModifierBodyMixed`) to represent them.
-*   **Factory Functions (`primitive_`, `modifier_`, `block_`)**: Functions like
-    `primitive_2d`, `modifier_3d`, `block_mixed`, etc., provided in the `lib.rs` root,
-    are the primary way to construct `ScadObject` instances from the specific
-    primitive/modifier/block types defined in the `scad_2d`, `scad_3d`, and `scad_mixed`
-    modules. `try_` variants are provided for operations that might fail due to dimension
-    mismatches.
+    These are stored in `ScadObjectGeneric`.
 *   **Value Types**: Custom types in `value_type.rs` (like `Angle`, `RGBA`, `RoundSize`,
     etc.) and standard types (`f64` for `Unit`, `bool`, `String`, vectors from `nalgebra`)
     implement `ScadDisplay` to ensure correct formatting in the generated SCAD code.

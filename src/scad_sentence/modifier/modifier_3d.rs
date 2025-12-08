@@ -4,12 +4,47 @@ use derive_more::derive::From;
 use nalgebra as na;
 
 use crate::{
-    __generate_scad_options,
+    common::{AffineMatrix3D, DimensionType as _, Point3D, Unit},
     internal::generate_sentence_repr,
     scad_display::{ambassador_impl_ScadDisplay, ScadDisplay},
     value_type::Angle,
-    AffineMatrix3D, Point3D, Unit, __impl_builder_sentence,
 };
+
+use crate::common::D3;
+
+macro_rules! __impl_apply_2d {
+    ($mod_ty:ident) => {
+        __impl_apply_to_modifier!(
+            apply_to,
+            $mod_ty,
+            $crate::scad_3d::ScadModifierBody3D,
+            $crate::common::ScadObjectGeneric<$crate::common::D3>,
+            $crate::scad_3d::ScadModifier3D,
+            $crate::scad_3d::ScadObject3D,
+            $crate::common::ScadObjectImpl::Object3D,
+            $crate::common::D3, // output_marker
+            $crate::common::D2  // child_marker
+        );
+        __impl_panicking_modifier_methods!($mod_ty, D3);
+    };
+}
+
+macro_rules! __impl_apply_3d {
+    ($mod_ty:ident) => {
+        __impl_apply_to_modifier!(
+            apply_to,
+            $mod_ty,
+            $crate::scad_3d::ScadModifierBody3D,
+            $crate::common::ScadObjectGeneric<$crate::common::D3>,
+            $crate::scad_3d::ScadModifier3D,
+            $crate::scad_3d::ScadObject3D,
+            $crate::common::ScadObjectImpl::Object3D,
+            $crate::common::D3, // output_marker
+            $crate::common::D3  // child_marker
+        );
+        __impl_panicking_modifier_methods!($mod_ty, D3);
+    };
+}
 
 /// Translate modifier `translate()` in SCAD.
 /// This Rust type is regarded as 3D object and only applys to 3D objects.
@@ -21,16 +56,13 @@ pub struct Translate3D {
     pub v: Point3D,
 }
 
-__impl_builder_sentence!(Translate3D);
+__impl_builder_modifier!(Translate3D);
+__impl_modifier_chaining!(Translate3D);
+__impl_apply_3d!(Translate3D);
 
 impl ScadDisplay for Translate3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "translate",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("translate", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -73,7 +105,9 @@ pub struct Rotate3D {
     pub v: Option<Point3D>,
 }
 
-__impl_builder_sentence!(Rotate3D);
+__impl_builder_modifier!(Rotate3D);
+__impl_modifier_chaining!(Rotate3D);
+__impl_apply_3d!(Rotate3D);
 
 impl Rotate3DBuilder {
     /// Set rotation angle in degrees.
@@ -114,8 +148,7 @@ impl ScadDisplay for Rotate3D {
         generate_sentence_repr(
             "rotate",
             __generate_scad_options!(
-                ("a", self.a);
-                ("v", self.v);
+                ("a", self.a); opt:(("v", self.v);)
             ),
         )
     }
@@ -131,16 +164,13 @@ pub struct Scale3D {
     pub v: Point3D,
 }
 
-__impl_builder_sentence!(Scale3D);
+__impl_builder_modifier!(Scale3D);
+__impl_modifier_chaining!(Scale3D);
+__impl_apply_3d!(Scale3D);
 
 impl ScadDisplay for Scale3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "scale",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("scale", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -171,15 +201,16 @@ pub struct Resize3D {
     pub auto: Option<ResizeAuto3D>,
 }
 
-__impl_builder_sentence!(Resize3D);
+__impl_builder_modifier!(Resize3D);
+__impl_modifier_chaining!(Resize3D);
+__impl_apply_3d!(Resize3D);
 
 impl ScadDisplay for Resize3D {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
             "resize",
             __generate_scad_options!(
-                ("", self.size);
-                ("auto", self.auto);
+                ("", self.size); opt:(("auto", self.auto);)
             ),
         )
     }
@@ -194,16 +225,13 @@ pub struct Mirror3D {
     pub v: Point3D,
 }
 
-__impl_builder_sentence!(Mirror3D);
+__impl_builder_modifier!(Mirror3D);
+__impl_modifier_chaining!(Mirror3D);
+__impl_apply_3d!(Mirror3D);
 
 impl ScadDisplay for Mirror3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "mirror",
-            __generate_scad_options!(
-                ("", self.v);;
-            ),
-        )
+        generate_sentence_repr("mirror", __generate_scad_options!(("", self.v);))
     }
 }
 
@@ -216,16 +244,13 @@ pub struct MultMatrix3D {
     pub m: AffineMatrix3D,
 }
 
-__impl_builder_sentence!(MultMatrix3D);
+__impl_builder_modifier!(MultMatrix3D);
+__impl_modifier_chaining!(MultMatrix3D);
+__impl_apply_3d!(MultMatrix3D);
 
 impl ScadDisplay for MultMatrix3D {
     fn repr_scad(&self) -> String {
-        generate_sentence_repr(
-            "multmatrix",
-            __generate_scad_options!(
-                ("m", self.m);;
-            ),
-        )
+        generate_sentence_repr("multmatrix", __generate_scad_options!(("m", self.m);))
     }
 }
 
@@ -267,7 +292,9 @@ pub struct LinearExtrude {
     pub r#fn: Option<u64>,
 }
 
-__impl_builder_sentence!(LinearExtrude);
+__impl_builder_modifier!(LinearExtrude);
+__impl_modifier_chaining!(LinearExtrude);
+__impl_apply_2d!(LinearExtrude);
 
 impl ScadDisplay for LinearExtrude {
     fn repr_scad(&self) -> String {
@@ -275,13 +302,15 @@ impl ScadDisplay for LinearExtrude {
             "linear_extrude",
             __generate_scad_options!(
                 ("height", self.height);
-                ("v", self.v),
-                ("center", self.center),
-                ("twist", self.twist),
-                ("convexity", self.convexity),
-                ("slices", self.slices),
-                ("scale", self.scale),
-                ("$fn", self.r#fn);
+                opt: (
+                    ("v", self.v);
+                    ("center", self.center);
+                    ("twist", self.twist);
+                    ("convexity", self.convexity);
+                    ("slices", self.slices);
+                    ("scale", self.scale);
+                    ("$fn", self.r#fn);
+                )
             ),
         )
     }
@@ -318,20 +347,23 @@ pub struct RotateExtrude {
     pub fs: Option<Unit>,
 }
 
-__impl_builder_sentence!(RotateExtrude);
+__impl_builder_modifier!(RotateExtrude);
+__impl_modifier_chaining!(RotateExtrude);
+__impl_apply_2d!(RotateExtrude);
 
 impl ScadDisplay for RotateExtrude {
     fn repr_scad(&self) -> String {
         generate_sentence_repr(
             "rotate_extrude",
             __generate_scad_options!(
-                ;
-                ("angle", self.angle),
-                ("start", self.start),
-                ("convexity", self.convexity),
-                ("$fa", self.fa),
-                ("$fn", self.r#fn),
+                opt: (
+                ("angle", self.angle);
+                ("start", self.start);
+                ("convexity", self.convexity);
+                ("$fa", self.fa);
+                ("$fn", self.r#fn);
                 ("$fs", self.fs);
+                )
             ),
         )
     }
@@ -342,15 +374,15 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::*;
-    use crate::ScadBuildable as _;
 
     #[test]
     fn test_translate3d() {
         assert_eq!(
-            Translate3D::build_with(|tb| {
-                let _ = tb.v([8., -4., 6.]);
-            })
-            .repr_scad(),
+            Translate3DBuilder::default()
+                .v([8., -4., 6.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "translate([8, -4, 6])"
         );
     }
@@ -358,24 +390,28 @@ mod tests {
     #[test]
     fn test_rotate3d() {
         assert_eq!(
-            Rotate3D::build_with(|rb| {
-                let _ = rb.deg([45., 0., 90.]);
-            })
-            .repr_scad(),
+            Rotate3DBuilder::default()
+                .deg([45., 0., 90.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate(a = [45, 0, 90])"
         );
         assert_eq!(
-            Rotate3D::build_with(|rb| {
-                let _ = rb.rad([PI / 4., 0., PI / 2.]);
-            })
-            .repr_scad(),
+            Rotate3DBuilder::default()
+                .rad([PI / 4., 0., PI / 2.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate(a = [45, 0, 90])"
         );
         assert_eq!(
-            Rotate3D::build_with(|rb| {
-                let _ = rb.rad(PI / 4.).v([1., 1., 0.]);
-            })
-            .repr_scad(),
+            Rotate3DBuilder::default()
+                .rad(PI / 4.)
+                .v([1., 1., 0.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate(a = 45, v = [1, 1, 0])"
         );
     }
@@ -383,10 +419,11 @@ mod tests {
     #[test]
     fn test_mirror3d() {
         assert_eq!(
-            Mirror3D::build_with(|mb| {
-                let _ = mb.v([1., -1., 0.]);
-            })
-            .repr_scad(),
+            Mirror3DBuilder::default()
+                .v([1., -1., 0.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "mirror([1, -1, 0])"
         );
     }
@@ -394,10 +431,11 @@ mod tests {
     #[test]
     fn test_scale3d() {
         assert_eq!(
-            Scale3D::build_with(|sb| {
-                let _ = sb.v([3., 2., 4.]);
-            })
-            .repr_scad(),
+            Scale3DBuilder::default()
+                .v([3., 2., 4.])
+                .build()
+                .unwrap()
+                .repr_scad(),
             "scale([3, 2, 4])"
         );
     }
@@ -421,10 +459,11 @@ mod tests {
     fn test_multimatrix2d() {
         let m = AffineMatrix3D::new(1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.);
         assert_eq!(
-            MultMatrix3D::build_with(|mb| {
-                let _ = mb.m(m);
-            })
-            .repr_scad(),
+            MultMatrix3DBuilder::default()
+                .m(m)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "multmatrix(m = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])"
         );
     }
@@ -432,25 +471,26 @@ mod tests {
     #[test]
     fn test_linear_extrude() {
         assert_eq!(
-            LinearExtrude::build_with(|lb| {
-                let _ = lb.height(5.);
-            })
-            .repr_scad(),
+            LinearExtrudeBuilder::default()
+                .height(5.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "linear_extrude(height = 5)"
         );
         assert_eq!(
-            LinearExtrude::build_with(|lb| {
-                let _ = lb.height(5.)
-                    .v([0., 0.2, 1.])
-                    .center(true)
-                    .twist(180.)
-                    .convexity(10_u64)
-                    .slices(30_u64)
-                    .scale(0.7)
-                    .r#fn(20_u64)
-                    ;
-            })
-            .repr_scad(),
+            LinearExtrudeBuilder::default()
+                .height(5.)
+                .v([0., 0.2, 1.])
+                .center(true)
+                .twist(180.)
+                .convexity(10_u64)
+                .slices(30_u64)
+                .scale(0.7)
+                .r#fn(20_u64)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "linear_extrude(height = 5, v = [0, 0.2, 1], center = true, twist = 180, convexity = 10, slices = 30, scale = 0.7, $fn = 20)"
         );
     }
@@ -458,17 +498,18 @@ mod tests {
     #[test]
     fn test_rotate_extrude() {
         assert_eq!(
-            RotateExtrude::build_with(|rb| {
-                let _ = rb;
-            })
-            .repr_scad(),
+            RotateExtrudeBuilder::default().build().unwrap().repr_scad(),
             "rotate_extrude()"
         );
         assert_eq!(
-            RotateExtrude::build_with(|rb| {
-                let _ = rb.angle(180.).start(90.).convexity(10_u64).fa(5.);
-            })
-            .repr_scad(),
+            RotateExtrudeBuilder::default()
+                .angle(180.)
+                .start(90.)
+                .convexity(10_u64)
+                .fa(5.)
+                .build()
+                .unwrap()
+                .repr_scad(),
             "rotate_extrude(angle = 180, start = 90, convexity = 10, $fa = 5)"
         );
     }

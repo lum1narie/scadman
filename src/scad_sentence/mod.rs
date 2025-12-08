@@ -1,9 +1,9 @@
 //! Sentences in SCAD.
 
 #[allow(clippy::redundant_pub_crate)]
-mod primitive;
+pub mod primitive;
 pub use primitive::*;
 
 #[allow(clippy::redundant_pub_crate)]
-mod modifier;
+pub mod modifier;
 pub use modifier::*;
