@@ -71,6 +71,12 @@ pub struct ScadBlockMixed {
     pub objects: Vec<crate::common::ScadObjectImpl>,
 }
 
+impl ScadDisplay for ScadBlockMixed {
+    fn repr_scad(&self) -> String {
+        block_repr(&self.objects)
+    }
+}
+
 impl ScadBlockMixed {
     /// Creats a new [`ScadBlockMixed`].
     pub fn new(objects: &[crate::common::ScadObjectImpl]) -> Self {
@@ -78,11 +84,40 @@ impl ScadBlockMixed {
             objects: objects.to_vec(),
         }
     }
+
+    /// Creates a new [`ScadBlockMixed`] with the given objects if all objects are Mixed.
+    ///
+    /// # Arguments
+    ///
+    /// * `objects` - A slice of objects to be included in the block
+    ///
+    /// # Returns
+    ///
+    /// * `Some(ScadBlockMixed)` if all objects are Mixed objects
+    /// * `None` if any object is not a Mixed object
+    pub fn try_new(objects: &[crate::common::ScadObjectImpl]) -> Option<Self> {
+        objects
+            .iter()
+            .all(|o| o.get_type() == DimensionMarker::ObjectMixed)
+            .then_some(Self {
+                objects: objects.to_vec(),
+            })
+    }
 }
 
-impl ScadDisplay for ScadBlockMixed {
-    fn repr_scad(&self) -> String {
-        block_repr(&self.objects)
+__impl_from_scad_for_collection_with_try_new!(
+    crate::common::DMixed,
+    ScadBlockMixed,
+    ScadObjectMixed,
+    crate::common::ScadObjectImpl::ObjectMixed,
+    "Internal error: Vec<T> or &[T] for DMixed should always produce a valid ScadBlockMixed"
+);
+
+impl From<ScadObjectMixed> for crate::common::ScadObjectGeneric<crate::common::DMixed> {
+    fn from(val: ScadObjectMixed) -> Self {
+        let rc_o = Rc::new(val);
+        let rc_impl = Rc::new(crate::common::ScadObjectImpl::ObjectMixed(rc_o));
+        Self::from_impl(rc_impl)
     }
 }
 
@@ -107,13 +142,5 @@ pub enum ScadModifierBodyMixed {
 impl ScadModifierBodyMixed {
     pub(crate) const fn get_children_type(&self) -> DimensionMarker {
         DimensionMarker::ObjectMixed
-    }
-}
-
-impl From<ScadObjectMixed> for crate::common::ScadObjectGeneric<crate::common::DMixed> {
-    fn from(val: ScadObjectMixed) -> Self {
-        let rc_o = Rc::new(val);
-        let rc_impl = Rc::new(crate::common::ScadObjectImpl::ObjectMixed(rc_o));
-        Self::from_impl(rc_impl)
     }
 }
