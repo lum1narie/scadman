@@ -41,7 +41,7 @@ mod tests {
 translate([1, -2, 3])
   cube(size = [4, 6, 4], center = false);
 "
-        )
+        );
     }
 
     // 0.2.0 ~ 0.2.1
@@ -53,7 +53,7 @@ translate([1, -2, 3])
         let sqs = (0..=3)
             .map(|i| {
                 Translate2D::build_with(|tb| {
-                    let _ = tb.v([(i as Unit) * 4., 0.]);
+                    let _ = tb.v([Unit::from(i) * 4., 0.]);
                 })
                 .apply_to(sq.clone())
             })
